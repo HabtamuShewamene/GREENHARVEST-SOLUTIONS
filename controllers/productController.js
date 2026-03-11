@@ -4,6 +4,41 @@ const isValidPositiveNumber = (value) => {
   return !Number.isNaN(Number(value)) && Number(value) >= 0;
 };
 
+const getRequestBody = (req) => {
+  return req.body && typeof req.body === "object" ? req.body : {};
+};
+
+const logControllerError = (context, error, meta = {}) => {
+  console.error(`${context}:`, {
+    message: error.message,
+    code: error.code,
+    detail: error.detail,
+    constraint: error.constraint,
+    table: error.table,
+    stack: error.stack,
+    ...meta,
+  });
+};
+
+const handleDatabaseError = (res, error, fallbackMessage) => {
+  if (error.code === "23503") {
+    return res.status(400).json({
+      message: "Referenced record does not exist",
+      detail: error.detail,
+    });
+  }
+
+  if (error.code === "22P02") {
+    return res.status(400).json({
+      message: "Invalid input format",
+    });
+  }
+
+  return res.status(500).json({
+    message: fallbackMessage,
+  });
+};
+
 const ensureFarmerRole = (req, res) => {
   if (req.user.role !== "farmer") {
     res.status(403).json({
@@ -24,12 +59,57 @@ const getProductOwnership = async (productId) => {
   return result.rows[0] || null;
 };
 
+const getCategoryById = async (categoryId) => {
+  const result = await pool.query("SELECT id FROM categories WHERE id = $1", [
+    categoryId,
+  ]);
+
+  return result.rows[0] || null;
+};
+
+const validateCategoryId = async (categoryId, res) => {
+  if (categoryId === null || categoryId === undefined) {
+    return true;
+  }
+
+  if (!Number.isInteger(categoryId)) {
+    res.status(400).json({
+      message: "category_id must be an integer",
+    });
+    return false;
+  }
+
+  const category = await getCategoryById(categoryId);
+
+  if (!category) {
+    res.status(400).json({
+      message: "Invalid category_id. Referenced category does not exist",
+    });
+    return false;
+  }
+
+  return true;
+};
+
+const parseOptionalString = (value) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  return String(value).trim();
+};
+
 const createProduct = async (req, res) => {
   try {
     if (!ensureFarmerRole(req, res)) {
       return;
     }
 
+    const requestBody = getRequestBody(req);
     const {
       name,
       description,
@@ -38,7 +118,13 @@ const createProduct = async (req, res) => {
       category_id,
       farm_location,
       image_url,
-    } = req.body;
+    } = requestBody;
+
+    if (!req.body || typeof req.body !== "object") {
+      return res.status(400).json({
+        message: "Request body must be valid JSON",
+      });
+    }
 
     if (!name || !isValidPositiveNumber(price) || !Number.isInteger(Number(stock))) {
       return res.status(400).json({
@@ -52,6 +138,16 @@ const createProduct = async (req, res) => {
       return res.status(400).json({
         message: "category_id must be an integer",
       });
+    }
+
+    if (Number(stock) < 0) {
+      return res.status(400).json({
+        message: "stock must be a non-negative integer",
+      });
+    }
+
+    if (!(await validateCategoryId(categoryId, res))) {
+      return;
     }
 
     const result = await pool.query(
@@ -72,12 +168,12 @@ const createProduct = async (req, res) => {
       [
         req.user.id,
         categoryId,
-        name.trim(),
-        description ? description.trim() : null,
+        String(name).trim(),
+        description ? String(description).trim() : null,
         Number(price),
         Number(stock),
-        farm_location ? farm_location.trim() : null,
-        image_url ? image_url.trim() : null,
+        farm_location ? String(farm_location).trim() : null,
+        image_url ? String(image_url).trim() : null,
       ]
     );
 
@@ -86,10 +182,11 @@ const createProduct = async (req, res) => {
       product: result.rows[0],
     });
   } catch (error) {
-    console.error("Create product failed:", error.message);
-    return res.status(500).json({
-      message: "Internal server error",
+    logControllerError("Create product failed", error, {
+      userId: req.user && req.user.id,
+      body: getRequestBody(req),
     });
+    return handleDatabaseError(res, error, "Internal server error");
   }
 };
 
@@ -121,6 +218,7 @@ const updateProduct = async (req, res) => {
       });
     }
 
+    const requestBody = getRequestBody(req);
     const {
       name,
       description,
@@ -129,7 +227,27 @@ const updateProduct = async (req, res) => {
       category_id,
       farm_location,
       image_url,
-    } = req.body;
+    } = requestBody;
+
+    if (!req.body || typeof req.body !== "object") {
+      return res.status(400).json({
+        message: "Request body must be valid JSON",
+      });
+    }
+
+    if (
+      name === undefined &&
+      description === undefined &&
+      price === undefined &&
+      stock === undefined &&
+      category_id === undefined &&
+      farm_location === undefined &&
+      image_url === undefined
+    ) {
+      return res.status(400).json({
+        message: "At least one field is required for update",
+      });
+    }
 
     if (
       price !== undefined &&
@@ -149,6 +267,12 @@ const updateProduct = async (req, res) => {
       });
     }
 
+    if (stock !== undefined && Number(stock) < 0) {
+      return res.status(400).json({
+        message: "stock must be a non-negative integer",
+      });
+    }
+
     if (
       category_id !== undefined &&
       category_id !== null &&
@@ -157,6 +281,13 @@ const updateProduct = async (req, res) => {
       return res.status(400).json({
         message: "category_id must be an integer",
       });
+    }
+
+    const parsedCategoryId =
+      category_id === undefined || category_id === null ? category_id : Number(category_id);
+
+    if (!(await validateCategoryId(parsedCategoryId, res))) {
+      return;
     }
 
     const result = await pool.query(
@@ -174,13 +305,13 @@ const updateProduct = async (req, res) => {
         RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
       `,
       [
-        name !== undefined ? name.trim() : null,
-        description !== undefined ? (description ? description.trim() : null) : null,
+        name !== undefined ? String(name).trim() : null,
+        description !== undefined ? (description ? String(description).trim() : null) : null,
         price !== undefined ? Number(price) : null,
         stock !== undefined ? Number(stock) : null,
-        category_id !== undefined ? category_id : null,
-        farm_location !== undefined ? (farm_location ? farm_location.trim() : null) : null,
-        image_url !== undefined ? (image_url ? image_url.trim() : null) : null,
+        parsedCategoryId !== undefined ? parsedCategoryId : null,
+        farm_location !== undefined ? (farm_location ? String(farm_location).trim() : null) : null,
+        image_url !== undefined ? (image_url ? String(image_url).trim() : null) : null,
         productId,
       ]
     );
@@ -190,10 +321,12 @@ const updateProduct = async (req, res) => {
       product: result.rows[0],
     });
   } catch (error) {
-    console.error("Update product failed:", error.message);
-    return res.status(500).json({
-      message: "Internal server error",
+    logControllerError("Update product failed", error, {
+      userId: req.user && req.user.id,
+      productId: req.params.id,
+      body: getRequestBody(req),
     });
+    return handleDatabaseError(res, error, "Internal server error");
   }
 };
 
@@ -231,10 +364,11 @@ const deleteProduct = async (req, res) => {
       message: "Product deleted successfully",
     });
   } catch (error) {
-    console.error("Delete product failed:", error.message);
-    return res.status(500).json({
-      message: "Internal server error",
+    logControllerError("Delete product failed", error, {
+      userId: req.user && req.user.id,
+      productId: req.params.id,
     });
+    return handleDatabaseError(res, error, "Internal server error");
   }
 };
 
@@ -267,7 +401,7 @@ const getAllProducts = async (req, res) => {
       products: result.rows,
     });
   } catch (error) {
-    console.error("Fetch products failed:", error.message);
+    logControllerError("Fetch products failed", error);
     return res.status(500).json({
       message: "Internal server error",
     });
@@ -318,7 +452,9 @@ const getProductById = async (req, res) => {
       product: result.rows[0],
     });
   } catch (error) {
-    console.error("Fetch product failed:", error.message);
+    logControllerError("Fetch product failed", error, {
+      productId: req.params.id,
+    });
     return res.status(500).json({
       message: "Internal server error",
     });
@@ -332,7 +468,14 @@ const updateProductStock = async (req, res) => {
     }
 
     const productId = Number(req.params.id);
-    const { stock } = req.body;
+    const requestBody = getRequestBody(req);
+    const { stock } = requestBody;
+
+    if (!req.body || typeof req.body !== "object") {
+      return res.status(400).json({
+        message: "Request body must be valid JSON",
+      });
+    }
 
     if (!Number.isInteger(productId)) {
       return res.status(400).json({
@@ -375,10 +518,12 @@ const updateProductStock = async (req, res) => {
       product: result.rows[0],
     });
   } catch (error) {
-    console.error("Update stock failed:", error.message);
-    return res.status(500).json({
-      message: "Internal server error",
+    logControllerError("Update stock failed", error, {
+      userId: req.user && req.user.id,
+      productId: req.params.id,
+      body: getRequestBody(req),
     });
+    return handleDatabaseError(res, error, "Internal server error");
   }
 };
 
