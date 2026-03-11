@@ -7,6 +7,8 @@ const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+const deliveryRoutes = require("./routes/deliveryRoutes");
 
 dotenv.config();
 
@@ -20,6 +22,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/deliveries", deliveryRoutes);
 
 app.get("/", async (req, res) => {
   res.status(200).send("Agricultural Ecommerce API Running");
