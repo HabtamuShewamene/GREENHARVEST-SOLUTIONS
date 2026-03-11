@@ -11,6 +11,8 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const deliveryRoutes = require("./routes/deliveryRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const searchRoutes = require("./routes/searchRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 dotenv.config();
 
@@ -28,6 +30,8 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/deliveries", deliveryRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/search", searchRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.get("/", async (req, res) => {
   res.status(200).send("Agricultural Ecommerce API Running");
