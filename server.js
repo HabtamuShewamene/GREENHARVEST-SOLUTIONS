@@ -2,7 +2,8 @@
 require("./src/config/env");
 
 const app = require("./src/app");
-const { pool, connectDB } = require("./config/db");
+// Import path updated to use src/config/db.js after removing legacy wrappers.
+const { pool, connectDB } = require("./src/config/db");
 const PORT = Number(process.env.PORT) || 5000;
 
 const logServerEvent = (message, meta = {}) => {
