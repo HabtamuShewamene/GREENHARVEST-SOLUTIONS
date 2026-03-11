@@ -1,28 +1,17 @@
-// Moved from controllers/productController.js during the structure refactor.
-// Import path updated to use src/config/db.js.
-const { pool } = require("../config/db");
+// Product controller delegates business logic to the product service.
+const logger = require("../utils/logger");
+const productService = require("../services/productService");
 
-const isValidPositiveNumber = (value) => {
-  return !Number.isNaN(Number(value)) && Number(value) >= 0;
-};
-
-const getRequestBody = (req) => {
-  return req.body && typeof req.body === "object" ? req.body : {};
-};
-
-const logControllerError = (context, error, meta = {}) => {
-  console.error(`${context}:`, {
+const handleControllerError = (res, context, error, meta = {}) => {
+  logger.error(context, {
     message: error.message,
     code: error.code,
     detail: error.detail,
     constraint: error.constraint,
-    table: error.table,
     stack: error.stack,
     ...meta,
   });
-};
 
-const handleDatabaseError = (res, error, fallbackMessage) => {
   if (error.code === "23503") {
     return res.status(400).json({
       message: "Referenced record does not exist",
@@ -36,496 +25,131 @@ const handleDatabaseError = (res, error, fallbackMessage) => {
     });
   }
 
-  return res.status(500).json({
-    message: fallbackMessage,
+  return res.status(error.statusCode || 500).json({
+    message: error.statusCode ? error.message : "Internal server error",
   });
-};
-
-const ensureFarmerRole = (req, res) => {
-  if (req.user.role !== "farmer") {
-    res.status(403).json({
-      message: "Only farmers can perform this action",
-    });
-    return false;
-  }
-
-  return true;
-};
-
-const getProductOwnership = async (productId) => {
-  const result = await pool.query(
-    "SELECT id, farmer_id FROM products WHERE id = $1",
-    [productId]
-  );
-
-  return result.rows[0] || null;
-};
-
-const getCategoryById = async (categoryId) => {
-  const result = await pool.query("SELECT id FROM categories WHERE id = $1", [
-    categoryId,
-  ]);
-
-  return result.rows[0] || null;
-};
-
-const validateCategoryId = async (categoryId, res) => {
-  if (categoryId === null || categoryId === undefined) {
-    return true;
-  }
-
-  if (!Number.isInteger(categoryId)) {
-    res.status(400).json({
-      message: "category_id must be an integer",
-    });
-    return false;
-  }
-
-  const category = await getCategoryById(categoryId);
-
-  if (!category) {
-    res.status(400).json({
-      message: "Invalid category_id. Referenced category does not exist",
-    });
-    return false;
-  }
-
-  return true;
-};
-
-const parseOptionalString = (value) => {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (value === null) {
-    return null;
-  }
-
-  return String(value).trim();
 };
 
 const createProduct = async (req, res) => {
   try {
-    if (!ensureFarmerRole(req, res)) {
-      return;
-    }
-
-    const requestBody = getRequestBody(req);
-    const {
-      name,
-      description,
-      price,
-      stock,
-      category_id,
-      farm_location,
-      image_url,
-    } = requestBody;
-
     if (!req.body || typeof req.body !== "object") {
       return res.status(400).json({
         message: "Request body must be valid JSON",
       });
     }
 
-    if (!name || !isValidPositiveNumber(price) || !Number.isInteger(Number(stock))) {
-      return res.status(400).json({
-        message: "Name, valid price, and integer stock are required",
-      });
-    }
-
-    const categoryId = category_id ? Number(category_id) : null;
-
-    if (category_id && !Number.isInteger(categoryId)) {
-      return res.status(400).json({
-        message: "category_id must be an integer",
-      });
-    }
-
-    if (Number(stock) < 0) {
-      return res.status(400).json({
-        message: "stock must be a non-negative integer",
-      });
-    }
-
-    if (!(await validateCategoryId(categoryId, res))) {
-      return;
-    }
-
-    const result = await pool.query(
-      `
-        INSERT INTO products (
-          farmer_id,
-          category_id,
-          name,
-          description,
-          price,
-          stock,
-          farm_location,
-          image_url
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
-      `,
-      [
-        req.user.id,
-        categoryId,
-        String(name).trim(),
-        description ? String(description).trim() : null,
-        Number(price),
-        Number(stock),
-        farm_location ? String(farm_location).trim() : null,
-        image_url ? String(image_url).trim() : null,
-      ]
-    );
+    const product = await productService.createProduct({
+      user: req.user,
+      payload: req.body,
+    });
 
     return res.status(201).json({
       message: "Product created successfully",
-      product: result.rows[0],
+      product,
     });
   } catch (error) {
-    logControllerError("Create product failed", error, {
+    return handleControllerError(res, "Create product failed", error, {
       userId: req.user && req.user.id,
-      body: getRequestBody(req),
+      body: req.body,
     });
-    return handleDatabaseError(res, error, "Internal server error");
   }
 };
 
 const updateProduct = async (req, res) => {
   try {
-    if (!ensureFarmerRole(req, res)) {
-      return;
-    }
-
-    const productId = Number(req.params.id);
-
-    if (!Number.isInteger(productId)) {
-      return res.status(400).json({
-        message: "Invalid product id",
-      });
-    }
-
-    const ownedProduct = await getProductOwnership(productId);
-
-    if (!ownedProduct) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
-    }
-
-    if (ownedProduct.farmer_id !== req.user.id) {
-      return res.status(403).json({
-        message: "You can only update your own products",
-      });
-    }
-
-    const requestBody = getRequestBody(req);
-    const {
-      name,
-      description,
-      price,
-      stock,
-      category_id,
-      farm_location,
-      image_url,
-    } = requestBody;
-
     if (!req.body || typeof req.body !== "object") {
       return res.status(400).json({
         message: "Request body must be valid JSON",
       });
     }
 
-    if (
-      name === undefined &&
-      description === undefined &&
-      price === undefined &&
-      stock === undefined &&
-      category_id === undefined &&
-      farm_location === undefined &&
-      image_url === undefined
-    ) {
-      return res.status(400).json({
-        message: "At least one field is required for update",
-      });
-    }
-
-    if (
-      price !== undefined &&
-      !isValidPositiveNumber(price)
-    ) {
-      return res.status(400).json({
-        message: "price must be a valid non-negative number",
-      });
-    }
-
-    if (
-      stock !== undefined &&
-      !Number.isInteger(Number(stock))
-    ) {
-      return res.status(400).json({
-        message: "stock must be an integer",
-      });
-    }
-
-    if (stock !== undefined && Number(stock) < 0) {
-      return res.status(400).json({
-        message: "stock must be a non-negative integer",
-      });
-    }
-
-    if (
-      category_id !== undefined &&
-      category_id !== null &&
-      !Number.isInteger(Number(category_id))
-    ) {
-      return res.status(400).json({
-        message: "category_id must be an integer",
-      });
-    }
-
-    const parsedCategoryId =
-      category_id === undefined || category_id === null ? category_id : Number(category_id);
-
-    if (!(await validateCategoryId(parsedCategoryId, res))) {
-      return;
-    }
-
-    const result = await pool.query(
-      `
-        UPDATE products
-        SET
-          name = COALESCE($1, name),
-          description = COALESCE($2, description),
-          price = COALESCE($3, price),
-          stock = COALESCE($4, stock),
-          category_id = COALESCE($5, category_id),
-          farm_location = COALESCE($6, farm_location),
-          image_url = COALESCE($7, image_url)
-        WHERE id = $8
-        RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
-      `,
-      [
-        name !== undefined ? String(name).trim() : null,
-        description !== undefined ? (description ? String(description).trim() : null) : null,
-        price !== undefined ? Number(price) : null,
-        stock !== undefined ? Number(stock) : null,
-        parsedCategoryId !== undefined ? parsedCategoryId : null,
-        farm_location !== undefined ? (farm_location ? String(farm_location).trim() : null) : null,
-        image_url !== undefined ? (image_url ? String(image_url).trim() : null) : null,
-        productId,
-      ]
-    );
+    const product = await productService.updateProduct({
+      user: req.user,
+      productId: req.params.id,
+      payload: req.body,
+    });
 
     return res.status(200).json({
       message: "Product updated successfully",
-      product: result.rows[0],
+      product,
     });
   } catch (error) {
-    logControllerError("Update product failed", error, {
+    return handleControllerError(res, "Update product failed", error, {
       userId: req.user && req.user.id,
       productId: req.params.id,
-      body: getRequestBody(req),
+      body: req.body,
     });
-    return handleDatabaseError(res, error, "Internal server error");
   }
 };
 
 const deleteProduct = async (req, res) => {
   try {
-    if (!ensureFarmerRole(req, res)) {
-      return;
-    }
-
-    const productId = Number(req.params.id);
-
-    if (!Number.isInteger(productId)) {
-      return res.status(400).json({
-        message: "Invalid product id",
-      });
-    }
-
-    const ownedProduct = await getProductOwnership(productId);
-
-    if (!ownedProduct) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
-    }
-
-    if (ownedProduct.farmer_id !== req.user.id) {
-      return res.status(403).json({
-        message: "You can only delete your own products",
-      });
-    }
-
-    await pool.query("DELETE FROM products WHERE id = $1", [productId]);
+    await productService.deleteProduct({
+      user: req.user,
+      productId: req.params.id,
+    });
 
     return res.status(200).json({
       message: "Product deleted successfully",
     });
   } catch (error) {
-    logControllerError("Delete product failed", error, {
+    return handleControllerError(res, "Delete product failed", error, {
       userId: req.user && req.user.id,
       productId: req.params.id,
     });
-    return handleDatabaseError(res, error, "Internal server error");
   }
 };
 
 const getAllProducts = async (req, res) => {
   try {
-    const result = await pool.query(
-      `
-        SELECT
-          p.id,
-          p.name,
-          p.description,
-          p.price,
-          p.stock,
-          p.farm_location,
-          p.image_url,
-          p.created_at,
-          p.category_id,
-          p.farmer_id,
-          u.name AS farmer_name,
-          u.email AS farmer_email,
-          c.name AS category_name
-        FROM products p
-        JOIN users u ON u.id = p.farmer_id
-        LEFT JOIN categories c ON c.id = p.category_id
-        ORDER BY p.created_at DESC
-      `
-    );
+    const products = await productService.getAllProducts();
 
     return res.status(200).json({
-      products: result.rows,
+      products,
     });
   } catch (error) {
-    logControllerError("Fetch products failed", error);
-    return res.status(500).json({
-      message: "Internal server error",
-    });
+    return handleControllerError(res, "Fetch products failed", error);
   }
 };
 
 const getProductById = async (req, res) => {
   try {
-    const productId = Number(req.params.id);
-
-    if (!Number.isInteger(productId)) {
-      return res.status(400).json({
-        message: "Invalid product id",
-      });
-    }
-
-    const result = await pool.query(
-      `
-        SELECT
-          p.id,
-          p.name,
-          p.description,
-          p.price,
-          p.stock,
-          p.farm_location,
-          p.image_url,
-          p.created_at,
-          p.category_id,
-          p.farmer_id,
-          u.name AS farmer_name,
-          u.email AS farmer_email,
-          c.name AS category_name
-        FROM products p
-        JOIN users u ON u.id = p.farmer_id
-        LEFT JOIN categories c ON c.id = p.category_id
-        WHERE p.id = $1
-      `,
-      [productId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
-    }
+    const product = await productService.getProductById(req.params.id);
 
     return res.status(200).json({
-      product: result.rows[0],
+      product,
     });
   } catch (error) {
-    logControllerError("Fetch product failed", error, {
+    return handleControllerError(res, "Fetch product failed", error, {
       productId: req.params.id,
-    });
-    return res.status(500).json({
-      message: "Internal server error",
     });
   }
 };
 
 const updateProductStock = async (req, res) => {
   try {
-    if (!ensureFarmerRole(req, res)) {
-      return;
-    }
-
-    const productId = Number(req.params.id);
-    const requestBody = getRequestBody(req);
-    const { stock } = requestBody;
-
     if (!req.body || typeof req.body !== "object") {
       return res.status(400).json({
         message: "Request body must be valid JSON",
       });
     }
 
-    if (!Number.isInteger(productId)) {
-      return res.status(400).json({
-        message: "Invalid product id",
-      });
-    }
-
-    if (!Number.isInteger(Number(stock)) || Number(stock) < 0) {
-      return res.status(400).json({
-        message: "stock must be a non-negative integer",
-      });
-    }
-
-    const ownedProduct = await getProductOwnership(productId);
-
-    if (!ownedProduct) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
-    }
-
-    if (ownedProduct.farmer_id !== req.user.id) {
-      return res.status(403).json({
-        message: "You can only update stock for your own products",
-      });
-    }
-
-    const result = await pool.query(
-      `
-        UPDATE products
-        SET stock = $1
-        WHERE id = $2
-        RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
-      `,
-      [Number(stock), productId]
-    );
+    const product = await productService.updateProductStock({
+      user: req.user,
+      productId: req.params.id,
+      stock: req.body.stock,
+    });
 
     return res.status(200).json({
       message: "Stock updated successfully",
-      product: result.rows[0],
+      product,
     });
   } catch (error) {
-    logControllerError("Update stock failed", error, {
+    return handleControllerError(res, "Update stock failed", error, {
       userId: req.user && req.user.id,
       productId: req.params.id,
-      body: getRequestBody(req),
+      body: req.body,
     });
-    return handleDatabaseError(res, error, "Internal server error");
   }
 };
 
