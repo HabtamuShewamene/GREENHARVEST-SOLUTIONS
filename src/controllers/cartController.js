@@ -1,34 +1,5 @@
-// Moved from controllers/cartController.js during the structure refactor.
-// Import path updated to use src/config/db.js.
-const { pool } = require("../config/db");
-
-const getUserCartItems = async (userId) => {
-  const result = await pool.query(
-    `
-      SELECT
-        c.id,
-        c.user_id,
-        c.product_id,
-        c.quantity,
-        p.name AS product_name,
-        p.description AS product_description,
-        p.price AS product_price,
-        p.stock AS product_stock,
-        p.image_url,
-        p.farm_location,
-        p.farmer_id,
-        u.name AS farmer_name
-      FROM cart c
-      JOIN products p ON p.id = c.product_id
-      JOIN users u ON u.id = p.farmer_id
-      WHERE c.user_id = $1
-      ORDER BY c.id DESC
-    `,
-    [userId]
-  );
-
-  return result.rows;
-};
+const cartModel = require("../models/cartModel");
+const productModel = require("../models/productModel");
 
 const validatePositiveInteger = (value) => {
   return Number.isInteger(Number(value)) && Number(value) > 0;
@@ -47,34 +18,17 @@ const addToCart = async (req, res) => {
     const productId = Number(product_id);
     const requestedQuantity = Number(quantity);
 
-    const productResult = await pool.query(
-      `
-        SELECT id, stock
-        FROM products
-        WHERE id = $1
-      `,
-      [productId]
-    );
+    const product = await productModel.findProductStockById(productId);
 
-    if (productResult.rows.length === 0) {
+    if (!product) {
       return res.status(404).json({
         message: "Product not found",
       });
     }
 
-    const product = productResult.rows[0];
+    const existingItem = await cartModel.findCartItemByUserAndProduct(req.user.id, productId);
 
-    const existingCartItemResult = await pool.query(
-      `
-        SELECT id, quantity
-        FROM cart
-        WHERE user_id = $1 AND product_id = $2
-      `,
-      [req.user.id, productId]
-    );
-
-    if (existingCartItemResult.rows.length > 0) {
-      const existingItem = existingCartItemResult.rows[0];
+    if (existingItem) {
       const updatedQuantity = existingItem.quantity + requestedQuantity;
 
       if (updatedQuantity > product.stock) {
@@ -83,14 +37,7 @@ const addToCart = async (req, res) => {
         });
       }
 
-      await pool.query(
-        `
-          UPDATE cart
-          SET quantity = $1
-          WHERE id = $2
-        `,
-        [updatedQuantity, existingItem.id]
-      );
+      await cartModel.updateCartItemQuantityById(existingItem.id, updatedQuantity);
     } else {
       if (requestedQuantity > product.stock) {
         return res.status(400).json({
@@ -98,16 +45,14 @@ const addToCart = async (req, res) => {
         });
       }
 
-      await pool.query(
-        `
-          INSERT INTO cart (user_id, product_id, quantity)
-          VALUES ($1, $2, $3)
-        `,
-        [req.user.id, productId, requestedQuantity]
-      );
+      await cartModel.createCartItem({
+        userId: req.user.id,
+        productId,
+        quantity: requestedQuantity,
+      });
     }
 
-    const cartItems = await getUserCartItems(req.user.id);
+    const cartItems = await cartModel.getUserCartItems(req.user.id);
 
     return res.status(200).json({
       message: "Cart updated successfully",
@@ -138,23 +83,13 @@ const updateCartItem = async (req, res) => {
       });
     }
 
-    const cartItemResult = await pool.query(
-      `
-        SELECT c.id, c.user_id, c.product_id, p.stock
-        FROM cart c
-        JOIN products p ON p.id = c.product_id
-        WHERE c.id = $1
-      `,
-      [cartItemId]
-    );
+    const cartItem = await cartModel.findCartItemWithStockById(cartItemId);
 
-    if (cartItemResult.rows.length === 0) {
+    if (!cartItem) {
       return res.status(404).json({
         message: "Cart item not found",
       });
     }
-
-    const cartItem = cartItemResult.rows[0];
 
     if (cartItem.user_id !== req.user.id) {
       return res.status(403).json({
@@ -168,16 +103,9 @@ const updateCartItem = async (req, res) => {
       });
     }
 
-    await pool.query(
-      `
-        UPDATE cart
-        SET quantity = $1
-        WHERE id = $2
-      `,
-      [Number(quantity), cartItemId]
-    );
+    await cartModel.updateCartItemQuantityById(cartItemId, Number(quantity));
 
-    const cartItems = await getUserCartItems(req.user.id);
+    const cartItems = await cartModel.getUserCartItems(req.user.id);
 
     return res.status(200).json({
       message: "Cart item updated successfully",
@@ -201,22 +129,15 @@ const removeCartItem = async (req, res) => {
       });
     }
 
-    const result = await pool.query(
-      `
-        DELETE FROM cart
-        WHERE id = $1 AND user_id = $2
-        RETURNING id
-      `,
-      [cartItemId, req.user.id]
-    );
+    const deletedCartItem = await cartModel.deleteCartItemByIdForUser(cartItemId, req.user.id);
 
-    if (result.rows.length === 0) {
+    if (!deletedCartItem) {
       return res.status(404).json({
         message: "Cart item not found",
       });
     }
 
-    const cartItems = await getUserCartItems(req.user.id);
+    const cartItems = await cartModel.getUserCartItems(req.user.id);
 
     return res.status(200).json({
       message: "Cart item removed successfully",
@@ -232,7 +153,7 @@ const removeCartItem = async (req, res) => {
 
 const getCart = async (req, res) => {
   try {
-    const cartItems = await getUserCartItems(req.user.id);
+    const cartItems = await cartModel.getUserCartItems(req.user.id);
 
     return res.status(200).json({
       cart: cartItems,

@@ -1,6 +1,7 @@
 // Product service that centralizes product business rules and persistence operations.
-const { pool } = require("../config/db");
 const logger = require("../utils/logger");
+const categoryModel = require("../models/categoryModel");
+const productModel = require("../models/productModel");
 const {
 	getMissingRequiredFields,
 	isNonNegativeNumber,
@@ -21,16 +22,11 @@ const ensureFarmerRole = (user) => {
 };
 
 const getProductOwnership = async (productId) => {
-	const result = await pool.query("SELECT id, farmer_id FROM products WHERE id = $1", [
-		productId,
-	]);
-
-	return result.rows[0] || null;
+	return productModel.findProductOwnershipById(productId);
 };
 
 const getCategoryById = async (categoryId) => {
-	const result = await pool.query("SELECT id FROM categories WHERE id = $1", [categoryId]);
-	return result.rows[0] || null;
+	return categoryModel.findCategoryById(categoryId);
 };
 
 const validateCategoryId = async (categoryId) => {
@@ -99,35 +95,19 @@ const createProduct = async ({ user, payload }) => {
 
 	const categoryId = await validateCategoryId(payload.category_id);
 
-	const result = await pool.query(
-		`
-			INSERT INTO products (
-				farmer_id,
-				category_id,
-				name,
-				description,
-				price,
-				stock,
-				farm_location,
-				image_url
-			)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-			RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
-		`,
-		[
-			user.id,
-			categoryId,
-			productValues.name,
-			productValues.description || null,
-			productValues.price,
-			productValues.stock,
-			productValues.farm_location || null,
-			productValues.image_url || null,
-		]
-	);
+	const product = await productModel.createProduct({
+		farmerId: user.id,
+		categoryId,
+		name: productValues.name,
+		description: productValues.description || null,
+		price: productValues.price,
+		stock: productValues.stock,
+		farmLocation: productValues.farm_location || null,
+		imageUrl: productValues.image_url || null,
+	});
 
-	logger.info("Product created", { productId: result.rows[0].id, farmerId: user.id });
-	return result.rows[0];
+	logger.info("Product created", { productId: product.id, farmerId: user.id });
+	return product;
 };
 
 const updateProduct = async ({ user, productId, payload }) => {
@@ -177,33 +157,16 @@ const updateProduct = async ({ user, productId, payload }) => {
 	const categoryId =
 		payload.category_id === undefined ? undefined : await validateCategoryId(payload.category_id);
 
-	const result = await pool.query(
-		`
-			UPDATE products
-			SET
-				name = COALESCE($1, name),
-				description = COALESCE($2, description),
-				price = COALESCE($3, price),
-				stock = COALESCE($4, stock),
-				category_id = COALESCE($5, category_id),
-				farm_location = COALESCE($6, farm_location),
-				image_url = COALESCE($7, image_url)
-			WHERE id = $8
-			RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
-		`,
-		[
-			productValues.name !== undefined ? productValues.name : null,
-			productValues.description !== undefined ? productValues.description : null,
-			productValues.price !== undefined ? productValues.price : null,
-			productValues.stock !== undefined ? productValues.stock : null,
-			categoryId !== undefined ? categoryId : null,
+	return productModel.updateProductById(Number(productId), {
+		name: productValues.name !== undefined ? productValues.name : null,
+		description: productValues.description !== undefined ? productValues.description : null,
+		price: productValues.price !== undefined ? productValues.price : null,
+		stock: productValues.stock !== undefined ? productValues.stock : null,
+		categoryId: categoryId !== undefined ? categoryId : null,
+		farmLocation:
 			productValues.farm_location !== undefined ? productValues.farm_location : null,
-			productValues.image_url !== undefined ? productValues.image_url : null,
-			Number(productId),
-		]
-	);
-
-	return result.rows[0];
+		imageUrl: productValues.image_url !== undefined ? productValues.image_url : null,
+	});
 };
 
 const deleteProduct = async ({ user, productId }) => {
@@ -223,35 +186,12 @@ const deleteProduct = async ({ user, productId }) => {
 		throw createServiceError("You can only delete your own products", 403);
 	}
 
-	await pool.query("DELETE FROM products WHERE id = $1", [Number(productId)]);
+	await productModel.deleteProductById(Number(productId));
 	return { deleted: true };
 };
 
 const getAllProducts = async () => {
-	const result = await pool.query(
-		`
-			SELECT
-				p.id,
-				p.name,
-				p.description,
-				p.price,
-				p.stock,
-				p.farm_location,
-				p.image_url,
-				p.created_at,
-				p.category_id,
-				p.farmer_id,
-				u.name AS farmer_name,
-				u.email AS farmer_email,
-				c.name AS category_name
-			FROM products p
-			JOIN users u ON u.id = p.farmer_id
-			LEFT JOIN categories c ON c.id = p.category_id
-			ORDER BY p.created_at DESC
-		`
-	);
-
-	return result.rows;
+	return productModel.findAllProducts();
 };
 
 const getProductById = async (productId) => {
@@ -259,35 +199,13 @@ const getProductById = async (productId) => {
 		throw createServiceError("Invalid product id", 400);
 	}
 
-	const result = await pool.query(
-		`
-			SELECT
-				p.id,
-				p.name,
-				p.description,
-				p.price,
-				p.stock,
-				p.farm_location,
-				p.image_url,
-				p.created_at,
-				p.category_id,
-				p.farmer_id,
-				u.name AS farmer_name,
-				u.email AS farmer_email,
-				c.name AS category_name
-			FROM products p
-			JOIN users u ON u.id = p.farmer_id
-			LEFT JOIN categories c ON c.id = p.category_id
-			WHERE p.id = $1
-		`,
-		[Number(productId)]
-	);
+	const product = await productModel.findProductById(Number(productId));
 
-	if (result.rows.length === 0) {
+	if (!product) {
 		throw createServiceError("Product not found", 404);
 	}
 
-	return result.rows[0];
+	return product;
 };
 
 const updateProductStock = async ({ user, productId, stock }) => {
@@ -313,17 +231,7 @@ const updateProductStock = async ({ user, productId, stock }) => {
 		throw createServiceError("You can only update stock for your own products", 403);
 	}
 
-	const result = await pool.query(
-		`
-			UPDATE products
-			SET stock = $1
-			WHERE id = $2
-			RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
-		`,
-		[parsedStock, Number(productId)]
-	);
-
-	return result.rows[0];
+	return productModel.updateProductStockById(Number(productId), parsedStock);
 };
 
 module.exports = {
