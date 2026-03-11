@@ -6,6 +6,8 @@ const cors = require("cors");
 
 // Import paths updated to use src/config and src/routes during the structure refactor.
 const { pool } = require("./config/db");
+const errorMiddleware = require("./middleware/errorMiddleware");
+const logger = require("./utils/logger");
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const cartRoutes = require("./routes/cartRoutes");
@@ -52,7 +54,7 @@ app.get("/test-db", async (req, res) => {
       data: result.rows[0],
     });
   } catch (error) {
-    console.error("Test DB route failed:", {
+    logger.error("Test DB route failed", {
       message: error.message,
       code: error.code,
       stack: error.stack,
@@ -61,45 +63,19 @@ app.get("/test-db", async (req, res) => {
     });
 
     res.status(500).json({
+      status: "error",
       message: "Database connection error",
     });
   }
 });
 
-app.use((error, req, res, next) => {
-  if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
-    console.error("Invalid JSON payload received:", {
-      message: error.message,
-      path: req.originalUrl,
-      method: req.method,
-    });
-
-    return res.status(400).json({
-      message: "Invalid JSON payload",
-    });
-  }
-
-  console.error("Unhandled application error:", {
-    message: error.message,
-    code: error.code,
-    stack: error.stack,
-    path: req.originalUrl,
-    method: req.method,
-  });
-
-  if (res.headersSent) {
-    return next(error);
-  }
-
-  return res.status(error.status || 500).json({
-    message: error.statusCode && error.statusCode < 500 ? error.message : "Internal server error",
-  });
-});
-
 app.use((req, res) => {
   res.status(404).json({
+    status: "error",
     message: "Route not found",
   });
 });
+
+app.use(errorMiddleware);
 
 module.exports = app;

@@ -1,22 +1,41 @@
-// Added during the structure refactor as a reusable logger utility.
+// Lightweight structured logger with timestamps for production debugging.
+const serializeMeta = (meta = {}) => {
+  return Object.entries(meta).reduce((accumulator, [key, value]) => {
+    if (value instanceof Error) {
+      accumulator[key] = {
+        message: value.message,
+        stack: value.stack,
+      };
+      return accumulator;
+    }
+
+    accumulator[key] = value;
+    return accumulator;
+  }, {});
+};
+
 const buildLogPayload = (level, message, meta = {}) => {
   return {
     timestamp: new Date().toISOString(),
     level,
     message,
-    ...meta,
+    ...serializeMeta(meta),
   };
+};
+
+const writeLog = (method, level, message, meta = {}) => {
+  console[method](JSON.stringify(buildLogPayload(level, message, meta)));
 };
 
 const logger = {
   info(message, meta = {}) {
-    console.log(buildLogPayload("info", message, meta));
+    writeLog("log", "info", message, meta);
   },
   warn(message, meta = {}) {
-    console.warn(buildLogPayload("warn", message, meta));
+    writeLog("warn", "warn", message, meta);
   },
   error(message, meta = {}) {
-    console.error(buildLogPayload("error", message, meta));
+    writeLog("error", "error", message, meta);
   },
 };
 
