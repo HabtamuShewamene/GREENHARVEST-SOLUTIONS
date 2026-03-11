@@ -9,6 +9,10 @@ const pool = new Pool({
   port: Number(process.env.DB_PORT) || 5432,
 });
 
+pool.on("error", (error) => {
+  console.error("Unexpected PostgreSQL pool error:", error.message);
+});
+
 const connectDB = async () => {
   try {
     await pool.query("SELECT 1");
