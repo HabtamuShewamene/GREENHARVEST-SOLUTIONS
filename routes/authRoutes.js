@@ -1,16 +1,2 @@
-const express = require("express");
-
-const {
-  registerUser,
-  loginUser,
-  getUserProfile,
-} = require("../controllers/authController");
-const authMiddleware = require("../middleware/authMiddleware");
-
-const router = express.Router();
-
-router.post("/register", registerUser);
-router.post("/login", loginUser);
-router.get("/profile", authMiddleware, getUserProfile);
-
-module.exports = router;
+// Compatibility wrapper kept during the structure refactor.
+module.exports = require("../src/routes/authRoutes");

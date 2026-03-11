@@ -4,17 +4,18 @@ require("./config/env");
 const express = require("express");
 const cors = require("cors");
 
-const { pool } = require("../config/db");
-const authRoutes = require("../routes/authRoutes");
-const productRoutes = require("../routes/productRoutes");
-const cartRoutes = require("../routes/cartRoutes");
-const orderRoutes = require("../routes/orderRoutes");
-const paymentRoutes = require("../routes/paymentRoutes");
-const deliveryRoutes = require("../routes/deliveryRoutes");
-const reviewRoutes = require("../routes/reviewRoutes");
-const notificationRoutes = require("../routes/notificationRoutes");
-const searchRoutes = require("../routes/searchRoutes");
-const dashboardRoutes = require("../routes/dashboardRoutes");
+// Import paths updated to use src/config and src/routes during the structure refactor.
+const { pool } = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
+const productRoutes = require("./routes/productRoutes");
+const cartRoutes = require("./routes/cartRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+const deliveryRoutes = require("./routes/deliveryRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const searchRoutes = require("./routes/searchRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 

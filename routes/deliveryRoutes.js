@@ -1,18 +1,2 @@
-const express = require("express");
-
-const authMiddleware = require("../middleware/authMiddleware");
-const {
-  assignDeliveryPartner,
-  updateDeliveryStatus,
-  trackDelivery,
-} = require("../controllers/deliveryController");
-
-const router = express.Router();
-
-router.use(authMiddleware);
-
-router.post("/assign", assignDeliveryPartner);
-router.patch("/:id/status", updateDeliveryStatus);
-router.get("/:order_id", trackDelivery);
-
-module.exports = router;
+// Compatibility wrapper kept during the structure refactor.
+module.exports = require("../src/routes/deliveryRoutes");
