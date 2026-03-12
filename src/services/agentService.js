@@ -1,5 +1,6 @@
 const agentModel = require("../models/agentModel");
 const categoryModel = require("../models/categoryModel");
+const inventoryModel = require("../models/inventoryModel");
 const productModel = require("../models/productModel");
 const { normalizeRole } = require("../utils/roles");
 const { isNonNegativeNumber, isPositiveInteger } = require("../utils/validators");
@@ -110,7 +111,7 @@ const addProductForFarmer = async ({ actor, payload }) => {
 		categoryId = Number(payload.category_id);
 	}
 
-	return productModel.createProduct({
+	const product = await productModel.createProduct({
 		farmerId,
 		categoryId,
 		name: String(payload.name).trim(),
@@ -120,6 +121,14 @@ const addProductForFarmer = async ({ actor, payload }) => {
 		farmLocation: payload.farm_location ? String(payload.farm_location).trim() : null,
 		imageUrl: payload.image_url ? String(payload.image_url).trim() : null,
 	});
+
+	await inventoryModel.upsertInventory({
+		productId: product.id,
+		farmerId,
+		quantity: product.stock,
+	});
+
+	return product;
 };
 
 module.exports = {

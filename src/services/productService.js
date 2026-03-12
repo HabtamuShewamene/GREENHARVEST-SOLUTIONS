@@ -1,6 +1,7 @@
 // Product service that centralizes product business rules and persistence operations.
 const logger = require("../utils/logger");
 const categoryModel = require("../models/categoryModel");
+const inventoryModel = require("../models/inventoryModel");
 const productModel = require("../models/productModel");
 const {
 	getMissingRequiredFields,
@@ -106,6 +107,12 @@ const createProduct = async ({ user, payload }) => {
 		imageUrl: productValues.image_url || null,
 	});
 
+	await inventoryModel.upsertInventory({
+		productId: product.id,
+		farmerId: user.id,
+		quantity: product.stock,
+	});
+
 	logger.info("Product created", { productId: product.id, farmerId: user.id });
 	return product;
 };
@@ -157,7 +164,7 @@ const updateProduct = async ({ user, productId, payload }) => {
 	const categoryId =
 		payload.category_id === undefined ? undefined : await validateCategoryId(payload.category_id);
 
-	return productModel.updateProductById(Number(productId), {
+	const updatedProduct = await productModel.updateProductById(Number(productId), {
 		name: productValues.name !== undefined ? productValues.name : null,
 		description: productValues.description !== undefined ? productValues.description : null,
 		price: productValues.price !== undefined ? productValues.price : null,
@@ -167,6 +174,16 @@ const updateProduct = async ({ user, productId, payload }) => {
 			productValues.farm_location !== undefined ? productValues.farm_location : null,
 		imageUrl: productValues.image_url !== undefined ? productValues.image_url : null,
 	});
+
+	if (productValues.stock !== undefined) {
+		await inventoryModel.upsertInventory({
+			productId: updatedProduct.id,
+			farmerId: user.id,
+			quantity: updatedProduct.stock,
+		});
+	}
+
+	return updatedProduct;
 };
 
 const deleteProduct = async ({ user, productId }) => {
@@ -231,7 +248,15 @@ const updateProductStock = async ({ user, productId, stock }) => {
 		throw createServiceError("You can only update stock for your own products", 403);
 	}
 
-	return productModel.updateProductStockById(Number(productId), parsedStock);
+	const updatedProduct = await productModel.updateProductStockById(Number(productId), parsedStock);
+
+	await inventoryModel.upsertInventory({
+		productId: updatedProduct.id,
+		farmerId: user.id,
+		quantity: updatedProduct.stock,
+	});
+
+	return updatedProduct;
 };
 
 module.exports = {
