@@ -2,7 +2,12 @@ const { pool } = require("../config/db");
 
 const findUserById = async (userId) => {
 	const result = await pool.query(
-		`SELECT id, name, email, role FROM users WHERE id = $1`,
+		`
+			SELECT u.id, u.name, u.email, COALESCE(u.role, r.role_name) AS role, r.role_name
+			FROM users u
+			LEFT JOIN roles r ON r.role_id = u.role_id
+			WHERE u.id = $1
+		`,
 		[userId]
 	);
 
