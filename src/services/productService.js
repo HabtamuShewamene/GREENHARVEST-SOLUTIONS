@@ -158,9 +158,9 @@ const updateProduct = async ({ user, productId, payload }) => {
 
 	if (
 		productValues.stock !== undefined &&
-		(!Number.isInteger(productValues.stock) || productValues.stock < 0)
+		(!Number.isInteger(productValues.stock) || productValues.stock <= 0)
 	) {
-		throw createServiceError("stock must be a non-negative integer", 400);
+		throw createServiceError("stock must be a positive integer", 400);
 	}
 
 	const categoryId =
