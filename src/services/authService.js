@@ -1,16 +1,17 @@
 // Authentication service that centralizes registration, login, and token generation.
 const bcrypt = require("bcrypt");
 
-const { pool } = require("../config/db");
+const userModel = require("../models/userModel");
 const { signToken } = require("../utils/jwt");
 const logger = require("../utils/logger");
+const { ALLOWED_ROLES, normalizeRole } = require("../utils/roles");
 const {
 	getMissingRequiredFields,
 	isStrongPassword,
 	isValidEmail,
 } = require("../utils/validators");
 
-const allowedRoles = ["buyer", "farmer", "admin", "delivery"];
+const allowedRoles = ALLOWED_ROLES;
 
 const createServiceError = (message, statusCode, extra = {}) => {
 	const error = new Error(message);
@@ -45,7 +46,7 @@ const registerUser = async ({ name, email, password, role }) => {
 	}
 
 	const normalizedEmail = email.trim().toLowerCase();
-	const normalizedRole = role.trim().toLowerCase();
+	const normalizedRole = normalizeRole(role);
 
 	if (!isValidEmail(normalizedEmail)) {
 		throw createServiceError("A valid email address is required", 400);
@@ -62,31 +63,27 @@ const registerUser = async ({ name, email, password, role }) => {
 		);
 	}
 
-	const existingUser = await pool.query("SELECT id FROM users WHERE email = $1", [
-		normalizedEmail,
-	]);
+	const existingUser = await userModel.findUserByEmail(normalizedEmail);
 
-	if (existingUser.rows.length > 0) {
+	if (existingUser) {
 		throw createServiceError("User already exists with this email", 409);
 	}
 
 	const hashedPassword = await bcrypt.hash(password, 10);
 
-	const result = await pool.query(
-		`
-			INSERT INTO users (name, email, password, role)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id, name, email, role, phone, address, created_at
-		`,
-		[name.trim(), normalizedEmail, hashedPassword, normalizedRole]
-	);
-
-	logger.info("User registered successfully", {
-		userId: result.rows[0].id,
-		role: result.rows[0].role,
+	const user = await userModel.createUser({
+		name: name.trim(),
+		email: normalizedEmail,
+		password: hashedPassword,
+		role: normalizedRole,
 	});
 
-	return result.rows[0];
+	logger.info("User registered successfully", {
+		userId: user.id,
+		role: user.role,
+	});
+
+	return user;
 };
 
 const loginUser = async ({ email, password }) => {
@@ -102,20 +99,12 @@ const loginUser = async ({ email, password }) => {
 		throw createServiceError("A valid email address is required", 400);
 	}
 
-	const result = await pool.query(
-		`
-			SELECT id, name, email, password, role, phone, address, created_at
-			FROM users
-			WHERE email = $1
-		`,
-		[normalizedEmail]
-	);
+	const user = await userModel.findUserByEmail(normalizedEmail);
 
-	if (result.rows.length === 0) {
+	if (!user) {
 		throw createServiceError("Invalid credentials", 401);
 	}
 
-	const user = result.rows[0];
 	const isPasswordValid = await bcrypt.compare(password, user.password);
 
 	if (!isPasswordValid) {
@@ -137,20 +126,13 @@ const loginUser = async ({ email, password }) => {
 };
 
 const getUserProfile = async (userId) => {
-	const result = await pool.query(
-		`
-			SELECT id, name, email, role, phone, address, created_at
-			FROM users
-			WHERE id = $1
-		`,
-		[userId]
-	);
+	const user = await userModel.findUserById(userId);
 
-	if (result.rows.length === 0) {
+	if (!user) {
 		throw createServiceError("User not found", 404);
 	}
 
-	return result.rows[0];
+	return user;
 };
 
 module.exports = {

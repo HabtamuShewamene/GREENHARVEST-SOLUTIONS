@@ -9,6 +9,7 @@ const { pool } = require("./config/db");
 const errorMiddleware = require("./middleware/errorMiddleware");
 const logger = require("./utils/logger");
 const authRoutes = require("./routes/authRoutes");
+const categoryRoutes = require("./routes/categoryRoutes");
 const productRoutes = require("./routes/productRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
@@ -18,6 +19,9 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const searchRoutes = require("./routes/searchRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const agentRoutes = require("./routes/agentRoutes");
+const inventoryRoutes = require("./routes/inventoryRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
@@ -31,15 +35,20 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/delivery", deliveryRoutes);
 app.use("/api/deliveries", deliveryRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/agents", agentRoutes);
+app.use("/api/inventory", inventoryRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.get("/", async (req, res) => {
   res.status(200).send("Agricultural Ecommerce API Running");

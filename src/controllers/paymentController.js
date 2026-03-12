@@ -36,10 +36,10 @@ const processPayment = async (req, res) => {
 
 const getPaymentHistory = async (req, res) => {
   try {
-    const payments = await paymentService.getPaymentHistory(req.user.id);
+    const history = await paymentService.getPaymentHistory(req.user.id);
 
     return res.status(200).json({
-      payments,
+      ...history,
     });
   } catch (error) {
     return handleControllerError(res, "Fetch payment history failed", error, {

@@ -1,11 +1,12 @@
 // Role-based authorization middleware for protected routes.
 const logger = require("../utils/logger");
+const { normalizeRole } = require("../utils/roles");
 
 const roleMiddleware = (...allowedRoles) => {
   const normalizedRoles = allowedRoles
     .flat()
     .filter(Boolean)
-    .map((role) => String(role).trim().toLowerCase());
+    .map((role) => normalizeRole(role));
 
   return (req, res, next) => {
     if (!req.user) {
@@ -19,7 +20,7 @@ const roleMiddleware = (...allowedRoles) => {
       return next();
     }
 
-    const userRole = String(req.user.role || "").trim().toLowerCase();
+    const userRole = normalizeRole(req.user.role);
 
     if (!normalizedRoles.includes(userRole)) {
       logger.warn("Access denied by role middleware", {
