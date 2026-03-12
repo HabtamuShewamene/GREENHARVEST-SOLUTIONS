@@ -120,9 +120,58 @@ const getAllCategories = async () => {
 	return result.rows;
 };
 
+const updateCategoryById = async (categoryId, { name, description = null }) => {
+	const schema = await getCategorySchema();
+
+	if (schema.hasDescription) {
+		const result = await pool.query(
+			`
+				UPDATE categories
+				SET
+					name = $1,
+					description = $2
+				WHERE id = $3
+				RETURNING id, name, description
+			`,
+			[name, description, categoryId]
+		);
+
+		return result.rows[0] || null;
+	}
+
+	const result = await pool.query(
+		`
+			UPDATE categories
+			SET category_name = $1
+			WHERE category_id = $2
+			RETURNING category_id AS id, category_name AS name, NULL::text AS description
+		`,
+		[name, categoryId]
+	);
+
+	return result.rows[0] || null;
+};
+
+const deleteCategoryById = async (categoryId) => {
+	const schema = await getCategorySchema();
+
+	const result = await pool.query(
+		`
+			DELETE FROM categories
+			WHERE ${schema.idColumn} = $1
+			RETURNING ${schema.idColumn} AS id
+		`,
+		[categoryId]
+	);
+
+	return result.rows[0] || null;
+};
+
 module.exports = {
 	createCategory,
+	deleteCategoryById,
 	findCategoryById,
 	findCategoryByName,
 	getAllCategories,
+	updateCategoryById,
 };
