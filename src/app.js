@@ -3,12 +3,17 @@ require("./config/env");
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 // Import paths updated to use src/config and src/routes during the structure refactor.
 const { pool } = require("./config/db");
 const errorMiddleware = require("./middleware/errorMiddleware");
+const requestLoggerMiddleware = require("./middleware/requestLoggerMiddleware");
+const sanitizeMiddleware = require("./middleware/sanitizeMiddleware");
 const logger = require("./utils/logger");
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const productRoutes = require("./routes/productRoutes");
 const cartRoutes = require("./routes/cartRoutes");
@@ -25,9 +30,25 @@ const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
-app.use(cors());
+const apiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(helmet());
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : true,
+    credentials: true,
+  })
+);
+app.use(apiRateLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(sanitizeMiddleware);
+app.use(requestLoggerMiddleware);
 
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
@@ -35,6 +56,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
