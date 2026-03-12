@@ -29,7 +29,7 @@ const getUserCartItems = async (userId) => {
 				p.description AS product_description,
 				p.price AS product_price,
 				COALESCE(i.quantity, 0) AS product_stock,
-				p.image_url,
+				COALESCE(pi.image_url, p.image_url) AS image_url,
 				p.farm_location,
 				p.farmer_id,
 				u.name AS farmer_name
@@ -37,6 +37,13 @@ const getUserCartItems = async (userId) => {
 			JOIN cart_items ci ON ci.cart_id = c.cart_id
 			JOIN products p ON p.id = ci.product_id
 			LEFT JOIN inventory i ON i.product_id = p.id
+			LEFT JOIN LATERAL (
+				SELECT image_url
+				FROM product_images
+				WHERE product_id = p.id
+				ORDER BY is_primary DESC, image_id ASC
+				LIMIT 1
+			) pi ON TRUE
 			JOIN users u ON u.id = p.farmer_id
 			WHERE c.user_id = $1
 			ORDER BY ci.cart_item_id DESC

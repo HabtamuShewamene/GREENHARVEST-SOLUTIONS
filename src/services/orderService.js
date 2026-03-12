@@ -2,6 +2,7 @@
 const { pool } = require("../config/db");
 const logger = require("../utils/logger");
 const orderModel = require("../models/orderModel");
+const { normalizeRole } = require("../utils/roles");
 const { isPositiveInteger } = require("../utils/validators");
 
 const allowedOrderStatuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
@@ -27,11 +28,20 @@ const getOrdersForBuyer = async (buyerId, orderId = null) => {
 	return orderModel.getOrdersForBuyer(buyerId, orderId);
 };
 
-const createOrder = async (buyerId) => {
+const createOrder = async (buyerId, payload = {}) => {
 	const client = await pool.connect();
 
 	try {
 		await client.query("BEGIN");
+
+		const addressId =
+			payload.address_id === undefined || payload.address_id === null
+				? null
+				: Number(payload.address_id);
+
+		if (addressId !== null && !isPositiveInteger(addressId)) {
+			throw createServiceError("address_id must be a valid integer", 400);
+		}
 
 		const cartResult = await client.query(
 			`
@@ -68,7 +78,12 @@ const createOrder = async (buyerId) => {
 			totalPrice += Number(item.price) * item.quantity;
 		}
 
-		const order = await orderModel.createOrderRecord(client, buyerId, totalPrice.toFixed(2));
+		const order = await orderModel.createOrderRecord(
+			client,
+			buyerId,
+			totalPrice.toFixed(2),
+			addressId
+		);
 
 		for (const item of cartResult.rows) {
 			await orderModel.createOrderItemRecord(client, {
@@ -78,7 +93,15 @@ const createOrder = async (buyerId) => {
 				price: item.price,
 			});
 
-			await orderModel.decrementProductStock(client, item.product_id, item.quantity);
+			const updatedInventory = await orderModel.decrementProductStock(
+				client,
+				item.product_id,
+				item.quantity
+			);
+
+			if (!updatedInventory || Number(updatedInventory.stock) < 0) {
+				throw createServiceError(`Insufficient stock for product: ${item.name}`, 400);
+			}
 		}
 
 		await client.query(
@@ -118,7 +141,7 @@ const getOrderByIdForBuyer = async (buyerId, orderId) => {
 };
 
 const updateOrderStatus = async ({ adminUser, orderId, order_status, payment_status, delivery_status }) => {
-	if (!adminUser || adminUser.role !== "admin") {
+	if (!adminUser || normalizeRole(adminUser.role) !== "admin") {
 		throw createServiceError("Only admins can update order status", 403);
 	}
 

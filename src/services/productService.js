@@ -3,6 +3,7 @@ const logger = require("../utils/logger");
 const categoryModel = require("../models/categoryModel");
 const inventoryModel = require("../models/inventoryModel");
 const productModel = require("../models/productModel");
+const { normalizeRole } = require("../utils/roles");
 const {
 	getMissingRequiredFields,
 	isNonNegativeNumber,
@@ -17,7 +18,7 @@ const createServiceError = (message, statusCode, extra = {}) => {
 };
 
 const ensureFarmerRole = (user) => {
-	if (!user || user.role !== "farmer") {
+	if (!user || normalizeRole(user.role) !== "farmer") {
 		throw createServiceError("Only farmers can perform this action", 403);
 	}
 };
@@ -129,7 +130,7 @@ const updateProduct = async ({ user, productId, payload }) => {
 		throw createServiceError("Product not found", 404);
 	}
 
-	if (ownedProduct.farmer_id !== user.id) {
+	if (Number(ownedProduct.farmer_id) !== Number(user.id)) {
 		throw createServiceError("You can only update your own products", 403);
 	}
 
@@ -202,7 +203,7 @@ const deleteProduct = async ({ user, productId }) => {
 		throw createServiceError("Product not found", 404);
 	}
 
-	if (ownedProduct.farmer_id !== user.id) {
+	if (Number(ownedProduct.farmer_id) !== Number(user.id)) {
 		throw createServiceError("You can only delete your own products", 403);
 	}
 
@@ -247,7 +248,7 @@ const updateProductStock = async ({ user, productId, stock }) => {
 		throw createServiceError("Product not found", 404);
 	}
 
-	if (ownedProduct.farmer_id !== user.id) {
+	if (Number(ownedProduct.farmer_id) !== Number(user.id)) {
 		throw createServiceError("You can only update stock for your own products", 403);
 	}
 

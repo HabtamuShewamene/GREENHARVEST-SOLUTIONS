@@ -1,4 +1,22 @@
-const { isValidEmail, isWithinRange, isPositiveInteger, isRequired } = require("../utils/validators");
+const {
+	getMissingRequiredFields,
+	isNonNegativeNumber,
+	isPositiveInteger,
+	isRequired,
+	isStrongPassword,
+	isValidEmail,
+	isWithinRange,
+} = require("../utils/validators");
+
+module.exports = {
+	getMissingRequiredFields,
+	isNonNegativeNumber,
+	isPositiveInteger,
+	isRequired,
+	isStrongPassword,
+	isValidEmail,
+	isWithinRange,
+};const { isValidEmail, isWithinRange, isPositiveInteger, isRequired } = require("../utils/validators");
 
 const validateRequiredFields = (payload, requiredFields) => {
   const missing = requiredFields.filter((field) => !isRequired(payload[field]));

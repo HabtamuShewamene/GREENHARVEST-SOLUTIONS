@@ -8,7 +8,9 @@ const formatOrderRows = (rows) => {
 			ordersMap.set(row.order_id, {
 				id: row.order_id,
 				buyer_id: row.buyer_id,
+				address_id: row.address_id,
 				total_price: row.total_price,
+				total_amount: row.total_amount,
 				order_status: row.order_status,
 				payment_status: row.payment_status,
 				delivery_status: row.delivery_status,
@@ -48,6 +50,7 @@ const getOrdersForBuyer = async (buyerId, orderId = null) => {
 			SELECT
 				o.id AS order_id,
 				o.buyer_id,
+				o.address_id,
 				COALESCE(o.total_amount, o.total_price) AS total_price,
 				COALESCE(o.total_amount, o.total_price) AS total_amount,
 				o.order_status,
@@ -60,12 +63,19 @@ const getOrdersForBuyer = async (buyerId, orderId = null) => {
 				oi.quantity,
 				oi.price,
 				p.name AS product_name,
-				p.image_url,
+				COALESCE(pi.image_url, p.image_url) AS image_url,
 				p.farm_location,
 				p.farmer_id
 			FROM orders o
 			LEFT JOIN order_items oi ON oi.order_id = o.id
 			LEFT JOIN products p ON p.id = oi.product_id
+			LEFT JOIN LATERAL (
+				SELECT image_url
+				FROM product_images
+				WHERE product_id = p.id
+				ORDER BY is_primary DESC, image_id ASC
+				LIMIT 1
+			) pi ON TRUE
 			WHERE ${filter}
 			ORDER BY o.created_at DESC, oi.id ASC
 		`,
@@ -75,14 +85,14 @@ const getOrdersForBuyer = async (buyerId, orderId = null) => {
 	return formatOrderRows(result.rows);
 };
 
-const createOrderRecord = async (client, buyerId, totalPrice) => {
+const createOrderRecord = async (client, buyerId, totalPrice, addressId = null) => {
 	const result = await client.query(
 		`
-			INSERT INTO orders (buyer_id, total_price, total_amount)
-			VALUES ($1, $2, $2)
-			RETURNING id, buyer_id, total_price, total_amount, order_status, payment_status, delivery_status, created_at
+			INSERT INTO orders (buyer_id, address_id, total_price, total_amount)
+			VALUES ($1, $2, $3, $3)
+			RETURNING id, buyer_id, address_id, total_price, total_amount, order_status, payment_status, delivery_status, created_at
 		`,
-		[buyerId, totalPrice]
+		[buyerId, addressId, totalPrice]
 	);
 
 	return result.rows[0];

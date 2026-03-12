@@ -17,7 +17,7 @@ const handleControllerError = (res, context, error, meta = {}) => {
 
 const createOrder = async (req, res) => {
   try {
-    const order = await orderService.createOrder(req.user.id);
+    const order = await orderService.createOrder(req.user.id, req.body || {});
 
     return res.status(201).json({
       message: "Order created successfully",
