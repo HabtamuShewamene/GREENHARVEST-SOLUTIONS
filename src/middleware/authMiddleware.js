@@ -1,5 +1,6 @@
 // Moved from middleware/authMiddleware.js during the structure refactor.
 const jwt = require("jsonwebtoken");
+const { normalizeRole } = require("../utils/roles");
 
 const extractBearerToken = (authorizationHeader) => {
   if (!authorizationHeader || typeof authorizationHeader !== "string") {
@@ -40,7 +41,10 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-    req.user = decoded;
+    req.user = {
+      ...decoded,
+      role: normalizeRole(decoded.role),
+    };
     return next();
   } catch (error) {
     const errorContext = {

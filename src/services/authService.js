@@ -4,13 +4,14 @@ const bcrypt = require("bcrypt");
 const userModel = require("../models/userModel");
 const { signToken } = require("../utils/jwt");
 const logger = require("../utils/logger");
+const { ALLOWED_ROLES, normalizeRole } = require("../utils/roles");
 const {
 	getMissingRequiredFields,
 	isStrongPassword,
 	isValidEmail,
 } = require("../utils/validators");
 
-const allowedRoles = ["buyer", "farmer", "admin", "delivery"];
+const allowedRoles = ALLOWED_ROLES;
 
 const createServiceError = (message, statusCode, extra = {}) => {
 	const error = new Error(message);
@@ -45,7 +46,7 @@ const registerUser = async ({ name, email, password, role }) => {
 	}
 
 	const normalizedEmail = email.trim().toLowerCase();
-	const normalizedRole = role.trim().toLowerCase();
+	const normalizedRole = normalizeRole(role);
 
 	if (!isValidEmail(normalizedEmail)) {
 		throw createServiceError("A valid email address is required", 400);

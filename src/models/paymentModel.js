@@ -1,0 +1,101 @@
+const { pool } = require("../config/db");
+
+const findOrderByIdForUpdate = async (client, orderId) => {
+	const result = await client.query(
+		`
+			SELECT id, buyer_id, total_price, payment_status
+			FROM orders
+			WHERE id = $1
+			FOR UPDATE
+		`,
+		[orderId]
+	);
+
+	return result.rows[0] || null;
+};
+
+const createPayment = async (client, { orderId, paymentMethod, amount, paymentStatus, transactionId }) => {
+	const result = await client.query(
+		`
+			INSERT INTO payments (order_id, payment_method, amount, payment_status, transaction_id)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id, order_id, payment_method, amount, payment_status, transaction_id, created_at
+		`,
+		[orderId, paymentMethod, amount, paymentStatus, transactionId]
+	);
+
+	return result.rows[0];
+};
+
+const createTransaction = async (client, { orderId, userId, amount, paymentMethod, status }) => {
+	const result = await client.query(
+		`
+			INSERT INTO transactions (order_id, user_id, amount, payment_method, status)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id, order_id, user_id, amount, payment_method, status, created_at
+		`,
+		[orderId, userId, amount, paymentMethod, status]
+	);
+
+	return result.rows[0];
+};
+
+const updateOrderPaymentStatus = async (client, { orderId, paymentStatus }) => {
+	await client.query(
+		`
+			UPDATE orders
+			SET payment_status = $1,
+					order_status = CASE WHEN order_status = 'pending' THEN 'confirmed' ELSE order_status END
+			WHERE id = $2
+		`,
+		[paymentStatus, orderId]
+	);
+};
+
+const getPaymentHistoryByBuyer = async (userId) => {
+	const result = await pool.query(
+		`
+			SELECT
+				p.id,
+				p.order_id,
+				p.payment_method,
+				p.amount,
+				p.payment_status,
+				p.transaction_id,
+				p.created_at,
+				o.order_status,
+				o.delivery_status,
+				o.total_price
+			FROM payments p
+			JOIN orders o ON o.id = p.order_id
+			WHERE o.buyer_id = $1
+			ORDER BY p.created_at DESC
+		`,
+		[userId]
+	);
+
+	return result.rows;
+};
+
+const getTransactionHistoryByUser = async (userId) => {
+	const result = await pool.query(
+		`
+			SELECT id, order_id, user_id, amount, payment_method, status, created_at
+			FROM transactions
+			WHERE user_id = $1
+			ORDER BY created_at DESC
+		`,
+		[userId]
+	);
+
+	return result.rows;
+};
+
+module.exports = {
+	createPayment,
+	createTransaction,
+	findOrderByIdForUpdate,
+	getPaymentHistoryByBuyer,
+	getTransactionHistoryByUser,
+	updateOrderPaymentStatus,
+};

@@ -3,6 +3,7 @@
 const express = require("express");
 
 const authMiddleware = require("../middleware/authMiddleware");
+const roleMiddleware = require("../middleware/roleMiddleware");
 const {
   assignDeliveryPartner,
   updateDeliveryStatus,
@@ -13,8 +14,11 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-router.post("/assign", assignDeliveryPartner);
-router.patch("/:id/status", updateDeliveryStatus);
+router.post("/assign", roleMiddleware("admin"), assignDeliveryPartner);
+router.put("/update-status", roleMiddleware("admin", "deliveryPartner"), updateDeliveryStatus);
+router.get("/track/:orderId", trackDelivery);
+
+router.patch("/:id/status", roleMiddleware("admin", "deliveryPartner"), updateDeliveryStatus);
 router.get("/:order_id", trackDelivery);
 
 module.exports = router;
