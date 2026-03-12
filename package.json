@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "seed:roles": "node src/database/seeders/seedRoles.js",
+    "seed:admin": "node src/database/seeders/seedAdmin.js",
+    "seed:categories": "node src/database/seeders/seedCategories.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,7 +19,9 @@
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
+    "express-rate-limit": "^7.5.0",
     "express": "^5.2.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0"
   }
