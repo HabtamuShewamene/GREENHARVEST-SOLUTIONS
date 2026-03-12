@@ -6,9 +6,9 @@ const productSelect = `
 		p.name,
 		p.description,
 		p.price,
-		p.stock,
+		COALESCE(i.quantity, 0) AS stock,
 		p.farm_location,
-		p.image_url,
+		COALESCE(pi.image_url, p.image_url) AS image_url,
 		p.created_at,
 		p.category_id,
 		p.farmer_id,
@@ -18,6 +18,14 @@ const productSelect = `
 	FROM products p
 	JOIN users u ON u.id = p.farmer_id
 	LEFT JOIN categories c ON c.id = p.category_id
+	LEFT JOIN inventory i ON i.product_id = p.id
+	LEFT JOIN LATERAL (
+		SELECT image_url
+		FROM product_images
+		WHERE product_id = p.id
+		ORDER BY is_primary DESC, image_id ASC
+		LIMIT 1
+	) pi ON TRUE
 `;
 
 const createProduct = async ({
@@ -26,7 +34,6 @@ const createProduct = async ({
 	name,
 	description,
 	price,
-	stock,
 	farmLocation,
 	imageUrl,
 }) => {
@@ -38,14 +45,13 @@ const createProduct = async ({
 				name,
 				description,
 				price,
-				stock,
 				farm_location,
 				image_url
 			)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-			RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			RETURNING id, farmer_id, category_id, name, description, price, farm_location, image_url, created_at
 		`,
-		[farmerId, categoryId, name, description, price, stock, farmLocation, imageUrl]
+		[farmerId, categoryId, name, description, price, farmLocation, imageUrl]
 	);
 
 	return result.rows[0];
@@ -59,9 +65,25 @@ const findProductOwnershipById = async (productId) => {
 const findProductStockById = async (productId) => {
 	const result = await pool.query(
 		`
-			SELECT id, stock
-			FROM products
-			WHERE id = $1
+			SELECT p.id, p.farmer_id, COALESCE(i.quantity, 0) AS stock
+			FROM products p
+			LEFT JOIN inventory i ON i.product_id = p.id
+			WHERE p.id = $1
+		`,
+		[productId]
+	);
+
+	return result.rows[0] || null;
+};
+
+const findProductStockForUpdateById = async (client, productId) => {
+	const result = await client.query(
+		`
+			SELECT p.id, p.farmer_id, COALESCE(i.quantity, 0) AS stock
+			FROM products p
+			LEFT JOIN inventory i ON i.product_id = p.id
+			WHERE p.id = $1
+			FOR UPDATE
 		`,
 		[productId]
 	);
@@ -94,7 +116,7 @@ const findProductById = async (productId) => {
 
 const updateProductById = async (
 	productId,
-	{ name, description, price, stock, categoryId, farmLocation, imageUrl }
+	{ name, description, price, categoryId, farmLocation, imageUrl }
 ) => {
 	const result = await pool.query(
 		`
@@ -103,31 +125,30 @@ const updateProductById = async (
 				name = COALESCE($1, name),
 				description = COALESCE($2, description),
 				price = COALESCE($3, price),
-				stock = COALESCE($4, stock),
-				category_id = COALESCE($5, category_id),
-				farm_location = COALESCE($6, farm_location),
-				image_url = COALESCE($7, image_url)
-			WHERE id = $8
-			RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
+				category_id = COALESCE($4, category_id),
+				farm_location = COALESCE($5, farm_location),
+				image_url = COALESCE($6, image_url)
+			WHERE id = $7
+			RETURNING id, farmer_id, category_id, name, description, price, farm_location, image_url, created_at
 		`,
-		[name, description, price, stock, categoryId, farmLocation, imageUrl, productId]
+		[name, description, price, categoryId, farmLocation, imageUrl, productId]
 	);
 
 	return result.rows[0] || null;
 };
 
 const updateProductStockById = async (productId, stock) => {
-	const result = await pool.query(
+	await pool.query(
 		`
-			UPDATE products
-			SET stock = $1
-			WHERE id = $2
-			RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
+			UPDATE inventory
+			SET quantity = $1,
+					last_updated = NOW()
+			WHERE product_id = $2
 		`,
 		[stock, productId]
 	);
 
-	return result.rows[0] || null;
+	return findProductById(productId);
 };
 
 const deleteProductById = async (productId) => {
@@ -150,6 +171,7 @@ module.exports = {
 	findProductById,
 	findProductOwnershipById,
 	findProductStockById,
+	findProductStockForUpdateById,
 	updateProductById,
 	updateProductStockById,
 };
