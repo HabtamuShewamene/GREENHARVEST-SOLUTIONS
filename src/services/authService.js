@@ -24,7 +24,7 @@ const buildUserPayload = (user) => {
 	return {
 		id: user.id,
 		email: user.email,
-		role: user.role,
+		role: normalizeRole(user.role_name || user.role),
 	};
 };
 
@@ -117,7 +117,8 @@ const loginUser = async ({ email, password }) => {
 			id: user.id,
 			name: user.name,
 			email: user.email,
-			role: user.role,
+			role: normalizeRole(user.role_name || user.role),
+			role_name: user.role_name || user.role,
 			phone: user.phone,
 			address: user.address,
 			created_at: user.created_at,
