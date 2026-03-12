@@ -55,8 +55,6 @@ const updateInventory = async ({ actor, payload }) => {
 		throw createServiceError("Forbidden: insufficient permissions", 403);
 	}
 
-	await productModel.updateProductStockById(productId, quantity);
-
 	return inventoryModel.upsertInventory({
 		productId,
 		farmerId: ownership.farmer_id,

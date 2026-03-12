@@ -86,12 +86,12 @@ const createProduct = async ({ user, payload }) => {
 
 	const productValues = buildProductValues(payload);
 
-	if (!isNonNegativeNumber(productValues.price)) {
-		throw createServiceError("price must be a valid non-negative number", 400);
+	if (!isNonNegativeNumber(productValues.price) || Number(productValues.price) <= 0) {
+		throw createServiceError("price must be a valid number greater than 0", 400);
 	}
 
-	if (!Number.isInteger(productValues.stock) || productValues.stock < 0) {
-		throw createServiceError("stock must be a non-negative integer", 400);
+	if (!Number.isInteger(productValues.stock) || productValues.stock <= 0) {
+		throw createServiceError("stock must be a positive integer", 400);
 	}
 
 	const categoryId = await validateCategoryId(payload.category_id);
@@ -102,7 +102,6 @@ const createProduct = async ({ user, payload }) => {
 		name: productValues.name,
 		description: productValues.description || null,
 		price: productValues.price,
-		stock: productValues.stock,
 		farmLocation: productValues.farm_location || null,
 		imageUrl: productValues.image_url || null,
 	});
@@ -110,11 +109,11 @@ const createProduct = async ({ user, payload }) => {
 	await inventoryModel.upsertInventory({
 		productId: product.id,
 		farmerId: user.id,
-		quantity: product.stock,
+		quantity: productValues.stock,
 	});
 
 	logger.info("Product created", { productId: product.id, farmerId: user.id });
-	return product;
+	return productModel.findProductById(product.id);
 };
 
 const updateProduct = async ({ user, productId, payload }) => {
@@ -150,8 +149,11 @@ const updateProduct = async ({ user, productId, payload }) => {
 
 	const productValues = buildProductValues(payload);
 
-	if (productValues.price !== undefined && !isNonNegativeNumber(productValues.price)) {
-		throw createServiceError("price must be a valid non-negative number", 400);
+	if (
+		productValues.price !== undefined &&
+		(!isNonNegativeNumber(productValues.price) || Number(productValues.price) <= 0)
+	) {
+		throw createServiceError("price must be a valid number greater than 0", 400);
 	}
 
 	if (
@@ -168,7 +170,6 @@ const updateProduct = async ({ user, productId, payload }) => {
 		name: productValues.name !== undefined ? productValues.name : null,
 		description: productValues.description !== undefined ? productValues.description : null,
 		price: productValues.price !== undefined ? productValues.price : null,
-		stock: productValues.stock !== undefined ? productValues.stock : null,
 		categoryId: categoryId !== undefined ? categoryId : null,
 		farmLocation:
 			productValues.farm_location !== undefined ? productValues.farm_location : null,
@@ -179,11 +180,13 @@ const updateProduct = async ({ user, productId, payload }) => {
 		await inventoryModel.upsertInventory({
 			productId: updatedProduct.id,
 			farmerId: user.id,
-			quantity: updatedProduct.stock,
+			quantity: productValues.stock,
 		});
+
+		return productModel.findProductById(updatedProduct.id);
 	}
 
-	return updatedProduct;
+	return productModel.findProductById(updatedProduct.id);
 };
 
 const deleteProduct = async ({ user, productId }) => {
@@ -234,8 +237,8 @@ const updateProductStock = async ({ user, productId, stock }) => {
 
 	const parsedStock = Number(stock);
 
-	if (!Number.isInteger(parsedStock) || parsedStock < 0) {
-		throw createServiceError("stock must be a non-negative integer", 400);
+	if (!Number.isInteger(parsedStock) || parsedStock <= 0) {
+		throw createServiceError("stock must be a positive integer", 400);
 	}
 
 	const ownedProduct = await getProductOwnership(Number(productId));
@@ -248,15 +251,13 @@ const updateProductStock = async ({ user, productId, stock }) => {
 		throw createServiceError("You can only update stock for your own products", 403);
 	}
 
-	const updatedProduct = await productModel.updateProductStockById(Number(productId), parsedStock);
-
 	await inventoryModel.upsertInventory({
-		productId: updatedProduct.id,
+		productId: Number(productId),
 		farmerId: user.id,
-		quantity: updatedProduct.stock,
+		quantity: parsedStock,
 	});
 
-	return updatedProduct;
+	return productModel.findProductById(Number(productId));
 };
 
 module.exports = {

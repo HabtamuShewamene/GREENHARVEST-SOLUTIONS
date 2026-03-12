@@ -6,7 +6,15 @@ const { isPositiveInteger } = require("../utils/validators");
 
 const allowedOrderStatuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
 const allowedPaymentStatuses = ["pending", "paid", "failed", "refunded"];
-const allowedDeliveryStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+const allowedDeliveryStatuses = [
+	"pending",
+	"assigned",
+	"processing",
+	"shipped",
+	"out for delivery",
+	"delivered",
+	"cancelled",
+];
 
 const createServiceError = (message, statusCode, extra = {}) => {
 	const error = new Error(message);
@@ -28,17 +36,20 @@ const createOrder = async (buyerId) => {
 		const cartResult = await client.query(
 			`
 				SELECT
-					c.id,
-					c.product_id,
-					c.quantity,
+					ci.cart_item_id AS id,
+					ci.product_id,
+					ci.quantity,
 					p.name,
 					p.price,
-					p.stock
-				FROM cart c
-				JOIN products p ON p.id = c.product_id
+					COALESCE(i.quantity, 0) AS stock,
+					c.cart_id
+				FROM carts c
+				JOIN cart_items ci ON ci.cart_id = c.cart_id
+				JOIN products p ON p.id = ci.product_id
+				LEFT JOIN inventory i ON i.product_id = p.id
 				WHERE c.user_id = $1
-				ORDER BY c.id ASC
-				FOR UPDATE OF p, c
+				ORDER BY ci.cart_item_id ASC
+				FOR UPDATE OF c, ci, i
 			`,
 			[buyerId]
 		);
@@ -70,7 +81,15 @@ const createOrder = async (buyerId) => {
 			await orderModel.decrementProductStock(client, item.product_id, item.quantity);
 		}
 
-		await client.query("DELETE FROM cart WHERE user_id = $1", [buyerId]);
+		await client.query(
+			`
+				DELETE FROM cart_items ci
+				USING carts c
+				WHERE ci.cart_id = c.cart_id AND c.user_id = $1
+			`,
+			[buyerId]
+		);
+		await client.query("UPDATE carts SET updated_at = NOW() WHERE user_id = $1", [buyerId]);
 		await client.query("COMMIT");
 
 		logger.info("Order created", { orderId: order.id, buyerId });

@@ -48,10 +48,12 @@ const getOrdersForBuyer = async (buyerId, orderId = null) => {
 			SELECT
 				o.id AS order_id,
 				o.buyer_id,
-				o.total_price,
+				COALESCE(o.total_amount, o.total_price) AS total_price,
+				COALESCE(o.total_amount, o.total_price) AS total_amount,
 				o.order_status,
 				o.payment_status,
 				o.delivery_status,
+				o.address_id,
 				o.created_at,
 				oi.id AS order_item_id,
 				oi.product_id,
@@ -76,9 +78,9 @@ const getOrdersForBuyer = async (buyerId, orderId = null) => {
 const createOrderRecord = async (client, buyerId, totalPrice) => {
 	const result = await client.query(
 		`
-			INSERT INTO orders (buyer_id, total_price)
-			VALUES ($1, $2)
-			RETURNING id, buyer_id, total_price, order_status, payment_status, delivery_status, created_at
+			INSERT INTO orders (buyer_id, total_price, total_amount)
+			VALUES ($1, $2, $2)
+			RETURNING id, buyer_id, total_price, total_amount, order_status, payment_status, delivery_status, created_at
 		`,
 		[buyerId, totalPrice]
 	);
@@ -102,10 +104,11 @@ const createOrderItemRecord = async (client, { orderId, productId, quantity, pri
 const decrementProductStock = async (client, productId, quantity) => {
 	const result = await client.query(
 		`
-			UPDATE products
-			SET stock = stock - $1
-			WHERE id = $2
-			RETURNING id, stock
+			UPDATE inventory
+			SET quantity = quantity - $1,
+					last_updated = NOW()
+			WHERE product_id = $2
+			RETURNING product_id AS id, quantity AS stock
 		`,
 		[quantity, productId]
 	);
@@ -122,7 +125,7 @@ const updateOrderStatusesById = async (orderId, { orderStatus, paymentStatus, de
 				payment_status = COALESCE($2, payment_status),
 				delivery_status = COALESCE($3, delivery_status)
 			WHERE id = $4
-			RETURNING id, buyer_id, total_price, order_status, payment_status, delivery_status, created_at
+			RETURNING id, buyer_id, total_price, total_amount, order_status, payment_status, delivery_status, created_at
 		`,
 		[orderStatus, paymentStatus, deliveryStatus, orderId]
 	);
