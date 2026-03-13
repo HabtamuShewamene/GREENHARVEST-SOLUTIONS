@@ -3,7 +3,7 @@ const { pool } = require("../config/db");
 const findOrderByIdForUpdate = async (client, orderId) => {
 	const result = await client.query(
 		`
-			SELECT id, buyer_id, total_price, payment_status
+			SELECT id, buyer_id, COALESCE(total_amount, total_price) AS total_amount, total_price, payment_status
 			FROM orders
 			WHERE id = $1
 			FOR UPDATE
@@ -65,7 +65,8 @@ const getPaymentHistoryByBuyer = async (userId) => {
 				p.created_at,
 				o.order_status,
 				o.delivery_status,
-				o.total_price
+				COALESCE(o.total_amount, o.total_price) AS total_price,
+				COALESCE(o.total_amount, o.total_price) AS total_amount
 			FROM payments p
 			JOIN orders o ON o.id = p.order_id
 			WHERE o.buyer_id = $1

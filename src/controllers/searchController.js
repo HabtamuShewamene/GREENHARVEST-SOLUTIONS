@@ -2,6 +2,37 @@
 // Import path updated to use src/config/db.js.
 const { pool } = require("../config/db");
 
+const productSearchSelect = `
+        SELECT
+          p.id,
+          p.name,
+          p.description,
+          p.price,
+          COALESCE(i.quantity, 0) AS stock,
+          p.farm_location,
+          COALESCE(pi.image_url, p.image_url) AS image_url,
+          p.created_at,
+          p.category_id,
+          p.farmer_id,
+          u.name AS farmer_name,
+          u.email AS farmer_email,
+          c.name AS category_name,
+          COALESCE(AVG(r.rating), 0)::numeric(10,2) AS average_rating,
+          COUNT(r.id)::int AS total_reviews
+        FROM products p
+        JOIN users u ON u.id = p.farmer_id
+        LEFT JOIN categories c ON c.id = p.category_id
+        LEFT JOIN inventory i ON i.product_id = p.id
+        LEFT JOIN LATERAL (
+          SELECT image_url
+          FROM product_images
+          WHERE product_id = p.id
+          ORDER BY is_primary DESC, image_id ASC
+          LIMIT 1
+        ) pi ON TRUE
+        LEFT JOIN reviews r ON r.product_id = p.id
+`;
+
 const searchProducts = async (req, res) => {
   try {
     const { name, category_id, min_price, max_price, location } = req.query;
@@ -61,28 +92,9 @@ const searchProducts = async (req, res) => {
 
     const result = await pool.query(
       `
-        SELECT
-          p.id,
-          p.name,
-          p.description,
-          p.price,
-          p.stock,
-          p.farm_location,
-          p.image_url,
-          p.created_at,
-          p.category_id,
-          p.farmer_id,
-          u.name AS farmer_name,
-          u.email AS farmer_email,
-          c.name AS category_name,
-          COALESCE(AVG(r.rating), 0)::numeric(10,2) AS average_rating,
-          COUNT(r.id)::int AS total_reviews
-        FROM products p
-        JOIN users u ON u.id = p.farmer_id
-        LEFT JOIN categories c ON c.id = p.category_id
-        LEFT JOIN reviews r ON r.product_id = p.id
+        ${productSearchSelect}
         ${whereClause}
-        GROUP BY p.id, u.id, c.id
+        GROUP BY p.id, i.quantity, pi.image_url, u.id, c.id
         ORDER BY p.created_at DESC
       `,
       values
@@ -153,9 +165,9 @@ const getRecommendations = async (req, res) => {
           p.name,
           p.description,
           p.price,
-          p.stock,
+          COALESCE(i.quantity, 0) AS stock,
           p.farm_location,
-          p.image_url,
+          COALESCE(pi.image_url, p.image_url) AS image_url,
           p.created_at,
           p.category_id,
           p.farmer_id,
@@ -166,15 +178,23 @@ const getRecommendations = async (req, res) => {
         FROM products p
         JOIN users u ON u.id = p.farmer_id
         LEFT JOIN categories c ON c.id = p.category_id
+        LEFT JOIN inventory i ON i.product_id = p.id
+        LEFT JOIN LATERAL (
+          SELECT image_url
+          FROM product_images
+          WHERE product_id = p.id
+          ORDER BY is_primary DESC, image_id ASC
+          LIMIT 1
+        ) pi ON TRUE
         LEFT JOIN reviews r ON r.product_id = p.id
         LEFT JOIN popular_products pop ON pop.id = p.id
-        WHERE p.stock > 0
+        WHERE COALESCE(i.quantity, 0) > 0
           AND p.id NOT IN (SELECT product_id FROM purchased_products)
           AND (
             p.category_id IN (SELECT category_id FROM preferred_categories)
             OR COALESCE(pop.popularity_score, 0) > 0
           )
-        GROUP BY p.id, u.id, c.id, pop.popularity_score
+        GROUP BY p.id, i.quantity, pi.image_url, u.id, c.id, pop.popularity_score
         ORDER BY
           CASE WHEN p.category_id IN (SELECT category_id FROM preferred_categories) THEN 0 ELSE 1 END,
           COALESCE(pop.popularity_score, 0) DESC,
@@ -193,9 +213,9 @@ const getRecommendations = async (req, res) => {
             p.name,
             p.description,
             p.price,
-            p.stock,
+            COALESCE(i.quantity, 0) AS stock,
             p.farm_location,
-            p.image_url,
+            COALESCE(pi.image_url, p.image_url) AS image_url,
             p.created_at,
             p.category_id,
             p.farmer_id,
@@ -206,10 +226,18 @@ const getRecommendations = async (req, res) => {
           FROM products p
           JOIN users u ON u.id = p.farmer_id
           LEFT JOIN categories c ON c.id = p.category_id
+          LEFT JOIN inventory i ON i.product_id = p.id
+          LEFT JOIN LATERAL (
+            SELECT image_url
+            FROM product_images
+            WHERE product_id = p.id
+            ORDER BY is_primary DESC, image_id ASC
+            LIMIT 1
+          ) pi ON TRUE
           LEFT JOIN order_items oi ON oi.product_id = p.id
           LEFT JOIN reviews r ON r.product_id = p.id
-          WHERE p.stock > 0
-          GROUP BY p.id, u.id, c.id
+          WHERE COALESCE(i.quantity, 0) > 0
+          GROUP BY p.id, i.quantity, pi.image_url, u.id, c.id
           ORDER BY popularity_score DESC, average_rating DESC, p.created_at DESC
           LIMIT 10
         `

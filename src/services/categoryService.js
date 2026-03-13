@@ -20,22 +20,22 @@ const normalizeDescription = (description) => {
   return String(description).trim();
 };
 
-const createCategory = async ({ name, description }) => {
-  if (!isRequired(name)) {
+const createCategory = async ({ category_name, description }) => {
+  if (!isRequired(category_name)) {
     throw createServiceError("Category name is required", 400);
   }
 
-  const normalizedName = String(name).trim();
+  const normalizedCategoryName = String(category_name).trim();
   const normalizedDescription = normalizeDescription(description);
 
-  const existingCategory = await categoryModel.findCategoryByName(normalizedName);
+  const existingCategory = await categoryModel.findCategoryByName(normalizedCategoryName);
 
   if (existingCategory) {
     throw createServiceError("Category already exists", 409);
   }
 
   return categoryModel.createCategory({
-    name: normalizedName,
+    category_name: normalizedCategoryName,
     description: normalizedDescription === undefined ? null : normalizedDescription,
   });
 };
@@ -58,8 +58,54 @@ const getCategoryById = async (categoryId) => {
   return category;
 };
 
+const updateCategory = async ({ categoryId, category_name, description }) => {
+  if (!isPositiveInteger(categoryId)) {
+    throw createServiceError("Invalid category id", 400);
+  }
+
+  if (!isRequired(category_name)) {
+    throw createServiceError("Category name is required", 400);
+  }
+
+  const existingCategory = await categoryModel.findCategoryById(Number(categoryId));
+
+  if (!existingCategory) {
+    throw createServiceError("Category not found", 404);
+  }
+
+  const normalizedCategoryName = String(category_name).trim();
+  const normalizedDescription = normalizeDescription(description);
+
+  const duplicateCategory = await categoryModel.findCategoryByName(normalizedCategoryName);
+
+  if (duplicateCategory && Number(duplicateCategory.id) !== Number(categoryId)) {
+    throw createServiceError("Category already exists", 409);
+  }
+
+  return categoryModel.updateCategoryById(Number(categoryId), {
+    category_name: normalizedCategoryName,
+    description: normalizedDescription === undefined ? null : normalizedDescription,
+  });
+};
+
+const deleteCategory = async (categoryId) => {
+  if (!isPositiveInteger(categoryId)) {
+    throw createServiceError("Invalid category id", 400);
+  }
+
+  const existingCategory = await categoryModel.findCategoryById(Number(categoryId));
+
+  if (!existingCategory) {
+    throw createServiceError("Category not found", 404);
+  }
+
+  return categoryModel.deleteCategoryById(Number(categoryId));
+};
+
 module.exports = {
   createCategory,
+  deleteCategory,
   getAllCategories,
   getCategoryById,
+  updateCategory,
 };

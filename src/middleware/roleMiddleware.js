@@ -23,6 +23,8 @@ const roleMiddleware = (...allowedRoles) => {
     const userRole = normalizeRole(req.user.role);
 
     if (!normalizedRoles.includes(userRole)) {
+      const requiredRoles = normalizedRoles.join(", ");
+
       logger.warn("Access denied by role middleware", {
         userId: req.user.id,
         userRole,
@@ -33,7 +35,7 @@ const roleMiddleware = (...allowedRoles) => {
 
       return res.status(403).json({
         status: "error",
-        message: "Forbidden: insufficient permissions",
+        message: `Forbidden: insufficient permissions. Required role: ${requiredRoles}`,
       });
     }
 

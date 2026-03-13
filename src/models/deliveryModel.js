@@ -10,7 +10,15 @@ const findOrderById = async (client, orderId) => {
 };
 
 const findDeliveryPartnerById = async (client, userId) => {
-	const result = await client.query(`SELECT id, role FROM users WHERE id = $1`, [userId]);
+	const result = await client.query(
+		`
+			SELECT u.id, COALESCE(u.role, r.role_name) AS role, r.role_name
+			FROM users u
+			LEFT JOIN roles r ON r.role_id = u.role_id
+			WHERE u.id = $1
+		`,
+		[userId]
+	);
 	return result.rows[0] || null;
 };
 

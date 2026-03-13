@@ -91,7 +91,13 @@ const addProductForFarmer = async ({ actor, payload }) => {
 		}
 	}
 
-	if (!payload.name || !isNonNegativeNumber(payload.price) || !Number.isInteger(Number(payload.stock))) {
+	if (
+		!payload.name ||
+		!isNonNegativeNumber(payload.price) ||
+		Number(payload.price) <= 0 ||
+		!Number.isInteger(Number(payload.stock)) ||
+		Number(payload.stock) <= 0
+	) {
 		throw createServiceError("name, price, and stock are required with valid values", 400);
 	}
 
@@ -117,7 +123,6 @@ const addProductForFarmer = async ({ actor, payload }) => {
 		name: String(payload.name).trim(),
 		description: payload.description ? String(payload.description).trim() : null,
 		price: Number(payload.price),
-		stock: Number(payload.stock),
 		farmLocation: payload.farm_location ? String(payload.farm_location).trim() : null,
 		imageUrl: payload.image_url ? String(payload.image_url).trim() : null,
 	});
@@ -125,10 +130,10 @@ const addProductForFarmer = async ({ actor, payload }) => {
 	await inventoryModel.upsertInventory({
 		productId: product.id,
 		farmerId,
-		quantity: product.stock,
+		quantity: Number(payload.stock),
 	});
 
-	return product;
+	return productModel.findProductById(product.id);
 };
 
 module.exports = {

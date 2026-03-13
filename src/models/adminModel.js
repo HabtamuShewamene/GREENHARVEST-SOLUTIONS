@@ -5,10 +5,15 @@ const getSummaryMetrics = async () => {
 		`
 			SELECT
 				(SELECT COUNT(*)::int FROM users) AS total_users,
-				(SELECT COUNT(*)::int FROM users WHERE role = 'farmer') AS total_farmers,
+				(
+					SELECT COUNT(*)::int
+					FROM users u
+					JOIN roles r ON r.role_id = u.role_id
+					WHERE r.role_name = 'farmer'
+				) AS total_farmers,
 				(SELECT COUNT(*)::int FROM orders) AS total_orders,
 				(
-					SELECT COALESCE(SUM(total_price) FILTER (WHERE payment_status = 'paid' AND order_status != 'cancelled'), 0)::numeric(10,2)
+					SELECT COALESCE(SUM(COALESCE(total_amount, total_price)) FILTER (WHERE payment_status = 'paid' AND order_status != 'cancelled'), 0)::numeric(10,2)
 					FROM orders
 				) AS total_revenue
 		`

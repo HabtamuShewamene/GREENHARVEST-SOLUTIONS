@@ -38,7 +38,7 @@ const processPayment = async ({ userId, order_id, payment_method, amount }) => {
 			throw createServiceError("Order not found", 404);
 		}
 
-		if (order.buyer_id !== userId) {
+		if (Number(order.buyer_id) !== Number(userId)) {
 			throw createServiceError("You can only pay for your own orders", 403);
 		}
 
@@ -46,7 +46,7 @@ const processPayment = async ({ userId, order_id, payment_method, amount }) => {
 			throw createServiceError("Order has already been paid", 409);
 		}
 
-		if (Number(order.total_price) !== paymentAmount) {
+		if (Number(order.total_amount) !== paymentAmount) {
 			throw createServiceError("Payment amount does not match order total", 400);
 		}
 

@@ -16,27 +16,29 @@ const getFarmerDashboard = async (req, res) => {
       pool.query(
         `
           SELECT
-            COUNT(*)::int AS total_products,
-            COALESCE(SUM(stock), 0)::int AS total_stock_units,
-            COUNT(*) FILTER (WHERE stock = 0)::int AS out_of_stock_products,
-            COUNT(*) FILTER (WHERE stock > 0 AND stock <= 10)::int AS low_stock_products
-          FROM products
-          WHERE farmer_id = $1
+            COUNT(p.id)::int AS total_products,
+            COALESCE(SUM(COALESCE(i.quantity, 0)), 0)::int AS total_stock_units,
+            COUNT(*) FILTER (WHERE COALESCE(i.quantity, 0) = 0)::int AS out_of_stock_products,
+            COUNT(*) FILTER (WHERE COALESCE(i.quantity, 0) > 0 AND COALESCE(i.quantity, 0) <= 10)::int AS low_stock_products
+          FROM products p
+          LEFT JOIN inventory i ON i.product_id = p.id
+          WHERE p.farmer_id = $1
         `,
         [farmerId]
       ),
       pool.query(
         `
           SELECT
-            id,
-            name,
-            stock,
-            price,
-            farm_location,
-            created_at
-          FROM products
-          WHERE farmer_id = $1
-          ORDER BY created_at DESC
+            p.id,
+            p.name,
+            COALESCE(i.quantity, 0) AS stock,
+            p.price,
+            p.farm_location,
+            p.created_at
+          FROM products p
+          LEFT JOIN inventory i ON i.product_id = p.id
+          WHERE p.farmer_id = $1
+          ORDER BY p.created_at DESC
         `,
         [farmerId]
       ),
@@ -80,10 +82,11 @@ const getAdminDashboard = async (req, res) => {
     const [userStats, platformStats, topSellingProducts] = await Promise.all([
       pool.query(
         `
-          SELECT role, COUNT(*)::int AS total_users
-          FROM users
-          GROUP BY role
-          ORDER BY role ASC
+          SELECT r.role_name AS role, COUNT(*)::int AS total_users
+          FROM users u
+          JOIN roles r ON r.role_id = u.role_id
+          GROUP BY r.role_name
+          ORDER BY r.role_name ASC
         `
       ),
       pool.query(
@@ -92,7 +95,7 @@ const getAdminDashboard = async (req, res) => {
             (SELECT COUNT(*)::int FROM products) AS total_products,
             (SELECT COUNT(*)::int FROM orders) AS total_orders,
             (
-              SELECT COALESCE(SUM(total_price) FILTER (WHERE payment_status = 'paid' AND order_status != 'cancelled'), 0)::numeric(10,2)
+              SELECT COALESCE(SUM(COALESCE(total_amount, total_price)) FILTER (WHERE payment_status = 'paid' AND order_status != 'cancelled'), 0)::numeric(10,2)
               FROM orders
             ) AS total_revenue
         `
@@ -103,17 +106,18 @@ const getAdminDashboard = async (req, res) => {
             p.id,
             p.name,
             p.price,
-            p.stock,
+            COALESCE(i.quantity, 0) AS stock,
             p.farmer_id,
             u.name AS farmer_name,
             COALESCE(SUM(oi.quantity), 0)::int AS units_sold,
             COALESCE(SUM(oi.quantity * oi.price), 0)::numeric(10,2) AS revenue_generated
           FROM products p
           JOIN users u ON u.id = p.farmer_id
+          LEFT JOIN inventory i ON i.product_id = p.id
           LEFT JOIN order_items oi ON oi.product_id = p.id
           LEFT JOIN orders o ON o.id = oi.order_id
           WHERE o.id IS NULL OR o.order_status != 'cancelled'
-          GROUP BY p.id, u.id
+          GROUP BY p.id, u.id, i.quantity
           ORDER BY units_sold DESC, revenue_generated DESC, p.created_at DESC
           LIMIT 10
         `

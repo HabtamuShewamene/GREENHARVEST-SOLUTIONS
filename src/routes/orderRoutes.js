@@ -3,6 +3,7 @@
 const express = require("express");
 
 const authMiddleware = require("../middleware/authMiddleware");
+const roleMiddleware = require("../middleware/roleMiddleware");
 const {
   createOrder,
   getUserOrders,
@@ -17,6 +18,6 @@ router.use(authMiddleware);
 router.post("/", createOrder);
 router.get("/", getUserOrders);
 router.get("/:id", getOrderById);
-router.patch("/:id/status", updateOrderStatus);
+router.patch("/:id/status", roleMiddleware("admin"), updateOrderStatus);
 
 module.exports = router;
