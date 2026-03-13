@@ -75,7 +75,7 @@ const updateCategory = async (req, res) => {
 
 		const category = await categoryService.updateCategory({
 			categoryId: req.params.id,
-			name: req.body.name,
+			category_name: req.body.category_name,
 			description: req.body.description,
 		});
 

@@ -28,24 +28,24 @@ const getCategorySchema = async () => {
 		  }
 		: {
 				idColumn: "id",
-				nameColumn: "name",
+				nameColumn: "category_name",
 				hasDescription: columnNames.includes("description"),
 		  };
 
 	return categorySchema;
 };
 
-const createCategory = async ({ name, description = null }) => {
+const createCategory = async ({ category_name, description = null }) => {
 	const schema = await getCategorySchema();
 
 	if (schema.hasDescription) {
 		const result = await pool.query(
 			`
-				INSERT INTO categories (name, description)
+				INSERT INTO categories (category_name, description)
 				VALUES ($1, $2)
-				RETURNING id, name, description
+				RETURNING id, category_name, description
 			`,
-			[name, description]
+			[category_name, description]
 		);
 
 		return result.rows[0];
@@ -55,9 +55,9 @@ const createCategory = async ({ name, description = null }) => {
 		`
 			INSERT INTO categories (category_name)
 			VALUES ($1)
-			RETURNING category_id AS id, category_name AS name, NULL::text AS description
+			RETURNING category_id AS id, category_name, NULL::text AS description
 		`,
-		[name]
+		[category_name]
 	);
 
 	return result.rows[0];
@@ -72,7 +72,7 @@ const findCategoryById = async (categoryId) => {
 		`
 			SELECT
 				${schema.idColumn} AS id,
-				${schema.nameColumn} AS name,
+				${schema.nameColumn} AS category_name,
 				${descriptionSelect}
 			FROM categories
 			WHERE ${schema.idColumn} = $1
@@ -83,7 +83,7 @@ const findCategoryById = async (categoryId) => {
 	return result.rows[0] || null;
 };
 
-const findCategoryByName = async (name) => {
+const findCategoryByName = async (category_name) => {
 	const schema = await getCategorySchema();
 	const descriptionSelect = schema.hasDescription ? "description" : "NULL::text AS description";
 
@@ -91,12 +91,12 @@ const findCategoryByName = async (name) => {
 		`
 			SELECT
 				${schema.idColumn} AS id,
-				${schema.nameColumn} AS name,
+				${schema.nameColumn} AS category_name,
 				${descriptionSelect}
 			FROM categories
 			WHERE LOWER(${schema.nameColumn}) = LOWER($1)
 		`,
-		[name]
+		[category_name]
 	);
 
 	return result.rows[0] || null;
@@ -110,7 +110,7 @@ const getAllCategories = async () => {
 		`
 			SELECT
 				${schema.idColumn} AS id,
-				${schema.nameColumn} AS name,
+				${schema.nameColumn} AS category_name,
 				${descriptionSelect}
 			FROM categories
 			ORDER BY ${schema.nameColumn} ASC
@@ -120,7 +120,7 @@ const getAllCategories = async () => {
 	return result.rows;
 };
 
-const updateCategoryById = async (categoryId, { name, description = null }) => {
+const updateCategoryById = async (categoryId, { category_name, description = null }) => {
 	const schema = await getCategorySchema();
 
 	if (schema.hasDescription) {
@@ -128,12 +128,12 @@ const updateCategoryById = async (categoryId, { name, description = null }) => {
 			`
 				UPDATE categories
 				SET
-					name = $1,
+					category_name = $1,
 					description = $2
 				WHERE id = $3
-				RETURNING id, name, description
+				RETURNING id, category_name, description
 			`,
-			[name, description, categoryId]
+			[category_name, description, categoryId]
 		);
 
 		return result.rows[0] || null;
@@ -144,9 +144,9 @@ const updateCategoryById = async (categoryId, { name, description = null }) => {
 			UPDATE categories
 			SET category_name = $1
 			WHERE category_id = $2
-			RETURNING category_id AS id, category_name AS name, NULL::text AS description
+			RETURNING category_id AS id, category_name, NULL::text AS description
 		`,
-		[name, categoryId]
+		[category_name, categoryId]
 	);
 
 	return result.rows[0] || null;
