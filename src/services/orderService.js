@@ -59,7 +59,7 @@ const createOrder = async (buyer_id, payload = {}) => {
 				LEFT JOIN inventory i ON i.product_id = p.product_id
 				WHERE c.buyer_id = $1
 				ORDER BY ci.cart_item_id ASC
-				FOR UPDATE OF c, ci, i
+				FOR UPDATE OF c, ci
 			`,
 			[buyer_id]
 		);

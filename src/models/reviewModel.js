@@ -87,7 +87,7 @@ const getProductReviews = async (product_id) => {
 	const result = await pool.query(
 		`
 			SELECT
-				r.id,
+				r.review_id AS id,
 				r.product_id,
 				r.buyer_id AS user_id,
 				r.rating,
