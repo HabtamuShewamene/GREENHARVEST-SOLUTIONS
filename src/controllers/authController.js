@@ -47,14 +47,14 @@ const loginUser = async (req, res) => {
 
 const getUserProfile = async (req, res) => {
   try {
-    const user = await authService.getUserProfile(req.user.id);
+    const user = await authService.getUserProfile(req.user.user_id || req.user.id);
 
     return res.status(200).json({
       user,
     });
   } catch (error) {
     return handleControllerError(res, "Fetching profile failed", error, {
-      userId: req.user && req.user.id,
+      userId: req.user && (req.user.user_id || req.user.id),
     });
   }
 };
