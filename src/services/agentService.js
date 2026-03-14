@@ -52,9 +52,10 @@ const assignFarmer = async ({ actor, agent_id, farmer_id }) => {
 const getFarmers = async ({ actor, agent_id }) => {
 	ensureRole(actor, ["admin", "fieldAgent"]);
 
+	const actorRole = normalizeRole(actor.role);
 	const actorUserId = Number(actor && actor.user_id ? actor.user_id : actor && actor.id);
 	const selected_agent_id =
-		normalizeRole(actor.role) === "admin"
+		actorRole === "admin"
 			? (agent_id ? Number(agent_id) : null)
 			: actorUserId;
 
@@ -66,7 +67,10 @@ const getFarmers = async ({ actor, agent_id }) => {
 		throw createServiceError("agent_id query parameter is required for admins", 400);
 	}
 
-	await ensureUserWithRole(selected_agent_id, "fieldAgent");
+	if (actorRole === "admin") {
+		await ensureUserWithRole(selected_agent_id, "fieldAgent");
+	}
+
 	return agentModel.getFarmersByAgent(selected_agent_id);
 };
 
