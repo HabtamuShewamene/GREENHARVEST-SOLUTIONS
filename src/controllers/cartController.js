@@ -17,8 +17,8 @@ const handleControllerError = (res, context, error, meta = {}) => {
 const addToCart = async (req, res) => {
   try {
     const cartItems = await cartService.addToCart({
-      userId: req.user.id,
-      productId: req.body && req.body.product_id,
+      user_id: req.user.id,
+      product_id: req.body && req.body.product_id,
       quantity: req.body && req.body.quantity,
     });
 
@@ -37,8 +37,8 @@ const addToCart = async (req, res) => {
 const updateCartItem = async (req, res) => {
   try {
     const cartItems = await cartService.updateCartItem({
-      userId: req.user.id,
-      cartItemId: req.params.id,
+      user_id: req.user.id,
+      cart_item_id: req.params.id,
       quantity: req.body && req.body.quantity,
     });
 
@@ -58,8 +58,8 @@ const updateCartItem = async (req, res) => {
 const removeCartItem = async (req, res) => {
   try {
     const cartItems = await cartService.removeCartItem({
-      userId: req.user.id,
-      cartItemId: req.params.id,
+      user_id: req.user.id,
+      cart_item_id: req.params.id,
     });
 
     return res.status(200).json({
