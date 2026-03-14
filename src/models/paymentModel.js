@@ -9,9 +9,9 @@ const findOrderByIdForUpdate = async (client, order_id) => {
 				o.total_amount,
 				o.total_amount AS total_price,
 				COALESCE(p.payment_status, 'pending') AS payment_status
-			FROM orders
-			LEFT JOIN payments p ON p.order_id = orders.order_id
-			WHERE id = $1
+			FROM orders o
+			LEFT JOIN payments p ON p.order_id = o.order_id
+			WHERE o.order_id = $1
 			FOR UPDATE
 		`,
 		[order_id]
