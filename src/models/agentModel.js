@@ -1,14 +1,33 @@
 const { pool } = require("../config/db");
 
-const withAgentFarmersTableGuard = (error) => {
-	if (error && error.code === "42P01") {
-		const wrappedError = new Error("Agent assignment module is not initialized");
-		wrappedError.statusCode = 503;
-		wrappedError.code = error.code;
-		throw wrappedError;
+let agentFarmersEnsured = false;
+
+const ensureAgentFarmersTable = async () => {
+	if (agentFarmersEnsured) {
+		return;
 	}
 
-	throw error;
+	await pool.query(
+		`
+			CREATE TABLE IF NOT EXISTS agent_farmers (
+				id BIGSERIAL PRIMARY KEY,
+				agent_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+				farmer_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+				assigned_by BIGINT REFERENCES users(user_id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+				CONSTRAINT unique_agent_farmer_assignment UNIQUE (agent_id, farmer_id)
+			)
+		`
+	);
+
+	await pool.query(
+		`CREATE INDEX IF NOT EXISTS idx_agent_farmers_agent_id ON agent_farmers(agent_id)`
+	);
+	await pool.query(
+		`CREATE INDEX IF NOT EXISTS idx_agent_farmers_farmer_id ON agent_farmers(farmer_id)`
+	);
+
+	agentFarmersEnsured = true;
 };
 
 const findUserById = async (user_id) => {
@@ -26,6 +45,8 @@ const findUserById = async (user_id) => {
 };
 
 const assignFarmer = async ({ agent_id, farmer_id, assigned_by }) => {
+	await ensureAgentFarmersTable();
+
 	try {
 		const result = await pool.query(
 			`
@@ -40,11 +61,13 @@ const assignFarmer = async ({ agent_id, farmer_id, assigned_by }) => {
 
 		return result.rows[0];
 	} catch (error) {
-		withAgentFarmersTableGuard(error);
+		throw error;
 	}
 };
 
 const isAgentAssignedToFarmer = async ({ agent_id, farmer_id }) => {
+	await ensureAgentFarmersTable();
+
 	try {
 		const result = await pool.query(
 			`SELECT id FROM agent_farmers WHERE agent_id = $1 AND farmer_id = $2`,
@@ -53,11 +76,13 @@ const isAgentAssignedToFarmer = async ({ agent_id, farmer_id }) => {
 
 		return result.rows.length > 0;
 	} catch (error) {
-		withAgentFarmersTableGuard(error);
+		throw error;
 	}
 };
 
 const getFarmersByAgent = async (agent_id) => {
+	await ensureAgentFarmersTable();
+
 	try {
 		const result = await pool.query(
 			`
@@ -81,7 +106,7 @@ const getFarmersByAgent = async (agent_id) => {
 
 		return result.rows;
 	} catch (error) {
-		withAgentFarmersTableGuard(error);
+		throw error;
 	}
 };
 

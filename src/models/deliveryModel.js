@@ -12,10 +12,11 @@ const findOrderById = async (client, order_id) => {
 const findDeliveryPartnerById = async (client, user_id) => {
 	const result = await client.query(
 		`
-			SELECT u.user_id AS id, r.role_name AS role, r.role_name
+			SELECT dp.delivery_id AS id, u.user_id, u.name, u.email, u.phone
 			FROM users u
-			LEFT JOIN roles r ON r.role_id = u.role_id
-			WHERE u.user_id = $1
+			JOIN delivery_profiles dp ON dp.user_id = u.user_id
+			WHERE (u.user_id = $1 OR dp.delivery_id = $1)
+			AND u.role = 'deliveryPartner'
 		`,
 		[user_id]
 	);
