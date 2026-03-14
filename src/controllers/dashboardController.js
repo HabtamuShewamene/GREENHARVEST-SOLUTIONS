@@ -16,12 +16,12 @@ const getFarmerDashboard = async (req, res) => {
       pool.query(
         `
           SELECT
-            COUNT(p.id)::int AS total_products,
+            COUNT(p.product_id)::int AS total_products,
             COALESCE(SUM(COALESCE(i.quantity, 0)), 0)::int AS total_stock_units,
             COUNT(*) FILTER (WHERE COALESCE(i.quantity, 0) = 0)::int AS out_of_stock_products,
             COUNT(*) FILTER (WHERE COALESCE(i.quantity, 0) > 0 AND COALESCE(i.quantity, 0) <= 10)::int AS low_stock_products
           FROM products p
-          LEFT JOIN inventory i ON i.product_id = p.id
+          LEFT JOIN inventory i ON i.product_id = p.product_id
           WHERE p.farmer_id = $1
         `,
         [farmerId]
@@ -29,14 +29,14 @@ const getFarmerDashboard = async (req, res) => {
       pool.query(
         `
           SELECT
-            p.id,
+            p.product_id AS id,
             p.name,
             COALESCE(i.quantity, 0) AS stock,
             p.price,
-            p.farm_location,
+            NULL::text AS farm_location,
             p.created_at
           FROM products p
-          LEFT JOIN inventory i ON i.product_id = p.id
+          LEFT JOIN inventory i ON i.product_id = p.product_id
           WHERE p.farmer_id = $1
           ORDER BY p.created_at DESC
         `,
@@ -46,10 +46,11 @@ const getFarmerDashboard = async (req, res) => {
         `
           SELECT
             COUNT(DISTINCT oi.order_id)::int AS total_orders_received,
-            COALESCE(SUM(oi.quantity * oi.price) FILTER (WHERE o.payment_status = 'paid' AND o.order_status != 'cancelled'), 0)::numeric(10,2) AS revenue_earned
+            COALESCE(SUM(oi.quantity * oi.price) FILTER (WHERE COALESCE(pay.payment_status, 'pending') = 'paid' AND o.order_status != 'cancelled'), 0)::numeric(10,2) AS revenue_earned
           FROM order_items oi
-          JOIN orders o ON o.id = oi.order_id
-          JOIN products p ON p.id = oi.product_id
+          JOIN orders o ON o.order_id = oi.order_id
+          JOIN products p ON p.product_id = oi.product_id
+          LEFT JOIN payments pay ON pay.order_id = o.order_id
           WHERE p.farmer_id = $1
         `,
         [farmerId]
@@ -95,15 +96,16 @@ const getAdminDashboard = async (req, res) => {
             (SELECT COUNT(*)::int FROM products) AS total_products,
             (SELECT COUNT(*)::int FROM orders) AS total_orders,
             (
-              SELECT COALESCE(SUM(COALESCE(total_amount, total_price)) FILTER (WHERE payment_status = 'paid' AND order_status != 'cancelled'), 0)::numeric(10,2)
-              FROM orders
+              SELECT COALESCE(SUM(o.total_amount) FILTER (WHERE p.payment_status = 'paid' AND o.order_status != 'cancelled'), 0)::numeric(10,2)
+              FROM orders o
+              LEFT JOIN payments p ON p.order_id = o.order_id
             ) AS total_revenue
         `
       ),
       pool.query(
         `
           SELECT
-            p.id,
+            p.product_id AS id,
             p.name,
             p.price,
             COALESCE(i.quantity, 0) AS stock,
@@ -112,12 +114,12 @@ const getAdminDashboard = async (req, res) => {
             COALESCE(SUM(oi.quantity), 0)::int AS units_sold,
             COALESCE(SUM(oi.quantity * oi.price), 0)::numeric(10,2) AS revenue_generated
           FROM products p
-          JOIN users u ON u.id = p.farmer_id
-          LEFT JOIN inventory i ON i.product_id = p.id
-          LEFT JOIN order_items oi ON oi.product_id = p.id
-          LEFT JOIN orders o ON o.id = oi.order_id
-          WHERE o.id IS NULL OR o.order_status != 'cancelled'
-          GROUP BY p.id, u.id, i.quantity
+          JOIN users u ON u.user_id = p.farmer_id
+          LEFT JOIN inventory i ON i.product_id = p.product_id
+          LEFT JOIN order_items oi ON oi.product_id = p.product_id
+          LEFT JOIN orders o ON o.order_id = oi.order_id
+          WHERE o.order_id IS NULL OR o.order_status != 'cancelled'
+          GROUP BY p.product_id, u.user_id, i.quantity
           ORDER BY units_sold DESC, revenue_generated DESC, p.created_at DESC
           LIMIT 10
         `
