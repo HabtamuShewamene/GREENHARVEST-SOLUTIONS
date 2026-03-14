@@ -55,9 +55,9 @@ const createOrder = async (buyer_id, payload = {}) => {
 					c.cart_id
 				FROM carts c
 				JOIN cart_items ci ON ci.cart_id = c.cart_id
-				JOIN products p ON p.id = ci.product_id
-				LEFT JOIN inventory i ON i.product_id = p.id
-				WHERE c.user_id = $1
+				JOIN products p ON p.product_id = ci.product_id
+				LEFT JOIN inventory i ON i.product_id = p.product_id
+				WHERE c.buyer_id = $1
 				ORDER BY ci.cart_item_id ASC
 				FOR UPDATE OF c, ci, i
 			`,
@@ -108,11 +108,10 @@ const createOrder = async (buyer_id, payload = {}) => {
 			`
 				DELETE FROM cart_items ci
 				USING carts c
-				WHERE ci.cart_id = c.cart_id AND c.user_id = $1
+				WHERE ci.cart_id = c.cart_id AND c.buyer_id = $1
 			`,
 			[buyer_id]
 		);
-		await client.query("UPDATE carts SET updated_at = NOW() WHERE user_id = $1", [buyer_id]);
 		await client.query("COMMIT");
 
 		logger.info("Order created", { order_id: order.id, buyer_id });

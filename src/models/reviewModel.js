@@ -3,9 +3,9 @@ const { pool } = require("../config/db");
 const findReviewByProductAndUser = async (product_id, user_id) => {
 	const result = await pool.query(
 		`
-			SELECT id, product_id, user_id, rating, comment, created_at
+			SELECT review_id AS id, product_id, buyer_id AS user_id, rating, comment, created_at
 			FROM reviews
-			WHERE product_id = $1 AND user_id = $2
+			WHERE product_id = $1 AND buyer_id = $2
 		`,
 		[product_id, user_id]
 	);
@@ -16,9 +16,9 @@ const findReviewByProductAndUser = async (product_id, user_id) => {
 const createReview = async ({ product_id, user_id, rating, comment }) => {
 	const result = await pool.query(
 		`
-			INSERT INTO reviews (product_id, user_id, rating, comment)
+			INSERT INTO reviews (product_id, buyer_id, rating, comment)
 			VALUES ($1, $2, $3, $4)
-			RETURNING id, product_id, user_id, rating, comment, created_at
+			RETURNING review_id AS id, product_id, buyer_id AS user_id, rating, comment, created_at
 		`,
 		[product_id, user_id, rating, comment]
 	);
@@ -29,9 +29,9 @@ const createReview = async ({ product_id, user_id, rating, comment }) => {
 const findReviewById = async (review_id) => {
 	const result = await pool.query(
 		`
-			SELECT id, product_id, user_id, rating, comment, created_at
+			SELECT review_id AS id, product_id, buyer_id AS user_id, rating, comment, created_at
 			FROM reviews
-			WHERE id = $1
+			WHERE review_id = $1
 		`,
 		[review_id]
 	);
@@ -46,8 +46,8 @@ const updateReviewById = async (review_id, { rating, comment }) => {
 			SET
 				rating = COALESCE($1, rating),
 				comment = COALESCE($2, comment)
-			WHERE id = $3
-			RETURNING id, product_id, user_id, rating, comment, created_at
+			WHERE review_id = $3
+			RETURNING review_id AS id, product_id, buyer_id AS user_id, rating, comment, created_at
 		`,
 		[rating, comment, review_id]
 	);
@@ -59,8 +59,8 @@ const deleteReviewById = async (review_id) => {
 	const result = await pool.query(
 		`
 			DELETE FROM reviews
-			WHERE id = $1
-			RETURNING id
+			WHERE review_id = $1
+			RETURNING review_id AS id
 		`,
 		[review_id]
 	);
@@ -89,14 +89,14 @@ const getProductReviews = async (product_id) => {
 			SELECT
 				r.id,
 				r.product_id,
-				r.user_id,
+				r.buyer_id AS user_id,
 				r.rating,
 				r.comment,
 				r.created_at,
 				u.name AS user_name,
 				u.email AS user_email
 			FROM reviews r
-			JOIN users u ON u.id = r.user_id
+			JOIN users u ON u.user_id = r.buyer_id
 			WHERE r.product_id = $1
 			ORDER BY r.created_at DESC
 		`,

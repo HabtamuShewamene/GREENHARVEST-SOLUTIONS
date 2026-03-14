@@ -3,10 +3,10 @@ const { pool } = require("../config/db");
 const findUserById = async (user_id) => {
 	const result = await pool.query(
 		`
-			SELECT u.id, u.name, u.email, COALESCE(u.role, r.role_name) AS role, r.role_name
+			SELECT u.user_id AS id, u.name, u.email, r.role_name AS role, r.role_name
 			FROM users u
 			LEFT JOIN roles r ON r.role_id = u.role_id
-			WHERE u.id = $1
+			WHERE u.user_id = $1
 		`,
 		[user_id]
 	);
@@ -50,9 +50,9 @@ const getFarmersByAgent = async (agent_id) => {
 				u.name AS farmer_name,
 				u.email AS farmer_email,
 				u.phone AS farmer_phone,
-				u.address AS farmer_address
+				NULL::text AS farmer_address
 			FROM agent_farmers af
-			JOIN users u ON u.id = af.farmer_id
+			JOIN users u ON u.user_id = af.farmer_id
 			WHERE af.agent_id = $1
 			ORDER BY af.created_at DESC
 		`,
