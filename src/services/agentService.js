@@ -52,10 +52,11 @@ const assignFarmer = async ({ actor, agent_id, farmer_id }) => {
 const getFarmers = async ({ actor, agent_id }) => {
 	ensureRole(actor, ["admin", "fieldAgent"]);
 
+	const actorUserId = Number(actor && actor.user_id ? actor.user_id : actor && actor.id);
 	const selected_agent_id =
 		normalizeRole(actor.role) === "admin"
 			? (agent_id ? Number(agent_id) : null)
-			: Number(actor.id);
+			: actorUserId;
 
 	if (selected_agent_id !== null && !isPositiveInteger(selected_agent_id)) {
 		throw createServiceError("agent_id must be a valid integer", 400);
@@ -81,8 +82,9 @@ const addProductForFarmer = async ({ actor, payload }) => {
 	await ensureUserWithRole(farmer_id, "farmer");
 
 	if (normalizeRole(actor.role) === "fieldAgent") {
+		const actorAgentUserId = Number(actor && actor.user_id ? actor.user_id : actor && actor.id);
 		const isAssigned = await agentModel.isAgentAssignedToFarmer({
-			agent_id: actor.id,
+			agent_id: actorAgentUserId,
 			farmer_id,
 		});
 
