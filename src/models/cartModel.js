@@ -1,6 +1,6 @@
 const { pool } = require("../config/db");
 
-const ensureCartForUser = async (userId) => {
+const ensureCartForUser = async (user_id) => {
 	const result = await pool.query(
 		`
 			INSERT INTO carts (user_id, updated_at)
@@ -9,14 +9,14 @@ const ensureCartForUser = async (userId) => {
 			DO UPDATE SET updated_at = NOW()
 			RETURNING cart_id, user_id
 		`,
-		[userId]
+		[user_id]
 	);
 
 	return result.rows[0];
 };
 
-const getUserCartItems = async (userId) => {
-	await ensureCartForUser(userId);
+const getUserCartItems = async (user_id) => {
+	await ensureCartForUser(user_id);
 
 	const result = await pool.query(
 		`
@@ -48,14 +48,14 @@ const getUserCartItems = async (userId) => {
 			WHERE c.user_id = $1
 			ORDER BY ci.cart_item_id DESC
 		`,
-		[userId]
+		[user_id]
 	);
 
 	return result.rows;
 };
 
-const findCartItemByUserAndProduct = async (userId, productId) => {
-	await ensureCartForUser(userId);
+const findCartItemByUserAndProduct = async (user_id, product_id) => {
+	await ensureCartForUser(user_id);
 
 	const result = await pool.query(
 		`
@@ -64,14 +64,14 @@ const findCartItemByUserAndProduct = async (userId, productId) => {
 			JOIN cart_items ci ON ci.cart_id = c.cart_id
 			WHERE c.user_id = $1 AND ci.product_id = $2
 		`,
-		[userId, productId]
+		[user_id, product_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const createCartItem = async ({ userId, productId, quantity }) => {
-	const cart = await ensureCartForUser(userId);
+const createCartItem = async ({ user_id, product_id, quantity }) => {
+	const cart = await ensureCartForUser(user_id);
 
 	const result = await pool.query(
 		`
@@ -79,7 +79,7 @@ const createCartItem = async ({ userId, productId, quantity }) => {
 			VALUES ($1, $2, $3)
 			RETURNING cart_item_id AS id, cart_id, product_id, quantity, created_at
 		`,
-		[cart.cart_id, productId, quantity]
+		[cart.cart_id, product_id, quantity]
 	);
 
 	await pool.query("UPDATE carts SET updated_at = NOW() WHERE cart_id = $1", [cart.cart_id]);
@@ -87,7 +87,7 @@ const createCartItem = async ({ userId, productId, quantity }) => {
 	return result.rows[0];
 };
 
-const findCartItemWithStockById = async (cartItemId) => {
+const findCartItemWithStockById = async (cart_item_id) => {
 	const result = await pool.query(
 		`
 			SELECT ci.cart_item_id AS id, c.user_id, ci.product_id, ci.quantity, COALESCE(i.quantity, 0) AS stock
@@ -97,13 +97,13 @@ const findCartItemWithStockById = async (cartItemId) => {
 			LEFT JOIN inventory i ON i.product_id = p.id
 			WHERE ci.cart_item_id = $1
 		`,
-		[cartItemId]
+		[cart_item_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const updateCartItemQuantityById = async (cartItemId, quantity) => {
+const updateCartItemQuantityById = async (cart_item_id, quantity) => {
 	const result = await pool.query(
 		`
 			UPDATE cart_items
@@ -111,7 +111,7 @@ const updateCartItemQuantityById = async (cartItemId, quantity) => {
 			WHERE cart_item_id = $2
 			RETURNING cart_item_id AS id, cart_id, product_id, quantity, created_at
 		`,
-		[quantity, cartItemId]
+		[quantity, cart_item_id]
 	);
 
 	if (result.rows[0]) {
@@ -122,14 +122,14 @@ const updateCartItemQuantityById = async (cartItemId, quantity) => {
 				FROM cart_items ci
 				WHERE ci.cart_item_id = $1 AND c.cart_id = ci.cart_id
 			`,
-			[cartItemId]
+			[cart_item_id]
 		);
 	}
 
 	return result.rows[0] || null;
 };
 
-const deleteCartItemByIdForUser = async (cartItemId, userId) => {
+const deleteCartItemByIdForUser = async (cart_item_id, user_id) => {
 	const result = await pool.query(
 		`
 			DELETE FROM cart_items ci
@@ -139,7 +139,7 @@ const deleteCartItemByIdForUser = async (cartItemId, userId) => {
 				AND c.user_id = $2
 			RETURNING ci.cart_item_id AS id, c.cart_id
 		`,
-		[cartItemId, userId]
+		[cart_item_id, user_id]
 	);
 
 	if (result.rows[0]) {

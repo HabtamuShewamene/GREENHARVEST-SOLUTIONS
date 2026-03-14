@@ -36,12 +36,12 @@ const formatOrderRows = (rows) => {
 	return Array.from(ordersMap.values());
 };
 
-const getOrdersForBuyer = async (buyerId, orderId = null) => {
-	const values = [buyerId];
+const getOrdersForBuyer = async (buyer_id, order_id = null) => {
+	const values = [buyer_id];
 	let filter = "o.buyer_id = $1";
 
-	if (orderId !== null) {
-		values.push(orderId);
+	if (order_id !== null) {
+		values.push(order_id);
 		filter += " AND o.id = $2";
 	}
 
@@ -85,33 +85,33 @@ const getOrdersForBuyer = async (buyerId, orderId = null) => {
 	return formatOrderRows(result.rows);
 };
 
-const createOrderRecord = async (client, buyerId, totalPrice, addressId = null) => {
+const createOrderRecord = async (client, buyer_id, total_amount, address_id = null) => {
 	const result = await client.query(
 		`
 			INSERT INTO orders (buyer_id, address_id, total_price, total_amount)
 			VALUES ($1, $2, $3, $3)
 			RETURNING id, buyer_id, address_id, total_price, total_amount, order_status, payment_status, delivery_status, created_at
 		`,
-		[buyerId, addressId, totalPrice]
+		[buyer_id, address_id, total_amount]
 	);
 
 	return result.rows[0];
 };
 
-const createOrderItemRecord = async (client, { orderId, productId, quantity, price }) => {
+const createOrderItemRecord = async (client, { order_id, product_id, quantity, price }) => {
 	const result = await client.query(
 		`
 			INSERT INTO order_items (order_id, product_id, quantity, price)
 			VALUES ($1, $2, $3, $4)
 			RETURNING id, order_id, product_id, quantity, price, created_at
 		`,
-		[orderId, productId, quantity, price]
+		[order_id, product_id, quantity, price]
 	);
 
 	return result.rows[0];
 };
 
-const decrementProductStock = async (client, productId, quantity) => {
+const decrementProductStock = async (client, product_id, quantity) => {
 	const result = await client.query(
 		`
 			UPDATE inventory
@@ -120,13 +120,16 @@ const decrementProductStock = async (client, productId, quantity) => {
 			WHERE product_id = $2
 			RETURNING product_id AS id, quantity AS stock
 		`,
-		[quantity, productId]
+		[quantity, product_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const updateOrderStatusesById = async (orderId, { orderStatus, paymentStatus, deliveryStatus }) => {
+const updateOrderStatusesById = async (
+	order_id,
+	{ order_status, payment_status, delivery_status }
+) => {
 	const result = await pool.query(
 		`
 			UPDATE orders
@@ -137,7 +140,7 @@ const updateOrderStatusesById = async (orderId, { orderStatus, paymentStatus, de
 			WHERE id = $4
 			RETURNING id, buyer_id, total_price, total_amount, order_status, payment_status, delivery_status, created_at
 		`,
-		[orderStatus, paymentStatus, deliveryStatus, orderId]
+		[order_status, payment_status, delivery_status, order_id]
 	);
 
 	return result.rows[0] || null;

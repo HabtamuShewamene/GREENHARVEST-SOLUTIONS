@@ -1,6 +1,6 @@
 const { pool } = require("../config/db");
 
-const findOrderByIdForUpdate = async (client, orderId) => {
+const findOrderByIdForUpdate = async (client, order_id) => {
 	const result = await client.query(
 		`
 			SELECT id, buyer_id, COALESCE(total_amount, total_price) AS total_amount, total_price, payment_status
@@ -8,39 +8,42 @@ const findOrderByIdForUpdate = async (client, orderId) => {
 			WHERE id = $1
 			FOR UPDATE
 		`,
-		[orderId]
+		[order_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const createPayment = async (client, { orderId, paymentMethod, amount, paymentStatus, transactionId }) => {
+const createPayment = async (
+	client,
+	{ order_id, payment_method, amount, payment_status, transaction_id }
+) => {
 	const result = await client.query(
 		`
 			INSERT INTO payments (order_id, payment_method, amount, payment_status, transaction_id)
 			VALUES ($1, $2, $3, $4, $5)
 			RETURNING id, order_id, payment_method, amount, payment_status, transaction_id, created_at
 		`,
-		[orderId, paymentMethod, amount, paymentStatus, transactionId]
+		[order_id, payment_method, amount, payment_status, transaction_id]
 	);
 
 	return result.rows[0];
 };
 
-const createTransaction = async (client, { orderId, userId, amount, paymentMethod, status }) => {
+const createTransaction = async (client, { order_id, user_id, amount, payment_method, status }) => {
 	const result = await client.query(
 		`
 			INSERT INTO transactions (order_id, user_id, amount, payment_method, status)
 			VALUES ($1, $2, $3, $4, $5)
 			RETURNING id, order_id, user_id, amount, payment_method, status, created_at
 		`,
-		[orderId, userId, amount, paymentMethod, status]
+		[order_id, user_id, amount, payment_method, status]
 	);
 
 	return result.rows[0];
 };
 
-const updateOrderPaymentStatus = async (client, { orderId, paymentStatus }) => {
+const updateOrderPaymentStatus = async (client, { order_id, payment_status }) => {
 	await client.query(
 		`
 			UPDATE orders
@@ -48,11 +51,11 @@ const updateOrderPaymentStatus = async (client, { orderId, paymentStatus }) => {
 					order_status = CASE WHEN order_status = 'pending' THEN 'confirmed' ELSE order_status END
 			WHERE id = $2
 		`,
-		[paymentStatus, orderId]
+		[payment_status, order_id]
 	);
 };
 
-const getPaymentHistoryByBuyer = async (userId) => {
+const getPaymentHistoryByBuyer = async (user_id) => {
 	const result = await pool.query(
 		`
 			SELECT
@@ -72,13 +75,13 @@ const getPaymentHistoryByBuyer = async (userId) => {
 			WHERE o.buyer_id = $1
 			ORDER BY p.created_at DESC
 		`,
-		[userId]
+		[user_id]
 	);
 
 	return result.rows;
 };
 
-const getTransactionHistoryByUser = async (userId) => {
+const getTransactionHistoryByUser = async (user_id) => {
 	const result = await pool.query(
 		`
 			SELECT id, order_id, user_id, amount, payment_method, status, created_at
@@ -86,7 +89,7 @@ const getTransactionHistoryByUser = async (userId) => {
 			WHERE user_id = $1
 			ORDER BY created_at DESC
 		`,
-		[userId]
+		[user_id]
 	);
 
 	return result.rows;

@@ -1,6 +1,6 @@
 const { pool } = require("../config/db");
 
-const findUserById = async (userId) => {
+const findUserById = async (user_id) => {
 	const result = await pool.query(
 		`
 			SELECT u.id, u.name, u.email, COALESCE(u.role, r.role_name) AS role, r.role_name
@@ -8,13 +8,13 @@ const findUserById = async (userId) => {
 			LEFT JOIN roles r ON r.role_id = u.role_id
 			WHERE u.id = $1
 		`,
-		[userId]
+		[user_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const assignFarmer = async ({ agentId, farmerId, assignedBy }) => {
+const assignFarmer = async ({ agent_id, farmer_id, assigned_by }) => {
 	const result = await pool.query(
 		`
 			INSERT INTO agent_farmers (agent_id, farmer_id, assigned_by)
@@ -23,22 +23,22 @@ const assignFarmer = async ({ agentId, farmerId, assignedBy }) => {
 			DO UPDATE SET assigned_by = EXCLUDED.assigned_by
 			RETURNING id, agent_id, farmer_id, assigned_by, created_at
 		`,
-		[agentId, farmerId, assignedBy]
+		[agent_id, farmer_id, assigned_by]
 	);
 
 	return result.rows[0];
 };
 
-const isAgentAssignedToFarmer = async ({ agentId, farmerId }) => {
+const isAgentAssignedToFarmer = async ({ agent_id, farmer_id }) => {
 	const result = await pool.query(
 		`SELECT id FROM agent_farmers WHERE agent_id = $1 AND farmer_id = $2`,
-		[agentId, farmerId]
+		[agent_id, farmer_id]
 	);
 
 	return result.rows.length > 0;
 };
 
-const getFarmersByAgent = async (agentId) => {
+const getFarmersByAgent = async (agent_id) => {
 	const result = await pool.query(
 		`
 			SELECT
@@ -56,7 +56,7 @@ const getFarmersByAgent = async (agentId) => {
 			WHERE af.agent_id = $1
 			ORDER BY af.created_at DESC
 		`,
-		[agentId]
+		[agent_id]
 	);
 
 	return result.rows;

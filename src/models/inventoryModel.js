@@ -1,6 +1,6 @@
 const { pool } = require("../config/db");
 
-const upsertInventory = async ({ productId, farmerId, quantity }) => {
+const upsertInventory = async ({ product_id, farmer_id, quantity }) => {
 	const result = await pool.query(
 		`
 			INSERT INTO inventory (product_id, farmer_id, quantity, last_updated)
@@ -12,13 +12,13 @@ const upsertInventory = async ({ productId, farmerId, quantity }) => {
 					last_updated = NOW()
 			RETURNING id, product_id, farmer_id, quantity, last_updated
 		`,
-		[productId, farmerId, quantity]
+		[product_id, farmer_id, quantity]
 	);
 
 	return result.rows[0];
 };
 
-const getInventoryByProductId = async (productId) => {
+const getInventoryByProductId = async (product_id) => {
 	const result = await pool.query(
 		`
 			SELECT
@@ -35,7 +35,7 @@ const getInventoryByProductId = async (productId) => {
 			JOIN users u ON u.id = i.farmer_id
 			WHERE i.product_id = $1
 		`,
-		[productId]
+		[product_id]
 	);
 
 	return result.rows[0] || null;

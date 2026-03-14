@@ -1,15 +1,15 @@
 const { pool } = require("../config/db");
 
-const findOrderById = async (client, orderId) => {
+const findOrderById = async (client, order_id) => {
 	const result = await client.query(
 		`SELECT id, buyer_id, order_status, payment_status FROM orders WHERE id = $1 FOR UPDATE`,
-		[orderId]
+		[order_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const findDeliveryPartnerById = async (client, userId) => {
+const findDeliveryPartnerById = async (client, user_id) => {
 	const result = await client.query(
 		`
 			SELECT u.id, COALESCE(u.role, r.role_name) AS role, r.role_name
@@ -17,24 +17,24 @@ const findDeliveryPartnerById = async (client, userId) => {
 			LEFT JOIN roles r ON r.role_id = u.role_id
 			WHERE u.id = $1
 		`,
-		[userId]
+		[user_id]
 	);
 	return result.rows[0] || null;
 };
 
-const findDeliveryByOrderIdForUpdate = async (client, orderId) => {
+const findDeliveryByOrderIdForUpdate = async (client, order_id) => {
 	const result = await client.query(
 		`SELECT * FROM deliveries WHERE order_id = $1 FOR UPDATE`,
-		[orderId]
+		[order_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const findDeliveryByIdForUpdate = async (client, deliveryId) => {
+const findDeliveryByIdForUpdate = async (client, delivery_id) => {
 	const result = await client.query(
 		`SELECT * FROM deliveries WHERE id = $1 FOR UPDATE`,
-		[deliveryId]
+		[delivery_id]
 	);
 
 	return result.rows[0] || null;
@@ -42,7 +42,14 @@ const findDeliveryByIdForUpdate = async (client, deliveryId) => {
 
 const createDelivery = async (
 	client,
-	{ orderId, deliveryPartnerId, pickupLocation, deliveryLocation, status, estimatedTime }
+	{
+		order_id,
+		delivery_partner_id,
+		pickup_location,
+		delivery_location,
+		status,
+		estimated_time,
+	}
 ) => {
 	const result = await client.query(
 		`
@@ -60,7 +67,7 @@ const createDelivery = async (
 			VALUES ($1, $2, $2, $3, $4, $4, $5, $5, $6)
 			RETURNING id, order_id, delivery_partner_id, pickup_location, delivery_location, status, estimated_time, created_at
 		`,
-		[orderId, deliveryPartnerId, pickupLocation, deliveryLocation, status, estimatedTime]
+		[order_id, delivery_partner_id, pickup_location, delivery_location, status, estimated_time]
 	);
 
 	return result.rows[0];
@@ -68,7 +75,13 @@ const createDelivery = async (
 
 const updateDeliveryByOrderId = async (
 	client,
-	{ orderId, status, estimatedTime = null, pickupLocation = undefined, deliveryLocation = undefined }
+	{
+		order_id,
+		status,
+		estimated_time = null,
+		pickup_location = undefined,
+		delivery_location = undefined,
+	}
 ) => {
 	const result = await client.query(
 		`
@@ -82,13 +95,13 @@ const updateDeliveryByOrderId = async (
 			WHERE order_id = $5
 			RETURNING id, order_id, delivery_partner_id, pickup_location, delivery_location, status, estimated_time, created_at
 		`,
-		[status, estimatedTime, pickupLocation, deliveryLocation, orderId]
+		[status, estimated_time, pickup_location, delivery_location, order_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const updateOrderDeliveryStatus = async (client, { orderId, status }) => {
+const updateOrderDeliveryStatus = async (client, { order_id, status }) => {
 	await client.query(
 		`
 			UPDATE orders
@@ -100,11 +113,11 @@ const updateOrderDeliveryStatus = async (client, { orderId, status }) => {
 					END
 			WHERE id = $2
 		`,
-		[status, orderId]
+		[status, order_id]
 	);
 };
 
-const getDeliveryByOrderId = async (orderId) => {
+const getDeliveryByOrderId = async (order_id) => {
 	const result = await pool.query(
 		`
 			SELECT
@@ -125,7 +138,7 @@ const getDeliveryByOrderId = async (orderId) => {
 			LEFT JOIN users u ON u.id = d.delivery_partner_id
 			WHERE d.order_id = $1
 		`,
-		[orderId]
+		[order_id]
 	);
 
 	return result.rows[0] || null;

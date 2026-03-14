@@ -29,13 +29,13 @@ const productSelect = `
 `;
 
 const createProduct = async ({
-	farmerId,
-	categoryId,
+	farmer_id,
+	category_id,
 	name,
 	description,
 	price,
-	farmLocation,
-	imageUrl,
+	farm_location,
+	image_url,
 }) => {
 	const result = await pool.query(
 		`
@@ -51,7 +51,7 @@ const createProduct = async ({
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id, farmer_id, category_id, name, description, price, farm_location, image_url, created_at
 		`,
-		[farmerId, categoryId, name, description, price, farmLocation, imageUrl]
+		[farmer_id, category_id, name, description, price, farm_location, image_url]
 	);
 
 	return result.rows[0];
@@ -116,7 +116,7 @@ const findProductById = async (productId) => {
 
 const updateProductById = async (
 	productId,
-	{ name, description, price, categoryId, farmLocation, imageUrl }
+	{ name, description, price, category_id, farm_location, image_url }
 ) => {
 	const result = await pool.query(
 		`
@@ -131,7 +131,7 @@ const updateProductById = async (
 			WHERE id = $7
 			RETURNING id, farmer_id, category_id, name, description, price, farm_location, image_url, created_at
 		`,
-		[name, description, price, categoryId, farmLocation, imageUrl, productId]
+		[name, description, price, category_id, farm_location, image_url, productId]
 	);
 
 	return result.rows[0] || null;
