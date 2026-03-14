@@ -14,9 +14,10 @@ const findDeliveryPartnerById = async (client, user_id) => {
 		`
 			SELECT dp.delivery_id AS id, u.user_id, u.name, u.email, u.phone
 			FROM users u
+			LEFT JOIN roles r ON r.role_id = u.role_id
 			JOIN delivery_profiles dp ON dp.user_id = u.user_id
 			WHERE (u.user_id = $1 OR dp.delivery_id = $1)
-			AND u.role = 'deliveryPartner'
+			AND LOWER(COALESCE(r.role_name, '')) = 'delivery_partner'
 		`,
 		[user_id]
 	);
