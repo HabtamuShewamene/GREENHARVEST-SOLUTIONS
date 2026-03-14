@@ -1,5 +1,16 @@
 const { pool } = require("../config/db");
 
+const withAgentFarmersTableGuard = (error) => {
+	if (error && error.code === "42P01") {
+		const wrappedError = new Error("Agent assignment module is not initialized");
+		wrappedError.statusCode = 503;
+		wrappedError.code = error.code;
+		throw wrappedError;
+	}
+
+	throw error;
+};
+
 const findUserById = async (user_id) => {
 	const result = await pool.query(
 		`
@@ -15,51 +26,63 @@ const findUserById = async (user_id) => {
 };
 
 const assignFarmer = async ({ agent_id, farmer_id, assigned_by }) => {
-	const result = await pool.query(
-		`
-			INSERT INTO agent_farmers (agent_id, farmer_id, assigned_by)
-			VALUES ($1, $2, $3)
-			ON CONFLICT (agent_id, farmer_id)
-			DO UPDATE SET assigned_by = EXCLUDED.assigned_by
-			RETURNING id, agent_id, farmer_id, assigned_by, created_at
-		`,
-		[agent_id, farmer_id, assigned_by]
-	);
+	try {
+		const result = await pool.query(
+			`
+				INSERT INTO agent_farmers (agent_id, farmer_id, assigned_by)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (agent_id, farmer_id)
+				DO UPDATE SET assigned_by = EXCLUDED.assigned_by
+				RETURNING id, agent_id, farmer_id, assigned_by, created_at
+			`,
+			[agent_id, farmer_id, assigned_by]
+		);
 
-	return result.rows[0];
+		return result.rows[0];
+	} catch (error) {
+		withAgentFarmersTableGuard(error);
+	}
 };
 
 const isAgentAssignedToFarmer = async ({ agent_id, farmer_id }) => {
-	const result = await pool.query(
-		`SELECT id FROM agent_farmers WHERE agent_id = $1 AND farmer_id = $2`,
-		[agent_id, farmer_id]
-	);
+	try {
+		const result = await pool.query(
+			`SELECT id FROM agent_farmers WHERE agent_id = $1 AND farmer_id = $2`,
+			[agent_id, farmer_id]
+		);
 
-	return result.rows.length > 0;
+		return result.rows.length > 0;
+	} catch (error) {
+		withAgentFarmersTableGuard(error);
+	}
 };
 
 const getFarmersByAgent = async (agent_id) => {
-	const result = await pool.query(
-		`
-			SELECT
-				af.id AS assignment_id,
-				af.agent_id,
-				af.farmer_id,
-				af.assigned_by,
-				af.created_at,
-				u.name AS farmer_name,
-				u.email AS farmer_email,
-				u.phone AS farmer_phone,
-				NULL::text AS farmer_address
-			FROM agent_farmers af
-			JOIN users u ON u.user_id = af.farmer_id
-			WHERE af.agent_id = $1
-			ORDER BY af.created_at DESC
-		`,
-		[agent_id]
-	);
+	try {
+		const result = await pool.query(
+			`
+				SELECT
+					af.id AS assignment_id,
+					af.agent_id,
+					af.farmer_id,
+					af.assigned_by,
+					af.created_at,
+					u.name AS farmer_name,
+					u.email AS farmer_email,
+					u.phone AS farmer_phone,
+					NULL::text AS farmer_address
+				FROM agent_farmers af
+				JOIN users u ON u.user_id = af.farmer_id
+				WHERE af.agent_id = $1
+				ORDER BY af.created_at DESC
+			`,
+			[agent_id]
+		);
 
-	return result.rows;
+		return result.rows;
+	} catch (error) {
+		withAgentFarmersTableGuard(error);
+	}
 };
 
 module.exports = {
