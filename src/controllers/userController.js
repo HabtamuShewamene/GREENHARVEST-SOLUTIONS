@@ -16,12 +16,12 @@ const handleControllerError = (res, context, error, meta = {}) => {
 
 const getMe = async (req, res) => {
   try {
-    const user = await userService.getMe(req.user.id);
+    const user = await userService.getMe(req.user.user_id || req.user.id);
 
     return res.status(200).json({ user });
   } catch (error) {
     return handleControllerError(res, "Get current user failed", error, {
-      userId: req.user && req.user.id,
+      userId: req.user && (req.user.user_id || req.user.id),
     });
   }
 };
