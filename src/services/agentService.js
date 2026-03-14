@@ -2,6 +2,7 @@ const agentModel = require("../models/agentModel");
 const categoryModel = require("../models/categoryModel");
 const inventoryModel = require("../models/inventoryModel");
 const productModel = require("../models/productModel");
+const { pool } = require("../config/db");
 const { normalizeRole } = require("../utils/roles");
 const { isNonNegativeNumber, isPositiveInteger } = require("../utils/validators");
 
@@ -85,6 +86,17 @@ const addProductForFarmer = async ({ actor, payload }) => {
 
 	await ensureUserWithRole(farmer_id, "farmer");
 
+	const farmerProfileResult = await pool.query(
+		`SELECT farmer_id FROM farmer_profiles WHERE user_id = $1 LIMIT 1`,
+		[farmer_id]
+	);
+
+	const farmer_profile_id = farmerProfileResult.rows[0] && farmerProfileResult.rows[0].farmer_id;
+
+	if (!farmer_profile_id) {
+		throw createServiceError("Farmer profile not found", 404);
+	}
+
 	if (normalizeRole(actor.role) === "fieldAgent") {
 		const actorAgentUserId = Number(actor && actor.user_id ? actor.user_id : actor && actor.id);
 		const isAssigned = await agentModel.isAgentAssignedToFarmer({
@@ -124,7 +136,7 @@ const addProductForFarmer = async ({ actor, payload }) => {
 	}
 
 	const product = await productModel.createProduct({
-		farmer_id,
+		farmer_id: Number(farmer_profile_id),
 		category_id,
 		name: String(payload.name).trim(),
 		description: payload.description ? String(payload.description).trim() : null,
@@ -135,7 +147,7 @@ const addProductForFarmer = async ({ actor, payload }) => {
 
 	await inventoryModel.upsertInventory({
 		product_id: product.id,
-		farmer_id,
+		farmer_id: Number(farmer_profile_id),
 		quantity: Number(payload.stock),
 	});
 
