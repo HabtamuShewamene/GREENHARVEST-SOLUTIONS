@@ -58,8 +58,8 @@ const getUserNotifications = async (req, res) => {
 const markNotificationAsRead = async (req, res) => {
 	try {
 		const notification = await notificationService.markAsRead({
-			userId: req.user.id,
-			notificationId: req.params.id,
+			user_id: req.user.id,
+			notification_id: req.params.id,
 		});
 
 		return res.status(200).json({

@@ -61,10 +61,10 @@ const updateDeliveryStatus = async (req, res) => {
 
 const trackDelivery = async (req, res) => {
 	try {
-		const orderId = req.params.orderId || req.params.order_id;
+		const order_id = req.params.order_id || req.params.orderId;
 		const delivery = await deliveryService.trackDelivery({
 			actor: req.user,
-			orderId,
+			order_id,
 		});
 
 		return res.status(200).json({
