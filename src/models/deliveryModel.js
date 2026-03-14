@@ -138,7 +138,8 @@ const getDeliveryByOrderId = async (order_id) => {
 			FROM deliveries d
 			JOIN orders o ON o.order_id = d.order_id
 			LEFT JOIN payments p ON p.order_id = o.order_id
-			LEFT JOIN users u ON u.user_id = d.delivery_partner_id
+			LEFT JOIN delivery_profiles dp ON dp.delivery_id = d.delivery_partner_id
+			LEFT JOIN users u ON u.user_id = dp.user_id
 			WHERE d.order_id = $1
 		`,
 		[order_id]

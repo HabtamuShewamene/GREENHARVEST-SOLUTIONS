@@ -52,7 +52,7 @@ const assignDelivery = async ({ actor, payload }) => {
 
 		const partner = await deliveryModel.findDeliveryPartnerById(client, delivery_partner_id);
 
-		if (!partner || normalizeRole(partner.role) !== "deliveryPartner") {
+		if (!partner) {
 			throw createServiceError("delivery_partner_id must belong to a delivery partner", 400);
 		}
 
@@ -64,7 +64,7 @@ const assignDelivery = async ({ actor, payload }) => {
 
 		const delivery = await deliveryModel.createDelivery(client, {
 			order_id,
-			delivery_partner_id,
+			delivery_partner_id: partner.id,
 			pickup_location: payload.pickup_location ? String(payload.pickup_location).trim() : null,
 			delivery_location: String(delivery_location).trim(),
 			status: "assigned",
