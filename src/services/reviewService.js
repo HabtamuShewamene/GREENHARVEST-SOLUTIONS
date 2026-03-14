@@ -18,8 +18,8 @@ const validateRating = (rating) => {
 	return Number(rating);
 };
 
-const ensureProductExists = async (productId) => {
-	const product = await productModel.findProductById(productId);
+const ensureProductExists = async (product_id) => {
+	const product = await productModel.findProductById(product_id);
 
 	if (!product) {
 		throw createServiceError("Product not found", 404);
@@ -33,26 +33,26 @@ const addReview = async ({ user, payload }) => {
 		throw createServiceError("Valid product_id is required", 400);
 	}
 
-	const productId = Number(payload.product_id);
+	const product_id = Number(payload.product_id);
 	const rating = validateRating(payload.rating);
-	await ensureProductExists(productId);
+	await ensureProductExists(product_id);
 
-	const existingReview = await reviewModel.findReviewByProductAndUser(productId, user.id);
+	const existingReview = await reviewModel.findReviewByProductAndUser(product_id, user.id);
 
 	if (existingReview) {
 		throw createServiceError("You have already reviewed this product", 409);
 	}
 
 	return reviewModel.createReview({
-		productId,
-		userId: user.id,
+		product_id,
+		user_id: user.id,
 		rating,
 		comment: payload.comment ? String(payload.comment).trim() : null,
 	});
 };
 
-const updateReview = async ({ user, reviewId, payload }) => {
-	if (!isPositiveInteger(reviewId)) {
+const updateReview = async ({ user, review_id, payload }) => {
+	if (!isPositiveInteger(review_id)) {
 		throw createServiceError("Invalid review id", 400);
 	}
 
@@ -60,7 +60,7 @@ const updateReview = async ({ user, reviewId, payload }) => {
 		throw createServiceError("At least one of rating or comment is required", 400);
 	}
 
-	const review = await reviewModel.findReviewById(Number(reviewId));
+	const review = await reviewModel.findReviewById(Number(review_id));
 
 	if (!review) {
 		throw createServiceError("Review not found", 404);
@@ -70,7 +70,7 @@ const updateReview = async ({ user, reviewId, payload }) => {
 		throw createServiceError("You can only update your own review", 403);
 	}
 
-	return reviewModel.updateReviewById(Number(reviewId), {
+	return reviewModel.updateReviewById(Number(review_id), {
 		rating: payload.rating !== undefined ? validateRating(payload.rating) : null,
 		comment:
 			payload.comment !== undefined
@@ -81,12 +81,12 @@ const updateReview = async ({ user, reviewId, payload }) => {
 	});
 };
 
-const deleteReview = async ({ user, reviewId }) => {
-	if (!isPositiveInteger(reviewId)) {
+const deleteReview = async ({ user, review_id }) => {
+	if (!isPositiveInteger(review_id)) {
 		throw createServiceError("Invalid review id", 400);
 	}
 
-	const review = await reviewModel.findReviewById(Number(reviewId));
+	const review = await reviewModel.findReviewById(Number(review_id));
 
 	if (!review) {
 		throw createServiceError("Review not found", 404);
@@ -98,19 +98,19 @@ const deleteReview = async ({ user, reviewId }) => {
 		throw createServiceError("You are not allowed to delete this review", 403);
 	}
 
-	await reviewModel.deleteReviewById(Number(reviewId));
+	await reviewModel.deleteReviewById(Number(review_id));
 	return { deleted: true };
 };
 
-const getProductReviews = async (productId) => {
-	if (!isPositiveInteger(productId)) {
+const getProductReviews = async (product_id) => {
+	if (!isPositiveInteger(product_id)) {
 		throw createServiceError("Invalid product id", 400);
 	}
 
-	const parsedProductId = Number(productId);
-	const product = await ensureProductExists(parsedProductId);
-	const summary = await reviewModel.getProductReviewSummary(parsedProductId);
-	const reviews = await reviewModel.getProductReviews(parsedProductId);
+	const parsed_product_id = Number(product_id);
+	const product = await ensureProductExists(parsed_product_id);
+	const summary = await reviewModel.getProductReviewSummary(parsed_product_id);
+	const reviews = await reviewModel.getProductReviews(parsed_product_id);
 
 	return {
 		product: {
