@@ -43,7 +43,8 @@ const createNotification = async (req, res) => {
 
 const getUserNotifications = async (req, res) => {
 	try {
-		const notifications = await notificationService.getNotifications(req.user.id);
+		const user_id = req.user && req.user.user_id ? req.user.user_id : req.user.id;
+		const notifications = await notificationService.getNotifications(user_id);
 
 		return res.status(200).json({
 			notifications,
@@ -57,8 +58,9 @@ const getUserNotifications = async (req, res) => {
 
 const markNotificationAsRead = async (req, res) => {
 	try {
+		const user_id = req.user && req.user.user_id ? req.user.user_id : req.user.id;
 		const notification = await notificationService.markAsRead({
-			user_id: req.user.id,
+			user_id,
 			notification_id: req.params.id,
 		});
 
