@@ -25,17 +25,17 @@ const assignDelivery = async ({ actor, payload }) => {
 		throw createServiceError("Only admins can assign delivery partners", 403);
 	}
 
-	const orderId = Number(payload.order_id);
-	const deliveryPartnerId = Number(payload.delivery_partner_id || payload.delivery_person_id);
+	const order_id = Number(payload.order_id);
+	const delivery_partner_id = Number(payload.delivery_partner_id || payload.delivery_person_id);
 
-	if (!isPositiveInteger(orderId) || !isPositiveInteger(deliveryPartnerId)) {
+	if (!isPositiveInteger(order_id) || !isPositiveInteger(delivery_partner_id)) {
 		throw createServiceError("order_id and delivery_partner_id are required", 400);
 	}
 
-	const deliveryLocation =
+	const delivery_location =
 		payload.delivery_location || payload.delivery_address || payload.address;
 
-	if (!deliveryLocation || !String(deliveryLocation).trim()) {
+	if (!delivery_location || !String(delivery_location).trim()) {
 		throw createServiceError("delivery_location is required", 400);
 	}
 
@@ -44,35 +44,35 @@ const assignDelivery = async ({ actor, payload }) => {
 	try {
 		await client.query("BEGIN");
 
-		const order = await deliveryModel.findOrderById(client, orderId);
+		const order = await deliveryModel.findOrderById(client, order_id);
 
 		if (!order) {
 			throw createServiceError("Order not found", 404);
 		}
 
-		const partner = await deliveryModel.findDeliveryPartnerById(client, deliveryPartnerId);
+		const partner = await deliveryModel.findDeliveryPartnerById(client, delivery_partner_id);
 
 		if (!partner || normalizeRole(partner.role) !== "deliveryPartner") {
 			throw createServiceError("delivery_partner_id must belong to a delivery partner", 400);
 		}
 
-		const existingDelivery = await deliveryModel.findDeliveryByOrderIdForUpdate(client, orderId);
+		const existingDelivery = await deliveryModel.findDeliveryByOrderIdForUpdate(client, order_id);
 
 		if (existingDelivery) {
 			throw createServiceError("Delivery partner already assigned for this order", 409);
 		}
 
 		const delivery = await deliveryModel.createDelivery(client, {
-			orderId,
-			deliveryPartnerId,
-			pickupLocation: payload.pickup_location ? String(payload.pickup_location).trim() : null,
-			deliveryLocation: String(deliveryLocation).trim(),
+			order_id,
+			delivery_partner_id,
+			pickup_location: payload.pickup_location ? String(payload.pickup_location).trim() : null,
+			delivery_location: String(delivery_location).trim(),
 			status: "assigned",
-			estimatedTime: payload.estimated_time || null,
+			estimated_time: payload.estimated_time || null,
 		});
 
 		await deliveryModel.updateOrderDeliveryStatus(client, {
-			orderId,
+			order_id,
 			status: "assigned",
 		});
 
@@ -87,23 +87,23 @@ const assignDelivery = async ({ actor, payload }) => {
 };
 
 const updateDeliveryStatus = async ({ actor, payload }) => {
-	let orderId = payload.order_id || payload.orderId;
-	const deliveryId = payload.delivery_id;
+	let order_id = payload.order_id;
+	const delivery_id = payload.delivery_id;
 	const status = payload.status || payload.delivery_status;
 
 	if (!status) {
 		throw createServiceError("status is required", 400);
 	}
 
-	if (orderId !== undefined && orderId !== null && !isPositiveInteger(orderId)) {
+	if (order_id !== undefined && order_id !== null && !isPositiveInteger(order_id)) {
 		throw createServiceError("order_id must be a valid integer", 400);
 	}
 
-	if (deliveryId !== undefined && deliveryId !== null && !isPositiveInteger(deliveryId)) {
+	if (delivery_id !== undefined && delivery_id !== null && !isPositiveInteger(delivery_id)) {
 		throw createServiceError("delivery_id must be a valid integer", 400);
 	}
 
-	if ((orderId === undefined || orderId === null) && (deliveryId === undefined || deliveryId === null)) {
+	if ((order_id === undefined || order_id === null) && (delivery_id === undefined || delivery_id === null)) {
 		throw createServiceError("order_id or delivery_id is required", 400);
 	}
 
@@ -119,12 +119,12 @@ const updateDeliveryStatus = async ({ actor, payload }) => {
 
 		let existingDelivery = null;
 
-		if (orderId !== undefined && orderId !== null) {
-			existingDelivery = await deliveryModel.findDeliveryByOrderIdForUpdate(client, Number(orderId));
+		if (order_id !== undefined && order_id !== null) {
+			existingDelivery = await deliveryModel.findDeliveryByOrderIdForUpdate(client, Number(order_id));
 		} else {
-			existingDelivery = await deliveryModel.findDeliveryByIdForUpdate(client, Number(deliveryId));
+			existingDelivery = await deliveryModel.findDeliveryByIdForUpdate(client, Number(delivery_id));
 			if (existingDelivery) {
-				orderId = existingDelivery.order_id;
+				order_id = existingDelivery.order_id;
 			}
 		}
 
@@ -132,7 +132,7 @@ const updateDeliveryStatus = async ({ actor, payload }) => {
 			throw createServiceError("Delivery not found for this order", 404);
 		}
 
-		const order = await deliveryModel.findOrderById(client, Number(orderId));
+		const order = await deliveryModel.findOrderById(client, Number(order_id));
 
 		if (!order) {
 			throw createServiceError("Order not found", 404);
@@ -148,17 +148,17 @@ const updateDeliveryStatus = async ({ actor, payload }) => {
 		}
 
 		const delivery = await deliveryModel.updateDeliveryByOrderId(client, {
-			orderId: Number(orderId),
+			order_id: Number(order_id),
 			status: normalizedStatus,
-			estimatedTime: payload.estimated_time || null,
-			pickupLocation:
+			estimated_time: payload.estimated_time || null,
+			pickup_location:
 				payload.pickup_location !== undefined ? String(payload.pickup_location).trim() : undefined,
-			deliveryLocation:
+			delivery_location:
 				payload.delivery_location !== undefined ? String(payload.delivery_location).trim() : undefined,
 		});
 
 		await deliveryModel.updateOrderDeliveryStatus(client, {
-			orderId: Number(orderId),
+			order_id: Number(order_id),
 			status: normalizedStatus,
 		});
 
@@ -172,12 +172,12 @@ const updateDeliveryStatus = async ({ actor, payload }) => {
 	}
 };
 
-const trackDelivery = async ({ actor, orderId }) => {
-	if (!isPositiveInteger(orderId)) {
+const trackDelivery = async ({ actor, order_id }) => {
+	if (!isPositiveInteger(order_id)) {
 		throw createServiceError("Invalid order id", 400);
 	}
 
-	const delivery = await deliveryModel.getDeliveryByOrderId(Number(orderId));
+	const delivery = await deliveryModel.getDeliveryByOrderId(Number(order_id));
 
 	if (!delivery) {
 		throw createServiceError("Delivery not found for this order", 404);
