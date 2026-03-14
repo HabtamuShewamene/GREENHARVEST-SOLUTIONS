@@ -1,18 +1,25 @@
 const { pool } = require("../config/db");
 
 const ensureCartForUser = async (user_id) => {
-	const result = await pool.query(
+	const existing = await pool.query(
+		`SELECT cart_id, buyer_id AS user_id FROM carts WHERE buyer_id = $1 ORDER BY cart_id ASC LIMIT 1`,
+		[user_id]
+	);
+
+	if (existing.rows[0]) {
+		return existing.rows[0];
+	}
+
+	const inserted = await pool.query(
 		`
 			INSERT INTO carts (buyer_id)
 			VALUES ($1)
-			ON CONFLICT (buyer_id)
-			DO UPDATE SET buyer_id = EXCLUDED.buyer_id
 			RETURNING cart_id, buyer_id AS user_id
 		`,
 		[user_id]
 	);
 
-	return result.rows[0];
+	return inserted.rows[0];
 };
 
 const getUserCartItems = async (user_id) => {
