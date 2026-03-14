@@ -42,42 +42,44 @@ const getOrdersForBuyer = async (buyer_id, order_id = null) => {
 
 	if (order_id !== null) {
 		values.push(order_id);
-		filter += " AND o.id = $2";
+		filter += " AND o.order_id = $2";
 	}
 
 	const result = await pool.query(
 		`
 			SELECT
-				o.id AS order_id,
+				o.order_id,
 				o.buyer_id,
 				o.address_id,
-				COALESCE(o.total_amount, o.total_price) AS total_price,
-				COALESCE(o.total_amount, o.total_price) AS total_amount,
+				o.total_amount AS total_price,
+				o.total_amount,
 				o.order_status,
-				o.payment_status,
-				o.delivery_status,
+				COALESCE(pay.payment_status, 'pending') AS payment_status,
+				COALESCE(d.delivery_status, 'pending') AS delivery_status,
 				o.address_id,
 				o.created_at,
-				oi.id AS order_item_id,
+				oi.order_item_id,
 				oi.product_id,
 				oi.quantity,
 				oi.price,
 				p.name AS product_name,
-				COALESCE(pi.image_url, p.image_url) AS image_url,
-				p.farm_location,
+				pi.image_url,
+				NULL::text AS farm_location,
 				p.farmer_id
 			FROM orders o
-			LEFT JOIN order_items oi ON oi.order_id = o.id
-			LEFT JOIN products p ON p.id = oi.product_id
+			LEFT JOIN order_items oi ON oi.order_id = o.order_id
+			LEFT JOIN products p ON p.product_id = oi.product_id
+			LEFT JOIN payments pay ON pay.order_id = o.order_id
+			LEFT JOIN deliveries d ON d.order_id = o.order_id
 			LEFT JOIN LATERAL (
 				SELECT image_url
 				FROM product_images
-				WHERE product_id = p.id
-				ORDER BY is_primary DESC, image_id ASC
+				WHERE product_id = p.product_id
+				ORDER BY image_id ASC
 				LIMIT 1
 			) pi ON TRUE
 			WHERE ${filter}
-			ORDER BY o.created_at DESC, oi.id ASC
+			ORDER BY o.created_at DESC, oi.order_item_id ASC
 		`,
 		values
 	);
@@ -88,9 +90,9 @@ const getOrdersForBuyer = async (buyer_id, order_id = null) => {
 const createOrderRecord = async (client, buyer_id, total_amount, address_id = null) => {
 	const result = await client.query(
 		`
-			INSERT INTO orders (buyer_id, address_id, total_price, total_amount)
-			VALUES ($1, $2, $3, $3)
-			RETURNING id, buyer_id, address_id, total_price, total_amount, order_status, payment_status, delivery_status, created_at
+			INSERT INTO orders (buyer_id, address_id, total_amount, order_status)
+			VALUES ($1, $2, $3, 'pending')
+			RETURNING order_id AS id, buyer_id, address_id, total_amount AS total_price, total_amount, order_status, 'pending'::varchar AS payment_status, 'pending'::varchar AS delivery_status, created_at
 		`,
 		[buyer_id, address_id, total_amount]
 	);
@@ -103,7 +105,7 @@ const createOrderItemRecord = async (client, { order_id, product_id, quantity, p
 		`
 			INSERT INTO order_items (order_id, product_id, quantity, price)
 			VALUES ($1, $2, $3, $4)
-			RETURNING id, order_id, product_id, quantity, price, created_at
+			RETURNING order_item_id AS id, order_id, product_id, quantity, price
 		`,
 		[order_id, product_id, quantity, price]
 	);
@@ -130,17 +132,44 @@ const updateOrderStatusesById = async (
 	order_id,
 	{ order_status, payment_status, delivery_status }
 ) => {
+	if (order_status !== null) {
+		await pool.query(
+			`UPDATE orders SET order_status = $1 WHERE order_id = $2`,
+			[order_status, order_id]
+		);
+	}
+
+	if (payment_status !== null) {
+		await pool.query(
+			`UPDATE payments SET payment_status = $1, paid_at = NOW() WHERE order_id = $2`,
+			[payment_status, order_id]
+		);
+	}
+
+	if (delivery_status !== null) {
+		await pool.query(
+			`UPDATE deliveries SET delivery_status = $1 WHERE order_id = $2`,
+			[delivery_status, order_id]
+		);
+	}
+
 	const result = await pool.query(
 		`
-			UPDATE orders
-			SET
-				order_status = COALESCE($1, order_status),
-				payment_status = COALESCE($2, payment_status),
-				delivery_status = COALESCE($3, delivery_status)
-			WHERE id = $4
-			RETURNING id, buyer_id, total_price, total_amount, order_status, payment_status, delivery_status, created_at
+			SELECT
+				o.order_id AS id,
+				o.buyer_id,
+				o.total_amount AS total_price,
+				o.total_amount,
+				o.order_status,
+				COALESCE(p.payment_status, 'pending') AS payment_status,
+				COALESCE(d.delivery_status, 'pending') AS delivery_status,
+				o.created_at
+			FROM orders o
+			LEFT JOIN payments p ON p.order_id = o.order_id
+			LEFT JOIN deliveries d ON d.order_id = o.order_id
+			WHERE o.order_id = $1
 		`,
-		[order_status, payment_status, delivery_status, order_id]
+		[order_id]
 	);
 
 	return result.rows[0] || null;

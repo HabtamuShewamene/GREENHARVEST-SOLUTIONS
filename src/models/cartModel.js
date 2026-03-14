@@ -3,11 +3,11 @@ const { pool } = require("../config/db");
 const ensureCartForUser = async (user_id) => {
 	const result = await pool.query(
 		`
-			INSERT INTO carts (user_id, updated_at)
-			VALUES ($1, NOW())
-			ON CONFLICT (user_id)
-			DO UPDATE SET updated_at = NOW()
-			RETURNING cart_id, user_id
+			INSERT INTO carts (buyer_id)
+			VALUES ($1)
+			ON CONFLICT (buyer_id)
+			DO UPDATE SET buyer_id = EXCLUDED.buyer_id
+			RETURNING cart_id, buyer_id AS user_id
 		`,
 		[user_id]
 	);
@@ -22,30 +22,30 @@ const getUserCartItems = async (user_id) => {
 		`
 			SELECT
 				ci.cart_item_id AS id,
-				c.user_id,
+				c.buyer_id AS user_id,
 				ci.product_id,
 				ci.quantity,
 				p.name AS product_name,
 				p.description AS product_description,
 				p.price AS product_price,
 				COALESCE(i.quantity, 0) AS product_stock,
-				COALESCE(pi.image_url, p.image_url) AS image_url,
-				p.farm_location,
+				pi.image_url,
+				NULL::text AS farm_location,
 				p.farmer_id,
 				u.name AS farmer_name
 			FROM carts c
 			JOIN cart_items ci ON ci.cart_id = c.cart_id
-			JOIN products p ON p.id = ci.product_id
-			LEFT JOIN inventory i ON i.product_id = p.id
+			JOIN products p ON p.product_id = ci.product_id
+			LEFT JOIN inventory i ON i.product_id = p.product_id
 			LEFT JOIN LATERAL (
 				SELECT image_url
 				FROM product_images
-				WHERE product_id = p.id
-				ORDER BY is_primary DESC, image_id ASC
+				WHERE product_id = p.product_id
+				ORDER BY image_id ASC
 				LIMIT 1
 			) pi ON TRUE
-			JOIN users u ON u.id = p.farmer_id
-			WHERE c.user_id = $1
+			JOIN users u ON u.user_id = p.farmer_id
+			WHERE c.buyer_id = $1
 			ORDER BY ci.cart_item_id DESC
 		`,
 		[user_id]
@@ -62,7 +62,7 @@ const findCartItemByUserAndProduct = async (user_id, product_id) => {
 			SELECT ci.cart_item_id AS id, ci.quantity
 			FROM carts c
 			JOIN cart_items ci ON ci.cart_id = c.cart_id
-			WHERE c.user_id = $1 AND ci.product_id = $2
+			WHERE c.buyer_id = $1 AND ci.product_id = $2
 		`,
 		[user_id, product_id]
 	);
@@ -77,12 +77,10 @@ const createCartItem = async ({ user_id, product_id, quantity }) => {
 		`
 			INSERT INTO cart_items (cart_id, product_id, quantity)
 			VALUES ($1, $2, $3)
-			RETURNING cart_item_id AS id, cart_id, product_id, quantity, created_at
+			RETURNING cart_item_id AS id, cart_id, product_id, quantity
 		`,
 		[cart.cart_id, product_id, quantity]
 	);
-
-	await pool.query("UPDATE carts SET updated_at = NOW() WHERE cart_id = $1", [cart.cart_id]);
 
 	return result.rows[0];
 };
@@ -90,11 +88,11 @@ const createCartItem = async ({ user_id, product_id, quantity }) => {
 const findCartItemWithStockById = async (cart_item_id) => {
 	const result = await pool.query(
 		`
-			SELECT ci.cart_item_id AS id, c.user_id, ci.product_id, ci.quantity, COALESCE(i.quantity, 0) AS stock
+			SELECT ci.cart_item_id AS id, c.buyer_id AS user_id, ci.product_id, ci.quantity, COALESCE(i.quantity, 0) AS stock
 			FROM cart_items ci
 			JOIN carts c ON c.cart_id = ci.cart_id
-			JOIN products p ON p.id = ci.product_id
-			LEFT JOIN inventory i ON i.product_id = p.id
+			JOIN products p ON p.product_id = ci.product_id
+			LEFT JOIN inventory i ON i.product_id = p.product_id
 			WHERE ci.cart_item_id = $1
 		`,
 		[cart_item_id]
@@ -109,22 +107,10 @@ const updateCartItemQuantityById = async (cart_item_id, quantity) => {
 			UPDATE cart_items
 			SET quantity = $1
 			WHERE cart_item_id = $2
-			RETURNING cart_item_id AS id, cart_id, product_id, quantity, created_at
+			RETURNING cart_item_id AS id, cart_id, product_id, quantity
 		`,
 		[quantity, cart_item_id]
 	);
-
-	if (result.rows[0]) {
-		await pool.query(
-			`
-				UPDATE carts c
-				SET updated_at = NOW()
-				FROM cart_items ci
-				WHERE ci.cart_item_id = $1 AND c.cart_id = ci.cart_id
-			`,
-			[cart_item_id]
-		);
-	}
 
 	return result.rows[0] || null;
 };
@@ -136,15 +122,11 @@ const deleteCartItemByIdForUser = async (cart_item_id, user_id) => {
 			USING carts c
 			WHERE ci.cart_item_id = $1
 				AND ci.cart_id = c.cart_id
-				AND c.user_id = $2
+				AND c.buyer_id = $2
 			RETURNING ci.cart_item_id AS id, c.cart_id
 		`,
 		[cart_item_id, user_id]
 	);
-
-	if (result.rows[0]) {
-		await pool.query("UPDATE carts SET updated_at = NOW() WHERE cart_id = $1", [result.rows[0].cart_id]);
-	}
 
 	return result.rows[0] || null;
 };
