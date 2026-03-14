@@ -44,12 +44,12 @@ const getAllCategories = async () => {
   return categoryModel.getAllCategories();
 };
 
-const getCategoryById = async (categoryId) => {
-  if (!isPositiveInteger(categoryId)) {
+const getCategoryById = async (category_id) => {
+  if (!isPositiveInteger(category_id)) {
     throw createServiceError("Invalid category id", 400);
   }
 
-  const category = await categoryModel.findCategoryById(Number(categoryId));
+  const category = await categoryModel.findCategoryById(Number(category_id));
 
   if (!category) {
     throw createServiceError("Category not found", 404);
@@ -58,8 +58,8 @@ const getCategoryById = async (categoryId) => {
   return category;
 };
 
-const updateCategory = async ({ categoryId, category_name, description }) => {
-  if (!isPositiveInteger(categoryId)) {
+const updateCategory = async ({ category_id, category_name, description }) => {
+  if (!isPositiveInteger(category_id)) {
     throw createServiceError("Invalid category id", 400);
   }
 
@@ -67,7 +67,7 @@ const updateCategory = async ({ categoryId, category_name, description }) => {
     throw createServiceError("Category name is required", 400);
   }
 
-  const existingCategory = await categoryModel.findCategoryById(Number(categoryId));
+  const existingCategory = await categoryModel.findCategoryById(Number(category_id));
 
   if (!existingCategory) {
     throw createServiceError("Category not found", 404);
@@ -78,28 +78,28 @@ const updateCategory = async ({ categoryId, category_name, description }) => {
 
   const duplicateCategory = await categoryModel.findCategoryByName(normalizedCategoryName);
 
-  if (duplicateCategory && Number(duplicateCategory.id) !== Number(categoryId)) {
+  if (duplicateCategory && Number(duplicateCategory.id) !== Number(category_id)) {
     throw createServiceError("Category already exists", 409);
   }
 
-  return categoryModel.updateCategoryById(Number(categoryId), {
+  return categoryModel.updateCategoryById(Number(category_id), {
     category_name: normalizedCategoryName,
     description: normalizedDescription === undefined ? null : normalizedDescription,
   });
 };
 
-const deleteCategory = async (categoryId) => {
-  if (!isPositiveInteger(categoryId)) {
+const deleteCategory = async (category_id) => {
+  if (!isPositiveInteger(category_id)) {
     throw createServiceError("Invalid category id", 400);
   }
 
-  const existingCategory = await categoryModel.findCategoryById(Number(categoryId));
+  const existingCategory = await categoryModel.findCategoryById(Number(category_id));
 
   if (!existingCategory) {
     throw createServiceError("Category not found", 404);
   }
 
-  return categoryModel.deleteCategoryById(Number(categoryId));
+  return categoryModel.deleteCategoryById(Number(category_id));
 };
 
 module.exports = {
