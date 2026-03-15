@@ -62,8 +62,8 @@ const getOrderById = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const order = await orderService.updateOrderStatus({
-      adminUser: req.user,
-      orderId: req.params.id,
+      admin_user: req.user,
+      order_id: req.params.id,
       ...req.body,
     });
 

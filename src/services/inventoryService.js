@@ -11,7 +11,7 @@ const createServiceError = (message, statusCode, extra = {}) => {
 	return error;
 };
 
-const canManageFarmerInventory = async ({ actor, farmerId }) => {
+const canManageFarmerInventory = async ({ actor, farmer_id }) => {
 	const role = normalizeRole(actor.role);
 
 	if (role === "admin") {
@@ -19,13 +19,13 @@ const canManageFarmerInventory = async ({ actor, farmerId }) => {
 	}
 
 	if (role === "farmer") {
-		return Number(actor.id) === Number(farmerId);
+		return Number(actor.id) === Number(farmer_id);
 	}
 
 	if (role === "fieldAgent") {
 		return agentModel.isAgentAssignedToFarmer({
-			agentId: actor.id,
-			farmerId,
+			agent_id: actor.id,
+			farmer_id,
 		});
 	}
 
@@ -33,14 +33,14 @@ const canManageFarmerInventory = async ({ actor, farmerId }) => {
 };
 
 const updateInventory = async ({ actor, payload }) => {
-	const productId = Number(payload.product_id);
+	const product_id = Number(payload.product_id);
 	const quantity = Number(payload.quantity);
 
-	if (!isPositiveInteger(productId) || !Number.isInteger(quantity) || quantity < 0) {
+	if (!isPositiveInteger(product_id) || !Number.isInteger(quantity) || quantity < 0) {
 		throw createServiceError("product_id and non-negative integer quantity are required", 400);
 	}
 
-	const ownership = await productModel.findProductOwnershipById(productId);
+	const ownership = await productModel.findProductOwnershipById(product_id);
 
 	if (!ownership) {
 		throw createServiceError("Product not found", 404);
@@ -48,7 +48,7 @@ const updateInventory = async ({ actor, payload }) => {
 
 	const isAuthorized = await canManageFarmerInventory({
 		actor,
-		farmerId: ownership.farmer_id,
+		farmer_id: ownership.farmer_id,
 	});
 
 	if (!isAuthorized) {
@@ -56,18 +56,18 @@ const updateInventory = async ({ actor, payload }) => {
 	}
 
 	return inventoryModel.upsertInventory({
-		productId,
-		farmerId: ownership.farmer_id,
+		product_id,
+		farmer_id: ownership.farmer_id,
 		quantity,
 	});
 };
 
-const getInventoryByProductId = async (productId) => {
-	if (!isPositiveInteger(productId)) {
+const getInventoryByProductId = async (product_id) => {
+	if (!isPositiveInteger(product_id)) {
 		throw createServiceError("Invalid product id", 400);
 	}
 
-	const inventory = await inventoryModel.getInventoryByProductId(Number(productId));
+	const inventory = await inventoryModel.getInventoryByProductId(Number(product_id));
 
 	if (!inventory) {
 		throw createServiceError("Inventory not found for this product", 404);

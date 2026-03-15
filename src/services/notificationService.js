@@ -25,20 +25,20 @@ const createNotification = async ({ actor, payload }) => {
 	const type = payload.type ? String(payload.type).trim() : "general";
 
 	if (payload.user_id !== undefined && payload.user_id !== null) {
-		const userId = Number(payload.user_id);
+		const user_id = Number(payload.user_id);
 
-		if (!isPositiveInteger(userId)) {
+		if (!isPositiveInteger(user_id)) {
 			throw createServiceError("user_id must be a valid integer", 400);
 		}
 
-		const user = await agentModel.findUserById(userId);
+		const user = await agentModel.findUserById(user_id);
 
 		if (!user) {
 			throw createServiceError("User not found", 404);
 		}
 
 		const notification = await notificationModel.createNotificationForUser({
-			userId,
+			user_id,
 			title,
 			message,
 			type,
@@ -62,18 +62,18 @@ const createNotification = async ({ actor, payload }) => {
 	};
 };
 
-const getNotifications = async (userId) => {
-	return notificationModel.getNotificationsByUserId(userId);
+const getNotifications = async (user_id) => {
+	return notificationModel.getNotificationsByUserId(user_id);
 };
 
-const markAsRead = async ({ userId, notificationId }) => {
-	if (!isPositiveInteger(notificationId)) {
+const markAsRead = async ({ user_id, notification_id }) => {
+	if (!isPositiveInteger(notification_id)) {
 		throw createServiceError("Invalid notification id", 400);
 	}
 
 	const notification = await notificationModel.markNotificationAsRead({
-		notificationId: Number(notificationId),
-		userId,
+		notification_id: Number(notification_id),
+		user_id,
 	});
 
 	if (!notification) {

@@ -24,22 +24,22 @@ const createServiceError = (message, statusCode, extra = {}) => {
 	return error;
 };
 
-const getOrdersForBuyer = async (buyerId, orderId = null) => {
-	return orderModel.getOrdersForBuyer(buyerId, orderId);
+const getOrdersForBuyer = async (buyer_id, order_id = null) => {
+	return orderModel.getOrdersForBuyer(buyer_id, order_id);
 };
 
-const createOrder = async (buyerId, payload = {}) => {
+const createOrder = async (buyer_id, payload = {}) => {
 	const client = await pool.connect();
 
 	try {
 		await client.query("BEGIN");
 
-		const addressId =
+		const address_id =
 			payload.address_id === undefined || payload.address_id === null
 				? null
 				: Number(payload.address_id);
 
-		if (addressId !== null && !isPositiveInteger(addressId)) {
+		if (address_id !== null && !isPositiveInteger(address_id)) {
 			throw createServiceError("address_id must be a valid integer", 400);
 		}
 
@@ -55,40 +55,40 @@ const createOrder = async (buyerId, payload = {}) => {
 					c.cart_id
 				FROM carts c
 				JOIN cart_items ci ON ci.cart_id = c.cart_id
-				JOIN products p ON p.id = ci.product_id
-				LEFT JOIN inventory i ON i.product_id = p.id
-				WHERE c.user_id = $1
+				JOIN products p ON p.product_id = ci.product_id
+				LEFT JOIN inventory i ON i.product_id = p.product_id
+				WHERE c.buyer_id = $1
 				ORDER BY ci.cart_item_id ASC
-				FOR UPDATE OF c, ci, i
+				FOR UPDATE OF c, ci
 			`,
-			[buyerId]
+			[buyer_id]
 		);
 
 		if (cartResult.rows.length === 0) {
 			throw createServiceError("Cart is empty", 400);
 		}
 
-		let totalPrice = 0;
+		let total_amount = 0;
 
 		for (const item of cartResult.rows) {
 			if (item.stock < item.quantity) {
 				throw createServiceError(`Insufficient stock for product: ${item.name}`, 400);
 			}
 
-			totalPrice += Number(item.price) * item.quantity;
+			total_amount += Number(item.price) * item.quantity;
 		}
 
 		const order = await orderModel.createOrderRecord(
 			client,
-			buyerId,
-			totalPrice.toFixed(2),
-			addressId
+			buyer_id,
+			total_amount.toFixed(2),
+			address_id
 		);
 
 		for (const item of cartResult.rows) {
 			await orderModel.createOrderItemRecord(client, {
-				orderId: order.id,
-				productId: item.product_id,
+				order_id: order.id,
+				product_id: item.product_id,
 				quantity: item.quantity,
 				price: item.price,
 			});
@@ -108,15 +108,14 @@ const createOrder = async (buyerId, payload = {}) => {
 			`
 				DELETE FROM cart_items ci
 				USING carts c
-				WHERE ci.cart_id = c.cart_id AND c.user_id = $1
+				WHERE ci.cart_id = c.cart_id AND c.buyer_id = $1
 			`,
-			[buyerId]
+			[buyer_id]
 		);
-		await client.query("UPDATE carts SET updated_at = NOW() WHERE user_id = $1", [buyerId]);
 		await client.query("COMMIT");
 
-		logger.info("Order created", { orderId: order.id, buyerId });
-		const createdOrders = await getOrdersForBuyer(buyerId, order.id);
+		logger.info("Order created", { order_id: order.id, buyer_id });
+		const createdOrders = await getOrdersForBuyer(buyer_id, order.id);
 		return createdOrders[0];
 	} catch (error) {
 		await client.query("ROLLBACK");
@@ -126,12 +125,12 @@ const createOrder = async (buyerId, payload = {}) => {
 	}
 };
 
-const getOrderByIdForBuyer = async (buyerId, orderId) => {
-	if (!isPositiveInteger(orderId)) {
+const getOrderByIdForBuyer = async (buyer_id, order_id) => {
+	if (!isPositiveInteger(order_id)) {
 		throw createServiceError("Invalid order id", 400);
 	}
 
-	const orders = await getOrdersForBuyer(buyerId, Number(orderId));
+	const orders = await getOrdersForBuyer(buyer_id, Number(order_id));
 
 	if (orders.length === 0) {
 		throw createServiceError("Order not found", 404);
@@ -140,12 +139,12 @@ const getOrderByIdForBuyer = async (buyerId, orderId) => {
 	return orders[0];
 };
 
-const updateOrderStatus = async ({ adminUser, orderId, order_status, payment_status, delivery_status }) => {
-	if (!adminUser || normalizeRole(adminUser.role) !== "admin") {
+const updateOrderStatus = async ({ admin_user, order_id, order_status, payment_status, delivery_status }) => {
+	if (!admin_user || normalizeRole(admin_user.role) !== "admin") {
 		throw createServiceError("Only admins can update order status", 403);
 	}
 
-	if (!isPositiveInteger(orderId)) {
+	if (!isPositiveInteger(order_id)) {
 		throw createServiceError("Invalid order id", 400);
 	}
 
@@ -169,10 +168,10 @@ const updateOrderStatus = async ({ adminUser, orderId, order_status, payment_sta
 		throw createServiceError("Invalid delivery_status value", 400);
 	}
 
-	const order = await orderModel.updateOrderStatusesById(Number(orderId), {
-		orderStatus: order_status !== undefined ? order_status : null,
-		paymentStatus: payment_status !== undefined ? payment_status : null,
-		deliveryStatus: delivery_status !== undefined ? delivery_status : null,
+	const order = await orderModel.updateOrderStatusesById(Number(order_id), {
+		order_status: order_status !== undefined ? order_status : null,
+		payment_status: payment_status !== undefined ? payment_status : null,
+		delivery_status: delivery_status !== undefined ? delivery_status : null,
 	});
 
 	if (!order) {

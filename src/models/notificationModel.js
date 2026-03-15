@@ -1,13 +1,13 @@
 const { pool } = require("../config/db");
 
-const createNotificationForUser = async ({ userId, title, message, type }) => {
+const createNotificationForUser = async ({ user_id, title, message, type }) => {
 	const result = await pool.query(
 		`
-			INSERT INTO notifications (user_id, title, message, type, is_read, status)
-			VALUES ($1, $2, $3, $4, FALSE, 'unread')
-			RETURNING id, user_id, title, message, type, is_read, created_at
+			INSERT INTO notifications (user_id, title, message, is_read, created_at)
+			VALUES ($1, $2, $3, FALSE, NOW())
+			RETURNING notification_id AS id, user_id, title, message, $4::text AS type, is_read, created_at
 		`,
-		[userId, title, message, type]
+		[user_id, title, message, type]
 	);
 
 	return result.rows[0];
@@ -16,10 +16,10 @@ const createNotificationForUser = async ({ userId, title, message, type }) => {
 const createNotificationForAllUsers = async ({ title, message, type }) => {
 	const result = await pool.query(
 		`
-			INSERT INTO notifications (user_id, title, message, type, is_read, status)
-			SELECT id, $1, $2, $3, FALSE, 'unread'
+			INSERT INTO notifications (user_id, title, message, is_read, created_at)
+			SELECT user_id, $1, $2, FALSE, NOW()
 			FROM users
-			RETURNING id, user_id, title, message, type, is_read, created_at
+			RETURNING notification_id AS id, user_id, title, message, $3::text AS type, is_read, created_at
 		`,
 		[title, message, type]
 	);
@@ -27,30 +27,29 @@ const createNotificationForAllUsers = async ({ title, message, type }) => {
 	return result.rows;
 };
 
-const getNotificationsByUserId = async (userId) => {
+const getNotificationsByUserId = async (user_id) => {
 	const result = await pool.query(
 		`
-			SELECT id, user_id, title, message, type, is_read, created_at
+			SELECT notification_id AS id, user_id, title, message, 'general'::text AS type, is_read, created_at
 			FROM notifications
 			WHERE user_id = $1
 			ORDER BY created_at DESC
 		`,
-		[userId]
+		[user_id]
 	);
 
 	return result.rows;
 };
 
-const markNotificationAsRead = async ({ notificationId, userId }) => {
+const markNotificationAsRead = async ({ notification_id, user_id }) => {
 	const result = await pool.query(
 		`
 			UPDATE notifications
-			SET is_read = TRUE,
-					status = 'read'
-			WHERE id = $1 AND user_id = $2
-			RETURNING id, user_id, title, message, type, is_read, created_at
+			SET is_read = TRUE
+			WHERE notification_id = $1 AND user_id = $2
+			RETURNING notification_id AS id, user_id, title, message, 'general'::text AS type, is_read, created_at
 		`,
-		[notificationId, userId]
+		[notification_id, user_id]
 	);
 
 	return result.rows[0] || null;

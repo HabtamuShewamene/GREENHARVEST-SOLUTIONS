@@ -95,21 +95,21 @@ const createProduct = async ({ user, payload }) => {
 		throw createServiceError("stock must be a positive integer", 400);
 	}
 
-	const categoryId = await validateCategoryId(payload.category_id);
+	const category_id = await validateCategoryId(payload.category_id);
 
 	const product = await productModel.createProduct({
-		farmerId: user.id,
-		categoryId,
+		farmer_id: user.id,
+		category_id,
 		name: productValues.name,
 		description: productValues.description || null,
 		price: productValues.price,
-		farmLocation: productValues.farm_location || null,
-		imageUrl: productValues.image_url || null,
+		farm_location: productValues.farm_location || null,
+		image_url: productValues.image_url || null,
 	});
 
 	await inventoryModel.upsertInventory({
-		productId: product.id,
-		farmerId: user.id,
+		product_id: product.id,
+		farmer_id: user.id,
 		quantity: productValues.stock,
 	});
 
@@ -164,23 +164,23 @@ const updateProduct = async ({ user, productId, payload }) => {
 		throw createServiceError("stock must be a positive integer", 400);
 	}
 
-	const categoryId =
+	const category_id =
 		payload.category_id === undefined ? undefined : await validateCategoryId(payload.category_id);
 
 	const updatedProduct = await productModel.updateProductById(Number(productId), {
 		name: productValues.name !== undefined ? productValues.name : null,
 		description: productValues.description !== undefined ? productValues.description : null,
 		price: productValues.price !== undefined ? productValues.price : null,
-		categoryId: categoryId !== undefined ? categoryId : null,
-		farmLocation:
+		category_id: category_id !== undefined ? category_id : null,
+		farm_location:
 			productValues.farm_location !== undefined ? productValues.farm_location : null,
-		imageUrl: productValues.image_url !== undefined ? productValues.image_url : null,
+		image_url: productValues.image_url !== undefined ? productValues.image_url : null,
 	});
 
 	if (productValues.stock !== undefined) {
 		await inventoryModel.upsertInventory({
-			productId: updatedProduct.id,
-			farmerId: user.id,
+			product_id: updatedProduct.id,
+			farmer_id: user.id,
 			quantity: productValues.stock,
 		});
 
@@ -253,8 +253,8 @@ const updateProductStock = async ({ user, productId, stock }) => {
 	}
 
 	await inventoryModel.upsertInventory({
-		productId: Number(productId),
-		farmerId: user.id,
+		product_id: Number(productId),
+		farmer_id: user.id,
 		quantity: parsedStock,
 	});
 

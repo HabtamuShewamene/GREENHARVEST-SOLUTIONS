@@ -2,6 +2,7 @@ const agentModel = require("../models/agentModel");
 const categoryModel = require("../models/categoryModel");
 const inventoryModel = require("../models/inventoryModel");
 const productModel = require("../models/productModel");
+const { pool } = require("../config/db");
 const { normalizeRole } = require("../utils/roles");
 const { isNonNegativeNumber, isPositiveInteger } = require("../utils/validators");
 
@@ -18,8 +19,8 @@ const ensureRole = (user, roles) => {
 	}
 };
 
-const ensureUserWithRole = async (userId, role) => {
-	const user = await agentModel.findUserById(userId);
+const ensureUserWithRole = async (user_id, role) => {
+	const user = await agentModel.findUserById(user_id);
 
 	if (!user) {
 		throw createServiceError("User not found", 404);
@@ -43,47 +44,64 @@ const assignFarmer = async ({ actor, agent_id, farmer_id }) => {
 	await ensureUserWithRole(Number(farmer_id), "farmer");
 
 	return agentModel.assignFarmer({
-		agentId: Number(agent_id),
-		farmerId: Number(farmer_id),
-		assignedBy: actor.id,
+		agent_id: Number(agent_id),
+		farmer_id: Number(farmer_id),
+		assigned_by: actor.id,
 	});
 };
 
 const getFarmers = async ({ actor, agent_id }) => {
 	ensureRole(actor, ["admin", "fieldAgent"]);
 
-	const selectedAgentId =
-		normalizeRole(actor.role) === "admin"
+	const actorRole = normalizeRole(actor.role);
+	const actorUserId = Number(actor && actor.user_id ? actor.user_id : actor && actor.id);
+	const selected_agent_id =
+		actorRole === "admin"
 			? (agent_id ? Number(agent_id) : null)
-			: Number(actor.id);
+			: actorUserId;
 
-	if (selectedAgentId !== null && !isPositiveInteger(selectedAgentId)) {
+	if (selected_agent_id !== null && !isPositiveInteger(selected_agent_id)) {
 		throw createServiceError("agent_id must be a valid integer", 400);
 	}
 
-	if (selectedAgentId === null) {
+	if (selected_agent_id === null) {
 		throw createServiceError("agent_id query parameter is required for admins", 400);
 	}
 
-	await ensureUserWithRole(selectedAgentId, "fieldAgent");
-	return agentModel.getFarmersByAgent(selectedAgentId);
+	if (actorRole === "admin") {
+		await ensureUserWithRole(selected_agent_id, "fieldAgent");
+	}
+
+	return agentModel.getFarmersByAgent(selected_agent_id);
 };
 
 const addProductForFarmer = async ({ actor, payload }) => {
 	ensureRole(actor, ["admin", "fieldAgent"]);
 
-	const farmerId = Number(payload.farmer_id);
+	const farmer_id = Number(payload.farmer_id);
 
-	if (!isPositiveInteger(farmerId)) {
+	if (!isPositiveInteger(farmer_id)) {
 		throw createServiceError("farmer_id is required and must be a valid integer", 400);
 	}
 
-	await ensureUserWithRole(farmerId, "farmer");
+	await ensureUserWithRole(farmer_id, "farmer");
+
+	const farmerProfileResult = await pool.query(
+		`SELECT farmer_id FROM farmer_profiles WHERE user_id = $1 LIMIT 1`,
+		[farmer_id]
+	);
+
+	const farmer_profile_id = farmerProfileResult.rows[0] && farmerProfileResult.rows[0].farmer_id;
+
+	if (!farmer_profile_id) {
+		throw createServiceError("Farmer profile not found", 404);
+	}
 
 	if (normalizeRole(actor.role) === "fieldAgent") {
+		const actorAgentUserId = Number(actor && actor.user_id ? actor.user_id : actor && actor.id);
 		const isAssigned = await agentModel.isAgentAssignedToFarmer({
-			agentId: actor.id,
-			farmerId,
+			agent_id: actorAgentUserId,
+			farmer_id,
 		});
 
 		if (!isAssigned) {
@@ -101,7 +119,7 @@ const addProductForFarmer = async ({ actor, payload }) => {
 		throw createServiceError("name, price, and stock are required with valid values", 400);
 	}
 
-	let categoryId = null;
+	let category_id = null;
 
 	if (payload.category_id !== undefined && payload.category_id !== null) {
 		if (!isPositiveInteger(payload.category_id)) {
@@ -114,22 +132,22 @@ const addProductForFarmer = async ({ actor, payload }) => {
 			throw createServiceError("Invalid category_id. Referenced category does not exist", 400);
 		}
 
-		categoryId = Number(payload.category_id);
+		category_id = Number(payload.category_id);
 	}
 
 	const product = await productModel.createProduct({
-		farmerId,
-		categoryId,
+		farmer_id: Number(farmer_profile_id),
+		category_id,
 		name: String(payload.name).trim(),
 		description: payload.description ? String(payload.description).trim() : null,
 		price: Number(payload.price),
-		farmLocation: payload.farm_location ? String(payload.farm_location).trim() : null,
-		imageUrl: payload.image_url ? String(payload.image_url).trim() : null,
+		farm_location: payload.farm_location ? String(payload.farm_location).trim() : null,
+		image_url: payload.image_url ? String(payload.image_url).trim() : null,
 	});
 
 	await inventoryModel.upsertInventory({
-		productId: product.id,
-		farmerId,
+		product_id: product.id,
+		farmer_id: Number(farmer_profile_id),
 		quantity: Number(payload.stock),
 	});
 

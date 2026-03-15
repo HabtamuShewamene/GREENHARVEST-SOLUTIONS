@@ -19,26 +19,31 @@ const buildTransactionId = () => {
 	return `txn_${crypto.randomBytes(8).toString("hex")}`;
 };
 
-const processPayment = async ({ userId, order_id, payment_method, amount }) => {
+const processPayment = async ({ user_id, order_id, payment_method, amount }) => {
 	const client = await pool.connect();
 
 	try {
-		const orderId = Number(order_id);
-		const paymentAmount = Number(amount);
+		const parsed_order_id = Number(order_id);
+		const payment_amount = Number(amount);
 
-		if (!isPositiveInteger(orderId) || !payment_method || Number.isNaN(paymentAmount) || paymentAmount <= 0) {
+		if (
+			!isPositiveInteger(parsed_order_id) ||
+			!payment_method ||
+			Number.isNaN(payment_amount) ||
+			payment_amount <= 0
+		) {
 			throw createServiceError("order_id, payment_method, and a valid amount are required", 400);
 		}
 
 		await client.query("BEGIN");
 
-		const order = await paymentModel.findOrderByIdForUpdate(client, orderId);
+		const order = await paymentModel.findOrderByIdForUpdate(client, parsed_order_id);
 
 		if (!order) {
 			throw createServiceError("Order not found", 404);
 		}
 
-		if (Number(order.buyer_id) !== Number(userId)) {
+		if (Number(order.buyer_id) !== Number(user_id)) {
 			throw createServiceError("You can only pay for your own orders", 403);
 		}
 
@@ -46,36 +51,33 @@ const processPayment = async ({ userId, order_id, payment_method, amount }) => {
 			throw createServiceError("Order has already been paid", 409);
 		}
 
-		if (Number(order.total_amount) !== paymentAmount) {
+		if (Number(order.total_amount) !== payment_amount) {
 			throw createServiceError("Payment amount does not match order total", 400);
 		}
 
-		const transactionId = buildTransactionId();
-		const paymentStatus = "paid";
+		const transaction_id = buildTransactionId();
+		const payment_status = "paid";
 
 		const payment = await paymentModel.createPayment(client, {
-			orderId,
-			paymentMethod: payment_method.trim(),
-			amount: paymentAmount.toFixed(2),
-			paymentStatus,
-			transactionId,
+			order_id: parsed_order_id,
+			payment_method: payment_method.trim(),
+			amount: payment_amount.toFixed(2),
+			payment_status,
+			transaction_id,
 		});
 
 		await paymentModel.createTransaction(client, {
-			orderId,
-			userId,
-			amount: paymentAmount.toFixed(2),
-			paymentMethod: payment_method.trim(),
-			status: paymentStatus,
+			payment_id: payment.id,
+			amount: payment_amount.toFixed(2),
 		});
 
 		await paymentModel.updateOrderPaymentStatus(client, {
-			orderId,
-			paymentStatus,
+			order_id: parsed_order_id,
+			payment_status,
 		});
 
 		await client.query("COMMIT");
-		logger.info("Payment processed", { orderId, userId, paymentId: payment.id });
+		logger.info("Payment processed", { order_id: parsed_order_id, user_id, payment_id: payment.id });
 		return payment;
 	} catch (error) {
 		await client.query("ROLLBACK");
@@ -85,10 +87,10 @@ const processPayment = async ({ userId, order_id, payment_method, amount }) => {
 	}
 };
 
-const getPaymentHistory = async (userId) => {
+const getPaymentHistory = async (user_id) => {
 	const [payments, transactions] = await Promise.all([
-		paymentModel.getPaymentHistoryByBuyer(userId),
-		paymentModel.getTransactionHistoryByUser(userId),
+		paymentModel.getPaymentHistoryByBuyer(user_id),
+		paymentModel.getTransactionHistoryByUser(user_id),
 	]);
 
 	return {

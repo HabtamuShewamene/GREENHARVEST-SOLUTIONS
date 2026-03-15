@@ -1,74 +1,74 @@
 const { pool } = require("../config/db");
 
-const findReviewByProductAndUser = async (productId, userId) => {
+const findReviewByProductAndUser = async (product_id, user_id) => {
 	const result = await pool.query(
 		`
-			SELECT id, product_id, user_id, rating, comment, created_at
+			SELECT review_id AS id, product_id, buyer_id AS user_id, rating, comment, created_at
 			FROM reviews
-			WHERE product_id = $1 AND user_id = $2
+			WHERE product_id = $1 AND buyer_id = $2
 		`,
-		[productId, userId]
+		[product_id, user_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const createReview = async ({ productId, userId, rating, comment }) => {
+const createReview = async ({ product_id, user_id, rating, comment }) => {
 	const result = await pool.query(
 		`
-			INSERT INTO reviews (product_id, user_id, rating, comment)
+			INSERT INTO reviews (product_id, buyer_id, rating, comment)
 			VALUES ($1, $2, $3, $4)
-			RETURNING id, product_id, user_id, rating, comment, created_at
+			RETURNING review_id AS id, product_id, buyer_id AS user_id, rating, comment, created_at
 		`,
-		[productId, userId, rating, comment]
+		[product_id, user_id, rating, comment]
 	);
 
 	return result.rows[0];
 };
 
-const findReviewById = async (reviewId) => {
+const findReviewById = async (review_id) => {
 	const result = await pool.query(
 		`
-			SELECT id, product_id, user_id, rating, comment, created_at
+			SELECT review_id AS id, product_id, buyer_id AS user_id, rating, comment, created_at
 			FROM reviews
-			WHERE id = $1
+			WHERE review_id = $1
 		`,
-		[reviewId]
+		[review_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const updateReviewById = async (reviewId, { rating, comment }) => {
+const updateReviewById = async (review_id, { rating, comment }) => {
 	const result = await pool.query(
 		`
 			UPDATE reviews
 			SET
 				rating = COALESCE($1, rating),
 				comment = COALESCE($2, comment)
-			WHERE id = $3
-			RETURNING id, product_id, user_id, rating, comment, created_at
+			WHERE review_id = $3
+			RETURNING review_id AS id, product_id, buyer_id AS user_id, rating, comment, created_at
 		`,
-		[rating, comment, reviewId]
+		[rating, comment, review_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const deleteReviewById = async (reviewId) => {
+const deleteReviewById = async (review_id) => {
 	const result = await pool.query(
 		`
 			DELETE FROM reviews
-			WHERE id = $1
-			RETURNING id
+			WHERE review_id = $1
+			RETURNING review_id AS id
 		`,
-		[reviewId]
+		[review_id]
 	);
 
 	return result.rows[0] || null;
 };
 
-const getProductReviewSummary = async (productId) => {
+const getProductReviewSummary = async (product_id) => {
 	const result = await pool.query(
 		`
 			SELECT
@@ -77,30 +77,30 @@ const getProductReviewSummary = async (productId) => {
 			FROM reviews
 			WHERE product_id = $1
 		`,
-		[productId]
+		[product_id]
 	);
 
 	return result.rows[0];
 };
 
-const getProductReviews = async (productId) => {
+const getProductReviews = async (product_id) => {
 	const result = await pool.query(
 		`
 			SELECT
-				r.id,
+				r.review_id AS id,
 				r.product_id,
-				r.user_id,
+				r.buyer_id AS user_id,
 				r.rating,
 				r.comment,
 				r.created_at,
 				u.name AS user_name,
 				u.email AS user_email
 			FROM reviews r
-			JOIN users u ON u.id = r.user_id
+			JOIN users u ON u.user_id = r.buyer_id
 			WHERE r.product_id = $1
 			ORDER BY r.created_at DESC
 		`,
-		[productId]
+		[product_id]
 	);
 
 	return result.rows;

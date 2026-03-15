@@ -18,7 +18,7 @@ const handleControllerError = (res, context, error, meta = {}) => {
 const processPayment = async (req, res) => {
   try {
     const payment = await paymentService.processPayment({
-      userId: req.user.id,
+      user_id: req.user.id,
       ...req.body,
     });
 
