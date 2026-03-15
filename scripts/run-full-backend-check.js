@@ -27,10 +27,10 @@ const waitForServer = async () => {
   throw new Error(`Server did not become ready within ${startupTimeoutMs} ms`);
 };
 
-const runCommand = (command, args, options = {}) => {
+const runCommand = (command, options = {}) => {
   return new Promise((resolve) => {
-    const child = spawn(command, args, {
-      shell: false,
+    const child = spawn(command, {
+      shell: true,
       stdio: "inherit",
       ...options,
     });
@@ -71,9 +71,8 @@ const main = async () => {
     PORT: String(testPort),
   };
 
-  const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-  const serverProcess = spawn(npmCommand, ["start"], {
-    shell: false,
+  const serverProcess = spawn("npm start", {
+    shell: true,
     stdio: "inherit",
     env: serverEnv,
   });
@@ -86,7 +85,7 @@ const main = async () => {
 
     for (let runNumber = 1; runNumber <= runs; runNumber += 1) {
       console.log(`[full-check] Checklist run ${runNumber}/${runs}...`);
-      const exitCode = await runCommand(process.execPath, ["tmp-api-checklist-runner.js"], {
+      const exitCode = await runCommand(`${process.execPath} tmp-api-checklist-runner.js`, {
         env: {
           ...process.env,
           CHECKLIST_BASE_URL: host,
