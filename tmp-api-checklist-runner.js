@@ -1,4 +1,4 @@
-const base = "http://localhost:5000";
+const base = process.env.CHECKLIST_BASE_URL || "http://localhost:5000";
 const out = [];
 
 const add = (module, test, endpoint, status, ok, notes = "") =>
