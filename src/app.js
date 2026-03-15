@@ -30,9 +30,16 @@ const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
+const isRateLimitDisabled =
+  process.env.DISABLE_RATE_LIMIT === "true" ||
+  process.env.NODE_ENV === "test";
+
+const rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
+const rateLimitMaxRequests = Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 300;
+
 const apiRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
+  windowMs: rateLimitWindowMs,
+  max: rateLimitMaxRequests,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -44,7 +51,9 @@ app.use(
     credentials: true,
   })
 );
-app.use(apiRateLimiter);
+if (!isRateLimitDisabled) {
+  app.use(apiRateLimiter);
+}
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(sanitizeMiddleware);

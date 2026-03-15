@@ -9,7 +9,9 @@
     "seed:roles": "node src/database/seeders/seedRoles.js",
     "seed:admin": "node src/database/seeders/seedAdmin.js",
     "seed:categories": "node src/database/seeders/seedCategories.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run test:backend:full",
+    "test:api:checklist": "node tmp-api-checklist-runner.js",
+    "test:backend:full": "node scripts/run-full-backend-check.js"
   },
   "keywords": [],
   "author": "",
