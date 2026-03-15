@@ -85,7 +85,7 @@ const main = async () => {
 
     for (let runNumber = 1; runNumber <= runs; runNumber += 1) {
       console.log(`[full-check] Checklist run ${runNumber}/${runs}...`);
-      const exitCode = await runCommand(`${process.execPath} tmp-api-checklist-runner.js`, {
+      const exitCode = await runCommand(`"${process.execPath}" tmp-api-checklist-runner.js`, {
         env: {
           ...process.env,
           CHECKLIST_BASE_URL: host,
