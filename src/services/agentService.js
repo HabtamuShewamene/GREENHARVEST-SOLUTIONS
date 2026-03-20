@@ -40,7 +40,7 @@ const assignFarmer = async ({ actor, agent_id, farmer_id }) => {
 		throw createServiceError("agent_id and farmer_id must be valid integers", 400);
 	}
 
-	await ensureUserWithRole(Number(agent_id), "fieldAgent");
+	await ensureUserWithRole(Number(agent_id), "field_agent");
 	await ensureUserWithRole(Number(farmer_id), "farmer");
 
 	return agentModel.assignFarmer({
@@ -51,7 +51,7 @@ const assignFarmer = async ({ actor, agent_id, farmer_id }) => {
 };
 
 const getFarmers = async ({ actor, agent_id }) => {
-	ensureRole(actor, ["admin", "fieldAgent"]);
+	ensureRole(actor, ["admin", "field_agent"]);
 
 	const actorRole = normalizeRole(actor.role);
 	const actorUserId = Number(actor && actor.user_id ? actor.user_id : actor && actor.id);
@@ -69,14 +69,14 @@ const getFarmers = async ({ actor, agent_id }) => {
 	}
 
 	if (actorRole === "admin") {
-		await ensureUserWithRole(selected_agent_id, "fieldAgent");
+		await ensureUserWithRole(selected_agent_id, "field_agent");
 	}
 
 	return agentModel.getFarmersByAgent(selected_agent_id);
 };
 
 const addProductForFarmer = async ({ actor, payload }) => {
-	ensureRole(actor, ["admin", "fieldAgent"]);
+	ensureRole(actor, ["admin", "field_agent"]);
 
 	const farmer_id = Number(payload.farmer_id);
 
@@ -97,7 +97,7 @@ const addProductForFarmer = async ({ actor, payload }) => {
 		throw createServiceError("Farmer profile not found", 404);
 	}
 
-	if (normalizeRole(actor.role) === "fieldAgent") {
+	if (normalizeRole(actor.role) === "field_agent") {
 		const actorAgentUserId = Number(actor && actor.user_id ? actor.user_id : actor && actor.id);
 		const isAssigned = await agentModel.isAgentAssignedToFarmer({
 			agent_id: actorAgentUserId,

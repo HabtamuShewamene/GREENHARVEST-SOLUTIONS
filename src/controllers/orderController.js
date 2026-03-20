@@ -1,5 +1,6 @@
 // Order controller delegates business logic to the order service.
 const logger = require("../utils/logger");
+const deliveryService = require("../services/deliveryService");
 const orderService = require("../services/orderService");
 
 const handleControllerError = (res, context, error, meta = {}) => {
@@ -62,9 +63,9 @@ const getOrderById = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const order = await orderService.updateOrderStatus({
-      admin_user: req.user,
+      actor: req.user,
       order_id: req.params.id,
-      ...req.body,
+      status: req.body && (req.body.status || req.body.order_status),
     });
 
     return res.status(200).json({
@@ -80,7 +81,29 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+const assignDeliveryPartner = async (req, res) => {
+  try {
+    const order = await deliveryService.assignDeliveryPartnerToOrder({
+      actor: req.user,
+      order_id: req.params.id,
+      delivery_partner_id: req.body && req.body.delivery_partner_id,
+    });
+
+    return res.status(200).json({
+      message: "Delivery partner assigned successfully",
+      order,
+    });
+  } catch (error) {
+    return handleControllerError(res, "Assign delivery partner failed", error, {
+      userId: req.user && req.user.id,
+      orderId: req.params.id,
+      body: req.body,
+    });
+  }
+};
+
 module.exports = {
+  assignDeliveryPartner,
   createOrder,
   getUserOrders,
   getOrderById,

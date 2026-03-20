@@ -65,6 +65,22 @@ const createProduct = async ({
 	return result.rows[0];
 };
 
+const tableExists = async (tableName) => {
+	const result = await pool.query(
+		`
+			SELECT EXISTS (
+				SELECT 1
+				FROM information_schema.tables
+				WHERE table_schema = CURRENT_SCHEMA()
+					AND table_name = $1
+			) AS exists
+		`,
+		[tableName]
+	);
+
+	return Boolean(result.rows[0] && result.rows[0].exists);
+};
+
 const getTableColumns = async (tableName) => {
 	const result = await pool.query(
 		`
@@ -79,59 +95,56 @@ const getTableColumns = async (tableName) => {
 	return result.rows.map((row) => row.column_name);
 };
 
+const getFirstAvailableColumn = (columns, candidateColumns) => {
+	return candidateColumns.find((columnName) => columns.includes(columnName)) || null;
+};
+
 const findFarmerById = async (farmerId) => {
-	const farmerTableCheck = await pool.query(
-		`
-			SELECT
-				EXISTS (
-					SELECT 1
-					FROM information_schema.tables
-					WHERE table_schema = CURRENT_SCHEMA()
-						AND table_name = 'farmers'
-				) AS has_farmers_table,
-				EXISTS (
-					SELECT 1
-					FROM information_schema.tables
-					WHERE table_schema = CURRENT_SCHEMA()
-						AND table_name = 'roles'
-				) AS has_roles_table
-		`
-	);
+	const farmerSourceTables = [
+		{
+			tableName: "farmers",
+			idColumns: ["farmer_id", "id"],
+		},
+		{
+			tableName: "farmer_profiles",
+			idColumns: ["farmer_id", "profile_id", "id"],
+		},
+	];
 
-	if (farmerTableCheck.rows[0] && farmerTableCheck.rows[0].has_farmers_table) {
-		const farmerColumns = await getTableColumns("farmers");
-		const farmerIdColumn = farmerColumns.includes("farmer_id")
-			? "farmer_id"
-			: farmerColumns.includes("id")
-				? "id"
-				: null;
+	for (const { tableName, idColumns } of farmerSourceTables) {
+		if (!(await tableExists(tableName))) {
+			continue;
+		}
 
-		if (farmerIdColumn) {
-			const farmerResult = await pool.query(
-				`
-					SELECT ${farmerIdColumn} AS id
-					FROM farmers
-					WHERE ${farmerIdColumn} = $1
-				`,
-				[farmerId]
-			);
+		const farmerColumns = await getTableColumns(tableName);
+		const farmerIdColumn = getFirstAvailableColumn(farmerColumns, idColumns);
 
-			return farmerResult.rows[0] || null;
+		if (!farmerIdColumn) {
+			continue;
+		}
+
+		const farmerResult = await pool.query(
+			`
+				SELECT ${farmerIdColumn} AS id
+				FROM ${tableName}
+				WHERE ${farmerIdColumn} = $1
+			`,
+			[farmerId]
+		);
+
+		if (farmerResult.rows[0]) {
+			return farmerResult.rows[0];
 		}
 	}
 
 	const userColumns = await getTableColumns("users");
-	const userIdColumn = userColumns.includes("user_id")
-		? "user_id"
-		: userColumns.includes("id")
-			? "id"
-			: null;
+	const userIdColumn = getFirstAvailableColumn(userColumns, ["user_id", "id"]);
 
 	if (!userIdColumn) {
 		return null;
 	}
 
-	if (userColumns.includes("role_id") && farmerTableCheck.rows[0].has_roles_table) {
+	if (userColumns.includes("role_id") && (await tableExists("roles"))) {
 		const roleBasedUserResult = await pool.query(
 			`
 				SELECT u.${userIdColumn} AS id

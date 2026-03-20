@@ -3,8 +3,9 @@
 const express = require("express");
 
 const authMiddleware = require("../middleware/authMiddleware");
-const roleMiddleware = require("../middleware/roleMiddleware");
+const { requireRole } = require("../middleware/roleMiddleware");
 const {
+  assignDeliveryPartner,
   createOrder,
   getUserOrders,
   getOrderById,
@@ -18,6 +19,7 @@ router.use(authMiddleware);
 router.post("/", createOrder);
 router.get("/", getUserOrders);
 router.get("/:id", getOrderById);
-router.patch("/:id/status", roleMiddleware("admin"), updateOrderStatus);
+router.put("/:id/assign-delivery", requireRole("admin"), assignDeliveryPartner);
+router.patch("/:id/status", requireRole("field_agent", "delivery_partner"), updateOrderStatus);
 
 module.exports = router;

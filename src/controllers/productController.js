@@ -32,35 +32,50 @@ const handleControllerError = (res, context, error, meta = {}) => {
   });
 };
 
+const validateCreateProductRequest = (req, res) => {
+  if (!req.body || typeof req.body !== "object") {
+    res.status(400).json({
+      message: "Request body must be valid JSON",
+    });
+    return false;
+  }
+
+  if (normalizeRole(req.user && req.user.role) !== "field_agent") {
+    res.status(403).json({
+      message: "Only field agents can create products",
+    });
+    return false;
+  }
+
+  if (req.body.farmer_id === undefined || req.body.farmer_id === null) {
+    res.status(400).json({
+      message: "farmer_id is required",
+    });
+    return false;
+  }
+
+  if (!isPositiveInteger(req.body.farmer_id)) {
+    res.status(400).json({
+      message: "farmer_id must be a valid integer",
+    });
+    return false;
+  }
+
+  return true;
+};
+
 const createProduct = async (req, res) => {
   try {
-    if (!req.body || typeof req.body !== "object") {
-      return res.status(400).json({
-        message: "Request body must be valid JSON",
-      });
-    }
-
-    if (normalizeRole(req.user && req.user.role) !== "fieldAgent") {
-      return res.status(403).json({
-        message: "Only field agents can create products",
-      });
-    }
-
-    if (req.body.farmer_id === undefined || req.body.farmer_id === null) {
-      return res.status(400).json({
-        message: "farmer_id is required",
-      });
-    }
-
-    if (!isPositiveInteger(req.body.farmer_id)) {
-      return res.status(400).json({
-        message: "farmer_id must be a valid integer",
-      });
+    if (!validateCreateProductRequest(req, res)) {
+      return;
     }
 
     const product = await productService.createProduct({
       user: req.user,
-      payload: req.body,
+      payload: {
+        ...req.body,
+        farmer_id: Number(req.body.farmer_id),
+      },
     });
 
     return res.status(201).json({

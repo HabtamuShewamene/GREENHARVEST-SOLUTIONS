@@ -24,7 +24,7 @@ const ensureFarmerRole = (user) => {
 };
 
 const ensureFieldAgentRole = (user) => {
-	if (!user || normalizeRole(user.role) !== "fieldAgent") {
+	if (!user || normalizeRole(user.role) !== "field_agent") {
 		throw createServiceError("Only field agents can create products", 403);
 	}
 };
@@ -54,6 +54,21 @@ const validateCategoryId = async (categoryId) => {
 	}
 
 	return parsedCategoryId;
+};
+
+const validateFarmerId = async (farmerId) => {
+	if (!isPositiveInteger(farmerId)) {
+		throw createServiceError("farmer_id must be a valid integer", 400);
+	}
+
+	const parsedFarmerId = Number(farmerId);
+	const farmer = await productModel.findFarmerById(parsedFarmerId);
+
+	if (!farmer) {
+		throw createServiceError("Invalid farmer_id. Referenced farmer does not exist", 400);
+	}
+
+	return parsedFarmerId;
 };
 
 const buildProductValues = (payload = {}) => {
@@ -88,18 +103,11 @@ const createProduct = async ({ user, payload }) => {
 	const missingFields = getMissingRequiredFields(payload, ["farmer_id", "name", "price", "stock"]);
 
 	if (missingFields.length > 0) {
-		throw createServiceError(
-			"farmer_id, name, valid price, and integer stock are required",
-			400
-		);
-	}
-
-	if (!isPositiveInteger(payload.farmer_id)) {
-		throw createServiceError("farmer_id must be a valid integer", 400);
+		throw createServiceError("farmer_id, name, price, and stock are required", 400);
 	}
 
 	const productValues = buildProductValues(payload);
-	const farmer_id = Number(payload.farmer_id);
+	const farmer_id = await validateFarmerId(payload.farmer_id);
 
 	if (!isNonNegativeNumber(productValues.price) || Number(productValues.price) <= 0) {
 		throw createServiceError("price must be a valid number greater than 0", 400);
@@ -110,11 +118,6 @@ const createProduct = async ({ user, payload }) => {
 	}
 
 	const category_id = await validateCategoryId(payload.category_id);
-	const farmer = await productModel.findFarmerById(farmer_id);
-
-	if (!farmer) {
-		throw createServiceError("Invalid farmer_id. Referenced farmer does not exist", 400);
-	}
 
 	const product = await productModel.createProduct({
 		farmer_id,

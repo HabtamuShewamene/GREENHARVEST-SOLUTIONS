@@ -4,11 +4,11 @@ const { normalizeRole } = require("../utils/roles");
 const toDbRoleName = (role) => {
 	const normalizedRole = normalizeRole(role);
 
-	if (normalizedRole === "deliveryPartner") {
+	if (normalizedRole === "delivery_partner") {
 		return "delivery_partner";
 	}
 
-	if (normalizedRole === "fieldAgent") {
+	if (normalizedRole === "field_agent") {
 		return "field_agent";
 	}
 
