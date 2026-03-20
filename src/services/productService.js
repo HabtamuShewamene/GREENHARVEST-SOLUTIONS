@@ -23,6 +23,12 @@ const ensureFarmerRole = (user) => {
 	}
 };
 
+const ensureFieldAgentRole = (user) => {
+	if (!user || normalizeRole(user.role) !== "fieldAgent") {
+		throw createServiceError("Only field agents can create products", 403);
+	}
+};
+
 const getProductOwnership = async (productId) => {
 	return productModel.findProductOwnershipById(productId);
 };
@@ -77,15 +83,23 @@ const buildProductValues = (payload = {}) => {
 };
 
 const createProduct = async ({ user, payload }) => {
-	ensureFarmerRole(user);
+	ensureFieldAgentRole(user);
 
-	const missingFields = getMissingRequiredFields(payload, ["name", "price", "stock"]);
+	const missingFields = getMissingRequiredFields(payload, ["farmer_id", "name", "price", "stock"]);
 
 	if (missingFields.length > 0) {
-		throw createServiceError("Name, valid price, and integer stock are required", 400);
+		throw createServiceError(
+			"farmer_id, name, valid price, and integer stock are required",
+			400
+		);
+	}
+
+	if (!isPositiveInteger(payload.farmer_id)) {
+		throw createServiceError("farmer_id must be a valid integer", 400);
 	}
 
 	const productValues = buildProductValues(payload);
+	const farmer_id = Number(payload.farmer_id);
 
 	if (!isNonNegativeNumber(productValues.price) || Number(productValues.price) <= 0) {
 		throw createServiceError("price must be a valid number greater than 0", 400);
@@ -96,9 +110,14 @@ const createProduct = async ({ user, payload }) => {
 	}
 
 	const category_id = await validateCategoryId(payload.category_id);
+	const farmer = await productModel.findFarmerById(farmer_id);
+
+	if (!farmer) {
+		throw createServiceError("Invalid farmer_id. Referenced farmer does not exist", 400);
+	}
 
 	const product = await productModel.createProduct({
-		farmer_id: user.id,
+		farmer_id,
 		category_id,
 		name: productValues.name,
 		description: productValues.description || null,
@@ -109,12 +128,36 @@ const createProduct = async ({ user, payload }) => {
 
 	await inventoryModel.upsertInventory({
 		product_id: product.id,
-		farmer_id: user.id,
+		farmer_id,
 		quantity: productValues.stock,
 	});
 
-	logger.info("Product created", { productId: product.id, farmerId: user.id });
-	return productModel.findProductById(product.id);
+	logger.info("Product created", {
+		productId: product.id,
+		farmerId: farmer_id,
+		fieldAgentId: user.id,
+	});
+
+	try {
+		const createdProduct = await productModel.findProductById(product.id);
+
+		if (createdProduct) {
+			return createdProduct;
+		}
+	} catch (error) {
+		logger.warn("Failed to reload created product", {
+			productId: product.id,
+			farmerId: farmer_id,
+			error: error.message,
+		});
+	}
+
+	return {
+		...product,
+		stock: productValues.stock,
+		farm_location: productValues.farm_location || null,
+		image_url: productValues.image_url || null,
+	};
 };
 
 const updateProduct = async ({ user, productId, payload }) => {
