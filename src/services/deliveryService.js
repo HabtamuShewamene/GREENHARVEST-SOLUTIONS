@@ -20,6 +20,50 @@ const createServiceError = (message, statusCode, extra = {}) => {
 	return error;
 };
 
+const orderModel = require("../models/orderModel");
+
+const assignDeliveryPartnerToOrder = async ({ actor, order_id, delivery_partner_id }) => {
+	if (!actor || normalizeRole(actor.role) !== "admin") {
+		throw createServiceError("Only admins can assign delivery partners", 403);
+	}
+
+	if (!isPositiveInteger(order_id) || !isPositiveInteger(delivery_partner_id)) {
+		throw createServiceError("order_id and delivery_partner_id must be valid integers", 400);
+	}
+
+	const client = await pool.connect();
+
+	try {
+		await client.query("BEGIN");
+
+		const order = await orderModel.findOrderById(Number(order_id), client);
+
+		if (!order) {
+			throw createServiceError("Order not found", 404);
+		}
+
+		const partner = await deliveryModel.findDeliveryPartnerById(client, Number(delivery_partner_id));
+
+		if (!partner) {
+			throw createServiceError("delivery_partner_id must belong to a delivery partner", 400);
+		}
+
+		const updatedOrder = await orderModel.assignDeliveryPartnerById(
+			Number(order_id),
+			Number(delivery_partner_id),
+			client
+		);
+
+		await client.query("COMMIT");
+		return updatedOrder;
+	} catch (error) {
+		await client.query("ROLLBACK");
+		throw error;
+	} finally {
+		client.release();
+	}
+};
+
 const assignDelivery = async ({ actor, payload }) => {
 	if (normalizeRole(actor.role) !== "admin") {
 		throw createServiceError("Only admins can assign delivery partners", 403);
@@ -200,6 +244,7 @@ const trackDelivery = async ({ actor, order_id }) => {
 module.exports = {
 	allowedDeliveryStatuses,
 	assignDelivery,
+	assignDeliveryPartnerToOrder,
 	trackDelivery,
 	updateDeliveryStatus,
 };
