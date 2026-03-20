@@ -2,14 +2,16 @@ const ROLE_ALIASES = {
   admin: "admin",
   farmer: "farmer",
   buyer: "buyer",
-  fieldagent: "fieldAgent",
-  field_agent: "fieldAgent",
-  deliverypartner: "deliveryPartner",
-  delivery_partner: "deliveryPartner",
-  delivery: "deliveryPartner",
+  fieldagent: "field_agent",
+  field_agent: "field_agent",
+  "field agent": "field_agent",
+  deliverypartner: "delivery_partner",
+  delivery_partner: "delivery_partner",
+  "delivery partner": "delivery_partner",
+  delivery: "delivery_partner",
 };
 
-const ALLOWED_ROLES = ["admin", "farmer", "buyer", "fieldAgent", "deliveryPartner"];
+const ALLOWED_ROLES = ["admin", "farmer", "buyer", "field_agent", "delivery_partner"];
 
 const normalizeRole = (role) => {
   if (role === undefined || role === null) {
@@ -22,8 +24,8 @@ const normalizeRole = (role) => {
     return "";
   }
 
-  const key = normalized.toLowerCase();
-  return ROLE_ALIASES[key] || normalized;
+  const key = normalized.toLowerCase().replace(/[\s-]+/g, "_");
+  return ROLE_ALIASES[key] || key;
 };
 
 const isAllowedRole = (role) => {

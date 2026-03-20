@@ -38,7 +38,7 @@ const resolveActorId = async (user_id, role) => {
     return result.rows[0].farmer_id;
   }
 
-  if (role === "deliveryPartner") {
+  if (role === "delivery_partner") {
     const result = await pool.query(
       `
         INSERT INTO delivery_profiles (user_id)
@@ -53,7 +53,7 @@ const resolveActorId = async (user_id, role) => {
     return result.rows[0].delivery_id;
   }
 
-  if (role === "fieldAgent") {
+  if (role === "field_agent") {
     const result = await pool.query(
       `
         INSERT INTO field_agent_profiles (user_id)

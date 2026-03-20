@@ -40,7 +40,7 @@ const validateCreateProductRequest = (req, res) => {
     return false;
   }
 
-  if (normalizeRole(req.user && req.user.role) !== "fieldAgent") {
+  if (normalizeRole(req.user && req.user.role) !== "field_agent") {
     res.status(403).json({
       message: "Only field agents can create products",
     });

@@ -24,7 +24,7 @@ const ensureFarmerRole = (user) => {
 };
 
 const ensureFieldAgentRole = (user) => {
-	if (!user || normalizeRole(user.role) !== "fieldAgent") {
+	if (!user || normalizeRole(user.role) !== "field_agent") {
 		throw createServiceError("Only field agents can create products", 403);
 	}
 };

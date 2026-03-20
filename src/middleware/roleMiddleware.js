@@ -2,7 +2,7 @@
 const logger = require("../utils/logger");
 const { normalizeRole } = require("../utils/roles");
 
-const roleMiddleware = (...allowedRoles) => {
+const requireRole = (...allowedRoles) => {
   const normalizedRoles = allowedRoles
     .flat()
     .filter(Boolean)
@@ -43,4 +43,6 @@ const roleMiddleware = (...allowedRoles) => {
   };
 };
 
-module.exports = roleMiddleware;
+module.exports = requireRole;
+module.exports.requireRole = requireRole;
+module.exports.roleMiddleware = requireRole;
