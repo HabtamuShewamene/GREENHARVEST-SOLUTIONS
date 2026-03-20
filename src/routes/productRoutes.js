@@ -3,6 +3,7 @@
 const express = require("express");
 
 const authMiddleware = require("../middleware/authMiddleware");
+const { requireRole } = require("../middleware/roleMiddleware");
 const {
   createProduct,
   updateProduct,
@@ -16,7 +17,7 @@ const router = express.Router();
 
 router.get("/", getAllProducts);
 router.get("/:id", getProductById);
-router.post("/", authMiddleware, createProduct);
+router.post("/", authMiddleware, requireRole("field_agent"), createProduct);
 router.put("/:id", authMiddleware, updateProduct);
 router.delete("/:id", authMiddleware, deleteProduct);
 router.patch("/:id/stock", authMiddleware, updateProductStock);

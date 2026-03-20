@@ -22,7 +22,7 @@ const canManageFarmerInventory = async ({ actor, farmer_id }) => {
 		return Number(actor.id) === Number(farmer_id);
 	}
 
-	if (role === "fieldAgent") {
+	if (role === "field_agent") {
 		return agentModel.isAgentAssignedToFarmer({
 			agent_id: actor.id,
 			farmer_id,

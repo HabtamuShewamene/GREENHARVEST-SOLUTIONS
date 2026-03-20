@@ -140,10 +140,11 @@ const updateDeliveryStatus = async ({ actor, payload }) => {
 
 		const actorRole = normalizeRole(actor.role);
 
-		if (
-			actorRole !== "admin" &&
-			!(actorRole === "deliveryPartner" && Number(actor.id) === Number(existingDelivery.delivery_partner_id))
-		) {
+		if (actorRole !== "delivery_partner") {
+			throw createServiceError("Only delivery partners can update delivery status", 403);
+		}
+
+		if (Number(actor.id) !== Number(existingDelivery.delivery_partner_id)) {
 			throw createServiceError("You are not allowed to update this delivery", 403);
 		}
 
