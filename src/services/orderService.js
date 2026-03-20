@@ -5,7 +5,7 @@ const orderModel = require("../models/orderModel");
 const { normalizeRole } = require("../utils/roles");
 const { isPositiveInteger } = require("../utils/validators");
 
-const allowedOrderStatuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
+const allowedOrderStatuses = ["pending", "confirmed", "collected", "in_transit", "delivered"];
 const allowedPaymentStatuses = ["pending", "paid", "failed", "refunded"];
 const allowedDeliveryStatuses = [
 	"pending",
@@ -26,6 +26,60 @@ const createServiceError = (message, statusCode, extra = {}) => {
 
 const getOrdersForBuyer = async (buyer_id, order_id = null) => {
 	return orderModel.getOrdersForBuyer(buyer_id, order_id);
+};
+
+const orderStatusTransitions = {
+	pending: ["confirmed"],
+	confirmed: ["collected"],
+	collected: ["in_transit"],
+	in_transit: ["delivered"],
+	delivered: [],
+};
+
+const roleAllowedStatuses = {
+	field_agent: ["confirmed", "collected"],
+	delivery_partner: ["in_transit", "delivered"],
+};
+
+const validateOrderStatusUpdate = ({ actor, order, nextStatus }) => {
+	const actorRole = normalizeRole(actor && actor.role);
+	const allowedStatuses = roleAllowedStatuses[actorRole];
+
+	if (!allowedStatuses) {
+		throw createServiceError("Only field agents and delivery partners can update order status", 403);
+	}
+
+	if (!allowedOrderStatuses.includes(nextStatus)) {
+		throw createServiceError("Invalid order status value", 400);
+	}
+
+	if (!allowedStatuses.includes(nextStatus)) {
+		throw createServiceError(`Role ${actorRole} cannot set order status to ${nextStatus}`, 403);
+	}
+
+	if (
+		actorRole === "field_agent" &&
+		Number(actor.id) !== Number(order.field_agent_id)
+	) {
+		throw createServiceError("You are not assigned to this order as field agent", 403);
+	}
+
+	if (
+		actorRole === "delivery_partner" &&
+		Number(actor.id) !== Number(order.delivery_partner_id)
+	) {
+		throw createServiceError("You are not assigned to this order as delivery partner", 403);
+	}
+
+	const currentStatus = order.order_status;
+	const allowedNextStatuses = orderStatusTransitions[currentStatus] || [];
+
+	if (!allowedNextStatuses.includes(nextStatus)) {
+		throw createServiceError(
+			`Invalid order status transition from ${currentStatus} to ${nextStatus}`,
+			400
+		);
+	}
 };
 
 const resolveOrderSupplyChain = async (client, cartItems) => {
@@ -190,46 +244,33 @@ const getOrderByIdForBuyer = async (buyer_id, order_id) => {
 	return orders[0];
 };
 
-const updateOrderStatus = async ({ admin_user, order_id, order_status, payment_status, delivery_status }) => {
-	if (!admin_user || normalizeRole(admin_user.role) !== "admin") {
-		throw createServiceError("Only admins can update order status", 403);
+const updateOrderStatus = async ({ actor, order_id, status }) => {
+	if (!actor) {
+		throw createServiceError("Authentication is required", 401);
 	}
 
 	if (!isPositiveInteger(order_id)) {
 		throw createServiceError("Invalid order id", 400);
 	}
 
-	if (
-		order_status === undefined &&
-		payment_status === undefined &&
-		delivery_status === undefined
-	) {
-		throw createServiceError("At least one status field is required", 400);
+	if (!status || !String(status).trim()) {
+		throw createServiceError("status is required", 400);
 	}
 
-	if (order_status !== undefined && !allowedOrderStatuses.includes(order_status)) {
-		throw createServiceError("Invalid order_status value", 400);
-	}
-
-	if (payment_status !== undefined && !allowedPaymentStatuses.includes(payment_status)) {
-		throw createServiceError("Invalid payment_status value", 400);
-	}
-
-	if (delivery_status !== undefined && !allowedDeliveryStatuses.includes(delivery_status)) {
-		throw createServiceError("Invalid delivery_status value", 400);
-	}
-
-	const order = await orderModel.updateOrderStatusesById(Number(order_id), {
-		order_status: order_status !== undefined ? order_status : null,
-		payment_status: payment_status !== undefined ? payment_status : null,
-		delivery_status: delivery_status !== undefined ? delivery_status : null,
-	});
+	const nextStatus = String(status).trim().toLowerCase();
+	const order = await orderModel.findOrderById(Number(order_id));
 
 	if (!order) {
 		throw createServiceError("Order not found", 404);
 	}
 
-	return order;
+	validateOrderStatusUpdate({
+		actor,
+		order,
+		nextStatus,
+	});
+
+	return orderModel.updateOrderStatusById(Number(order_id), nextStatus);
 };
 
 module.exports = {

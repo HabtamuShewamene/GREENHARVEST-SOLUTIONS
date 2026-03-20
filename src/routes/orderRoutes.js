@@ -20,6 +20,6 @@ router.post("/", createOrder);
 router.get("/", getUserOrders);
 router.get("/:id", getOrderById);
 router.put("/:id/assign-delivery", requireRole("admin"), assignDeliveryPartner);
-router.patch("/:id/status", requireRole("admin"), updateOrderStatus);
+router.patch("/:id/status", requireRole("field_agent", "delivery_partner"), updateOrderStatus);
 
 module.exports = router;

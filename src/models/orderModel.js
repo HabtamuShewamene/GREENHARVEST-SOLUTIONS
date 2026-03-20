@@ -208,6 +208,30 @@ const assignDeliveryPartnerById = async (order_id, delivery_partner_id, client =
 	return result.rows[0] || null;
 };
 
+const updateOrderStatusById = async (order_id, order_status, client = pool) => {
+	const result = await client.query(
+		`
+			UPDATE orders
+			SET order_status = $1
+			WHERE order_id = $2
+			RETURNING
+				order_id AS id,
+				buyer_id,
+				farmer_id,
+				field_agent_id,
+				delivery_partner_id,
+				address_id,
+				total_amount AS total_price,
+				total_amount,
+				order_status,
+				created_at
+		`,
+		[order_status, order_id]
+	);
+
+	return result.rows[0] || null;
+};
+
 const decrementProductStock = async (client, product_id, quantity) => {
 	const result = await client.query(
 		`
@@ -279,5 +303,6 @@ module.exports = {
 	findProductSupplyChainById,
 	formatOrderRows,
 	getOrdersForBuyer,
+	updateOrderStatusById,
 	updateOrderStatusesById,
 };
