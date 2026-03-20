@@ -9,6 +9,9 @@ const formatOrderRows = (rows) => {
 				id: row.order_id,
 				buyer_id: row.buyer_id,
 				address_id: row.address_id,
+				farmer_id: row.order_farmer_id,
+				field_agent_id: row.field_agent_id,
+				delivery_partner_id: row.delivery_partner_id,
 				total_price: row.total_price,
 				total_amount: row.total_amount,
 				order_status: row.order_status,
@@ -51,6 +54,9 @@ const getOrdersForBuyer = async (buyer_id, order_id = null) => {
 				o.order_id,
 				o.buyer_id,
 				o.address_id,
+				o.farmer_id AS order_farmer_id,
+				o.field_agent_id,
+				o.delivery_partner_id,
 				o.total_amount AS total_price,
 				o.total_amount,
 				o.order_status,
@@ -87,14 +93,56 @@ const getOrdersForBuyer = async (buyer_id, order_id = null) => {
 	return formatOrderRows(result.rows);
 };
 
-const createOrderRecord = async (client, buyer_id, total_amount, address_id = null) => {
+const findProductSupplyChainById = async (client, product_id) => {
 	const result = await client.query(
 		`
-			INSERT INTO orders (buyer_id, address_id, total_amount, order_status)
-			VALUES ($1, $2, $3, 'pending')
-			RETURNING order_id AS id, buyer_id, address_id, total_amount AS total_price, total_amount, order_status, 'pending'::varchar AS payment_status, 'pending'::varchar AS delivery_status, created_at
+			SELECT
+				p.product_id AS product_id,
+				p.farmer_id,
+				af.agent_id AS field_agent_id
+			FROM products p
+			LEFT JOIN agent_farmers af ON af.farmer_id = p.farmer_id
+			WHERE p.product_id = $1
+			ORDER BY af.id DESC NULLS LAST
+			LIMIT 1
 		`,
-		[buyer_id, address_id, total_amount]
+		[product_id]
+	);
+
+	return result.rows[0] || null;
+};
+
+const createOrderRecord = async (
+	client,
+	{ buyer_id, farmer_id, field_agent_id, delivery_partner_id = null, total_amount, address_id = null }
+) => {
+	const result = await client.query(
+		`
+			INSERT INTO orders (
+				buyer_id,
+				farmer_id,
+				field_agent_id,
+				delivery_partner_id,
+				address_id,
+				total_amount,
+				order_status
+			)
+			VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+			RETURNING
+				order_id AS id,
+				buyer_id,
+				farmer_id,
+				field_agent_id,
+				delivery_partner_id,
+				address_id,
+				total_amount AS total_price,
+				total_amount,
+				order_status,
+				'pending'::varchar AS payment_status,
+				'pending'::varchar AS delivery_status,
+				created_at
+		`,
+		[buyer_id, farmer_id, field_agent_id, delivery_partner_id, address_id, total_amount]
 	);
 
 	return result.rows[0];
@@ -179,6 +227,7 @@ module.exports = {
 	createOrderItemRecord,
 	createOrderRecord,
 	decrementProductStock,
+	findProductSupplyChainById,
 	formatOrderRows,
 	getOrdersForBuyer,
 	updateOrderStatusesById,

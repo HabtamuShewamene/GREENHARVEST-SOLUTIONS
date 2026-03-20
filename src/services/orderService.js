@@ -28,6 +28,53 @@ const getOrdersForBuyer = async (buyer_id, order_id = null) => {
 	return orderModel.getOrdersForBuyer(buyer_id, order_id);
 };
 
+const resolveOrderSupplyChain = async (client, cartItems) => {
+	let farmer_id = null;
+	let field_agent_id = null;
+
+	for (const item of cartItems) {
+		const product_id = Number(item.product_id);
+		const supplyChain = await orderModel.findProductSupplyChainById(client, product_id);
+
+		if (!supplyChain) {
+			throw createServiceError(`Product not found for cart item: ${product_id}`, 404);
+		}
+
+		if (!supplyChain.farmer_id) {
+			throw createServiceError(`Farmer not found for product: ${product_id}`, 400);
+		}
+
+		if (!supplyChain.field_agent_id) {
+			throw createServiceError(`Field agent not assigned for farmer: ${supplyChain.farmer_id}`, 400);
+		}
+
+		if (farmer_id === null) {
+			farmer_id = Number(supplyChain.farmer_id);
+			field_agent_id = Number(supplyChain.field_agent_id);
+			continue;
+		}
+
+		if (farmer_id !== Number(supplyChain.farmer_id)) {
+			throw createServiceError(
+				"All products in an order must belong to the same farmer",
+				400
+			);
+		}
+
+		if (field_agent_id !== Number(supplyChain.field_agent_id)) {
+			throw createServiceError(
+				"All products in an order must belong to the same field agent",
+				400
+			);
+		}
+	}
+
+	return {
+		farmer_id,
+		field_agent_id,
+	};
+};
+
 const createOrder = async (buyer_id, payload = {}) => {
 	const client = await pool.connect();
 
@@ -78,12 +125,16 @@ const createOrder = async (buyer_id, payload = {}) => {
 			total_amount += Number(item.price) * item.quantity;
 		}
 
-		const order = await orderModel.createOrderRecord(
-			client,
+		const { farmer_id, field_agent_id } = await resolveOrderSupplyChain(client, cartResult.rows);
+
+		const order = await orderModel.createOrderRecord(client, {
 			buyer_id,
-			total_amount.toFixed(2),
-			address_id
-		);
+			farmer_id,
+			field_agent_id,
+			delivery_partner_id: null,
+			total_amount: total_amount.toFixed(2),
+			address_id,
+		});
 
 		for (const item of cartResult.rows) {
 			await orderModel.createOrderItemRecord(client, {
