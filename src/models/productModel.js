@@ -65,6 +65,106 @@ const createProduct = async ({
 	return result.rows[0];
 };
 
+const getTableColumns = async (tableName) => {
+	const result = await pool.query(
+		`
+			SELECT column_name
+			FROM information_schema.columns
+			WHERE table_schema = CURRENT_SCHEMA()
+				AND table_name = $1
+		`,
+		[tableName]
+	);
+
+	return result.rows.map((row) => row.column_name);
+};
+
+const findFarmerById = async (farmerId) => {
+	const farmerTableCheck = await pool.query(
+		`
+			SELECT
+				EXISTS (
+					SELECT 1
+					FROM information_schema.tables
+					WHERE table_schema = CURRENT_SCHEMA()
+						AND table_name = 'farmers'
+				) AS has_farmers_table,
+				EXISTS (
+					SELECT 1
+					FROM information_schema.tables
+					WHERE table_schema = CURRENT_SCHEMA()
+						AND table_name = 'roles'
+				) AS has_roles_table
+		`
+	);
+
+	if (farmerTableCheck.rows[0] && farmerTableCheck.rows[0].has_farmers_table) {
+		const farmerColumns = await getTableColumns("farmers");
+		const farmerIdColumn = farmerColumns.includes("farmer_id")
+			? "farmer_id"
+			: farmerColumns.includes("id")
+				? "id"
+				: null;
+
+		if (farmerIdColumn) {
+			const farmerResult = await pool.query(
+				`
+					SELECT ${farmerIdColumn} AS id
+					FROM farmers
+					WHERE ${farmerIdColumn} = $1
+				`,
+				[farmerId]
+			);
+
+			return farmerResult.rows[0] || null;
+		}
+	}
+
+	const userColumns = await getTableColumns("users");
+	const userIdColumn = userColumns.includes("user_id")
+		? "user_id"
+		: userColumns.includes("id")
+			? "id"
+			: null;
+
+	if (!userIdColumn) {
+		return null;
+	}
+
+	if (userColumns.includes("role_id") && farmerTableCheck.rows[0].has_roles_table) {
+		const roleBasedUserResult = await pool.query(
+			`
+				SELECT u.${userIdColumn} AS id
+				FROM users u
+				JOIN roles r ON r.role_id = u.role_id
+				WHERE u.${userIdColumn} = $1
+					AND LOWER(COALESCE(r.role_name, '')) = 'farmer'
+			`,
+			[farmerId]
+		);
+
+		if (roleBasedUserResult.rows[0]) {
+			return roleBasedUserResult.rows[0];
+		}
+	}
+
+	if (userColumns.includes("role")) {
+		const userResult = await pool.query(
+			`
+				SELECT u.${userIdColumn} AS id
+				FROM users u
+				WHERE u.${userIdColumn} = $1
+					AND LOWER(COALESCE(u.role, '')) = 'farmer'
+			`,
+			[farmerId]
+		);
+
+		return userResult.rows[0] || null;
+	}
+
+	return null;
+};
+
 const findProductOwnershipById = async (productId) => {
 	const result = await pool.query("SELECT product_id AS id, farmer_id FROM products WHERE product_id = $1", [productId]);
 	return result.rows[0] || null;
@@ -193,6 +293,7 @@ module.exports = {
 	createProduct,
 	deleteProductById,
 	findAllProducts,
+	findFarmerById,
 	findProductById,
 	findProductOwnershipById,
 	findProductStockById,

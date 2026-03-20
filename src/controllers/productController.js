@@ -1,6 +1,8 @@
 // Product controller delegates business logic to the product service.
 const logger = require("../utils/logger");
 const productService = require("../services/productService");
+const { normalizeRole } = require("../utils/roles");
+const { isPositiveInteger } = require("../utils/validators");
 
 const handleControllerError = (res, context, error, meta = {}) => {
   logger.error(context, {
@@ -35,6 +37,24 @@ const createProduct = async (req, res) => {
     if (!req.body || typeof req.body !== "object") {
       return res.status(400).json({
         message: "Request body must be valid JSON",
+      });
+    }
+
+    if (normalizeRole(req.user && req.user.role) !== "fieldAgent") {
+      return res.status(403).json({
+        message: "Only field agents can create products",
+      });
+    }
+
+    if (req.body.farmer_id === undefined || req.body.farmer_id === null) {
+      return res.status(400).json({
+        message: "farmer_id is required",
+      });
+    }
+
+    if (!isPositiveInteger(req.body.farmer_id)) {
+      return res.status(400).json({
+        message: "farmer_id must be a valid integer",
       });
     }
 
