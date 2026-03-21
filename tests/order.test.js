@@ -96,6 +96,45 @@ describe("Order tests", () => {
       expect(order.id).toBe(15);
     });
 
+    test("rejects insufficient stock in cart items", async () => {
+      const { orderService, orderModel, client } = loadOrderService();
+
+      client.query.mockImplementation(async (sql) => {
+        if (sql === "BEGIN" || sql === "ROLLBACK") {
+          return { rows: [] };
+        }
+
+        if (typeof sql === "string" && sql.includes("FROM carts c")) {
+          return {
+            rows: [
+              {
+                id: 1,
+                product_id: 10,
+                quantity: 20,
+                name: "Tomato",
+                price: 11,
+                stock: 10,
+                cart_id: 99,
+              },
+            ],
+          };
+        }
+
+        return { rows: [] };
+      });
+
+      orderModel.findProductSupplyChainById.mockResolvedValue({
+        product_id: 10,
+        farmer_id: 50,
+        field_agent_id: 7,
+      });
+
+      await expect(orderService.createOrder(3, {})).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Insufficient stock for product: Tomato",
+      });
+    });
+
     test("rejects invalid product during order creation", async () => {
       const { orderService, orderModel, client } = loadOrderService();
 
@@ -125,6 +164,152 @@ describe("Order tests", () => {
 
       await expect(orderService.createOrder(3, {})).rejects.toMatchObject({
         statusCode: 404,
+      });
+    });
+
+    test("rejects missing farmer or missing field agent in supply chain", async () => {
+      const { orderService, orderModel, client } = loadOrderService();
+
+      client.query.mockImplementation(async (sql) => {
+        if (sql === "BEGIN" || sql === "ROLLBACK") {
+          return { rows: [] };
+        }
+
+        if (typeof sql === "string" && sql.includes("FROM carts c")) {
+          return {
+            rows: [
+              {
+                product_id: 10,
+                quantity: 1,
+                name: "Tomato",
+                price: 11,
+                stock: 10,
+                cart_id: 99,
+              },
+            ],
+          };
+        }
+
+        return { rows: [] };
+      });
+
+      orderModel.findProductSupplyChainById.mockResolvedValueOnce({
+        product_id: 10,
+        farmer_id: null,
+        field_agent_id: 7,
+      });
+
+      await expect(orderService.createOrder(3, {})).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Farmer not found for product: 10",
+      });
+
+      orderModel.findProductSupplyChainById.mockResolvedValueOnce({
+        product_id: 10,
+        farmer_id: 50,
+        field_agent_id: null,
+      });
+
+      await expect(orderService.createOrder(3, {})).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Field agent not assigned for farmer: 50",
+      });
+    });
+
+    test("rejects cart items from different farmers or field agents", async () => {
+      const { orderService, orderModel, client } = loadOrderService();
+
+      client.query.mockImplementation(async (sql) => {
+        if (sql === "BEGIN" || sql === "ROLLBACK") {
+          return { rows: [] };
+        }
+
+        if (typeof sql === "string" && sql.includes("FROM carts c")) {
+          return {
+            rows: [
+              {
+                id: 1,
+                product_id: 10,
+                quantity: 1,
+                name: "Tomato",
+                price: 11,
+                stock: 10,
+                cart_id: 99,
+              },
+              {
+                id: 2,
+                product_id: 11,
+                quantity: 1,
+                name: "Potato",
+                price: 10,
+                stock: 10,
+                cart_id: 99,
+              },
+            ],
+          };
+        }
+
+        return { rows: [] };
+      });
+
+      orderModel.findProductSupplyChainById
+        .mockResolvedValueOnce({ product_id: 10, farmer_id: 50, field_agent_id: 7 })
+        .mockResolvedValueOnce({ product_id: 11, farmer_id: 51, field_agent_id: 7 });
+
+      await expect(orderService.createOrder(3, {})).rejects.toMatchObject({
+        statusCode: 400,
+        message: "All products in an order must belong to the same farmer",
+      });
+
+      orderModel.findProductSupplyChainById
+        .mockResolvedValueOnce({ product_id: 10, farmer_id: 50, field_agent_id: 7 })
+        .mockResolvedValueOnce({ product_id: 11, farmer_id: 50, field_agent_id: 8 });
+
+      await expect(orderService.createOrder(3, {})).rejects.toMatchObject({
+        statusCode: 400,
+        message: "All products in an order must belong to the same field agent",
+      });
+    });
+
+    test("rejects when decrementing stock would go negative", async () => {
+      const { orderService, orderModel, client } = loadOrderService();
+
+      client.query.mockImplementation(async (sql) => {
+        if (sql === "BEGIN" || sql === "ROLLBACK") {
+          return { rows: [] };
+        }
+
+        if (typeof sql === "string" && sql.includes("FROM carts c")) {
+          return {
+            rows: [
+              {
+                id: 1,
+                product_id: 10,
+                quantity: 2,
+                name: "Tomato",
+                price: 11,
+                stock: 10,
+                cart_id: 99,
+              },
+            ],
+          };
+        }
+
+        return { rows: [] };
+      });
+
+      orderModel.findProductSupplyChainById.mockResolvedValue({
+        product_id: 10,
+        farmer_id: 50,
+        field_agent_id: 7,
+      });
+      orderModel.createOrderRecord.mockResolvedValue({ id: 15 });
+      orderModel.createOrderItemRecord.mockResolvedValue({ id: 22 });
+      orderModel.decrementProductStock.mockResolvedValue(null);
+
+      await expect(orderService.createOrder(3, {})).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Insufficient stock for product: Tomato",
       });
     });
 
@@ -208,6 +393,89 @@ describe("Order tests", () => {
       });
     });
 
+    test("rejects invalid order status values", async () => {
+      const { orderService, orderModel } = loadOrderService();
+
+      orderModel.findOrderById.mockResolvedValue({
+        id: 11,
+        order_status: "pending",
+        field_agent_id: 7,
+        delivery_partner_id: 20,
+      });
+
+      await expect(
+        orderService.updateOrderStatus({
+          actor: { id: 7, role: "field_agent" },
+          order_id: 11,
+          status: "teleported",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid order status value",
+      });
+    });
+
+    test("rejects updates by unassigned field agents and delivery partners", async () => {
+      const { orderService, orderModel } = loadOrderService();
+
+      orderModel.findOrderById.mockResolvedValueOnce({
+        id: 11,
+        order_status: "pending",
+        field_agent_id: 7,
+        delivery_partner_id: 20,
+      });
+
+      await expect(
+        orderService.updateOrderStatus({
+          actor: { id: 8, role: "field_agent" },
+          order_id: 11,
+          status: "confirmed",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "You are not assigned to this order as field agent",
+      });
+
+      orderModel.findOrderById.mockResolvedValueOnce({
+        id: 12,
+        order_status: "collected",
+        field_agent_id: 7,
+        delivery_partner_id: 21,
+      });
+
+      await expect(
+        orderService.updateOrderStatus({
+          actor: { id: 22, role: "delivery_partner" },
+          order_id: 12,
+          status: "in_transit",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "You are not assigned to this order as delivery partner",
+      });
+    });
+
+    test("rejects status updates from unsupported roles", async () => {
+      const { orderService, orderModel } = loadOrderService();
+
+      orderModel.findOrderById.mockResolvedValue({
+        id: 11,
+        order_status: "pending",
+        field_agent_id: 7,
+        delivery_partner_id: 20,
+      });
+
+      await expect(
+        orderService.updateOrderStatus({
+          actor: { id: 7, role: "buyer" },
+          order_id: 11,
+          status: "confirmed",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "Only field agents and delivery partners can update order status",
+      });
+    });
     test("delivery_partner can move collected to in_transit and in_transit to delivered", async () => {
       const { orderService, orderModel } = loadOrderService();
 
