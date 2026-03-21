@@ -86,6 +86,21 @@ describe("Delivery tests", () => {
       expect(order.delivery_partner_id).toBe(22);
     });
 
+    test("rejects invalid ids when assigning delivery partner to order", async () => {
+      const { deliveryService } = loadDeliveryService();
+
+      await expect(
+        deliveryService.assignDeliveryPartnerToOrder({
+          actor: { id: 1, role: "admin" },
+          order_id: "bad",
+          delivery_partner_id: 22,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "order_id and delivery_partner_id must be valid integers",
+      });
+    });
+
     test("rejects non-delivery users", async () => {
       const { deliveryService, deliveryModel, orderModel, client } = loadDeliveryService();
 
@@ -177,6 +192,30 @@ describe("Delivery tests", () => {
       expect(delivery.id).toBe(5);
     });
 
+    test("assignDelivery rejects non-admin actors and missing delivery location", async () => {
+      const { deliveryService } = loadDeliveryService();
+
+      await expect(
+        deliveryService.assignDelivery({
+          actor: { id: 9, role: "buyer" },
+          payload: { order_id: 8, delivery_partner_id: 22, delivery_location: "Addis" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "Only admins can assign delivery partners",
+      });
+
+      await expect(
+        deliveryService.assignDelivery({
+          actor: { id: 1, role: "admin" },
+          payload: { order_id: 8, delivery_partner_id: 22 },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "delivery_location is required",
+      });
+    });
+
     test("assignDelivery rejects duplicate assignment", async () => {
       const { deliveryService, deliveryModel, client } = loadDeliveryService();
 
@@ -205,6 +244,50 @@ describe("Delivery tests", () => {
       });
     });
 
+    test("updateDeliveryStatus validates required fields and id formats", async () => {
+      const { deliveryService } = loadDeliveryService();
+
+      await expect(
+        deliveryService.updateDeliveryStatus({
+          actor: { id: 22, role: "delivery_partner" },
+          payload: { order_id: 8 },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "status is required",
+      });
+
+      await expect(
+        deliveryService.updateDeliveryStatus({
+          actor: { id: 22, role: "delivery_partner" },
+          payload: { order_id: "bad", status: "shipped" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "order_id must be a valid integer",
+      });
+
+      await expect(
+        deliveryService.updateDeliveryStatus({
+          actor: { id: 22, role: "delivery_partner" },
+          payload: { delivery_id: "bad", status: "shipped" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "delivery_id must be a valid integer",
+      });
+
+      await expect(
+        deliveryService.updateDeliveryStatus({
+          actor: { id: 22, role: "delivery_partner" },
+          payload: { status: "shipped" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "order_id or delivery_id is required",
+      });
+    });
+
     test("updateDeliveryStatus rejects invalid status", async () => {
       const { deliveryService } = loadDeliveryService();
 
@@ -218,6 +301,65 @@ describe("Delivery tests", () => {
         })
       ).rejects.toMatchObject({
         statusCode: 400,
+      });
+    });
+
+    test("updateDeliveryStatus rejects missing delivery/order, forbidden role, and unassigned partner", async () => {
+      const { deliveryService, deliveryModel, client } = loadDeliveryService();
+
+      client.query.mockImplementation(async (sql) => {
+        if (sql === "BEGIN" || sql === "ROLLBACK") {
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+
+      deliveryModel.findDeliveryByOrderIdForUpdate.mockResolvedValue(null);
+      await expect(
+        deliveryService.updateDeliveryStatus({
+          actor: { id: 22, role: "delivery_partner" },
+          payload: { order_id: 8, status: "shipped" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 404,
+        message: "Delivery not found for this order",
+      });
+
+      deliveryModel.findDeliveryByOrderIdForUpdate.mockResolvedValue({
+        id: 3,
+        order_id: 8,
+        delivery_partner_id: 22,
+      });
+      deliveryModel.findOrderById.mockResolvedValue(null);
+      await expect(
+        deliveryService.updateDeliveryStatus({
+          actor: { id: 22, role: "delivery_partner" },
+          payload: { order_id: 8, status: "shipped" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 404,
+        message: "Order not found",
+      });
+
+      deliveryModel.findOrderById.mockResolvedValue({ id: 8 });
+      await expect(
+        deliveryService.updateDeliveryStatus({
+          actor: { id: 1, role: "admin" },
+          payload: { order_id: 8, status: "shipped" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "Only delivery partners can update delivery status",
+      });
+
+      await expect(
+        deliveryService.updateDeliveryStatus({
+          actor: { id: 23, role: "delivery_partner" },
+          payload: { order_id: 8, status: "shipped" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "You are not allowed to update this delivery",
       });
     });
 
@@ -275,6 +417,26 @@ describe("Delivery tests", () => {
       });
 
       expect(delivery.id).toBe(4);
+    });
+
+    test("trackDelivery rejects forbidden actors", async () => {
+      const { deliveryService, deliveryModel } = loadDeliveryService();
+
+      deliveryModel.getDeliveryByOrderId.mockResolvedValue({
+        id: 4,
+        buyer_id: 10,
+        delivery_partner_id: 22,
+      });
+
+      await expect(
+        deliveryService.trackDelivery({
+          actor: { id: 9, role: "field_agent" },
+          order_id: 8,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "You are not allowed to view this delivery",
+      });
     });
   });
 
