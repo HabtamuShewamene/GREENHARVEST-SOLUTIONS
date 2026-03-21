@@ -25,8 +25,16 @@ const sanitizeMiddleware = (req, res, next) => {
     req.body = sanitizeValue(req.body);
   }
 
+  // Express 5 defines `req.query` as a getter (no setter). Shadow it per-request
+  // so downstream handlers observe the sanitized query object.
   if (req.query && typeof req.query === "object") {
-    req.query = sanitizeValue(req.query);
+    const sanitizedQuery = sanitizeValue(req.query);
+    Object.defineProperty(req, "query", {
+      value: sanitizedQuery,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
   }
 
   if (req.params && typeof req.params === "object") {

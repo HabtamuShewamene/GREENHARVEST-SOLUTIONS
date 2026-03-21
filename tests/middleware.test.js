@@ -256,6 +256,10 @@ describe("Middleware tests", () => {
 
   test("jwt utils sign and verify tokens", async () => {
     jest.resetModules();
+    // Earlier tests in this file mock `jsonwebtoken` (verify-only) for auth middleware.
+    // Ensure the JWT helper uses the real implementation for this test.
+    jest.unmock("jsonwebtoken");
+    jest.doMock("jsonwebtoken", () => jest.requireActual("jsonwebtoken"));
     const { signToken, verifyToken } = require("../src/utils/jwt");
 
     const token = signToken({ id: 1, role: "buyer" }, { expiresIn: "1h" });
