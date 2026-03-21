@@ -66,6 +66,39 @@ describe("Category tests", () => {
         message: "Category name is required",
       });
     });
+
+    test("getCategoryById rejects invalid id", async () => {
+      const { categoryService } = loadCategoryService();
+
+      await expect(categoryService.getCategoryById("abc")).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid category id",
+      });
+    });
+
+    test("updateCategory rejects missing category", async () => {
+      const { categoryService, categoryModel } = loadCategoryService();
+
+      categoryModel.findCategoryById.mockResolvedValue(null);
+
+      await expect(
+        categoryService.updateCategory({
+          category_id: 9,
+          category_name: "Vegetables",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 404,
+        message: "Category not found",
+      });
+    });
+
+    test("deleteCategory rejects invalid id", async () => {
+      const { categoryService } = loadCategoryService();
+
+      await expect(categoryService.deleteCategory("nope")).rejects.toMatchObject({
+        statusCode: 400,
+      });
+    });
   });
 
   describe("category routes", () => {
@@ -140,6 +173,25 @@ describe("Category tests", () => {
 
       expect(response.status).toBe(403);
       expect(response.body.message).toContain("Required role: admin");
+    });
+
+    test("rejects unauthenticated category creation", async () => {
+      const response = await request(app).post("/api/categories").send({
+        category_name: "Vegetables",
+      });
+
+      expect(response.status).toBe(401);
+    });
+
+    test("returns category service failure for get by id", async () => {
+      categoryServiceMock.getCategoryById.mockRejectedValue(
+        Object.assign(new Error("Category not found"), { statusCode: 404 })
+      );
+
+      const response = await request(app).get("/api/categories/999");
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe("Category not found");
     });
   });
 });

@@ -127,6 +127,38 @@ describe("Order tests", () => {
         statusCode: 404,
       });
     });
+
+    test("rejects empty cart", async () => {
+      const { orderService, client } = loadOrderService();
+
+      client.query.mockImplementation(async (sql) => {
+        if (sql === "BEGIN" || sql === "ROLLBACK") {
+          return { rows: [] };
+        }
+
+        if (typeof sql === "string" && sql.includes("FROM carts c")) {
+          return { rows: [] };
+        }
+
+        return { rows: [] };
+      });
+
+      await expect(orderService.createOrder(3, {})).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Cart is empty",
+      });
+    });
+
+    test("rejects invalid address id", async () => {
+      const { orderService } = loadOrderService();
+
+      await expect(
+        orderService.createOrder(3, { address_id: "bad" })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "address_id must be a valid integer",
+      });
+    });
   });
 
   describe("orderService workflow", () => {
@@ -233,6 +265,51 @@ describe("Order tests", () => {
         statusCode: 403,
       });
     });
+
+    test("rejects missing status", async () => {
+      const { orderService } = loadOrderService();
+
+      await expect(
+        orderService.updateOrderStatus({
+          actor: { id: 7, role: "field_agent" },
+          order_id: 13,
+          status: "",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "status is required",
+      });
+    });
+
+    test("rejects unauthenticated status update", async () => {
+      const { orderService } = loadOrderService();
+
+      await expect(
+        orderService.updateOrderStatus({
+          actor: null,
+          order_id: 13,
+          status: "confirmed",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 401,
+      });
+    });
+
+    test("rejects non-existing order on status update", async () => {
+      const { orderService, orderModel } = loadOrderService();
+
+      orderModel.findOrderById.mockResolvedValue(null);
+
+      await expect(
+        orderService.updateOrderStatus({
+          actor: { id: 7, role: "field_agent" },
+          order_id: 999,
+          status: "confirmed",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 404,
+      });
+    });
   });
 
   describe("order routes", () => {
@@ -295,6 +372,29 @@ describe("Order tests", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.order.order_status).toBe("confirmed");
+    });
+
+    test("rejects unauthorized workflow role at route level", async () => {
+      const response = await request(app)
+        .patch("/api/orders/8/status")
+        .set("x-test-role", "buyer")
+        .send({ status: "confirmed" });
+
+      expect(response.status).toBe(403);
+    });
+
+    test("returns order not found from controller", async () => {
+      orderServiceMock.updateOrderStatus.mockRejectedValue(
+        Object.assign(new Error("Order not found"), { statusCode: 404 })
+      );
+
+      const response = await request(app)
+        .patch("/api/orders/404/status")
+        .set("x-test-role", "field_agent")
+        .send({ status: "confirmed" });
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe("Order not found");
     });
   });
 });

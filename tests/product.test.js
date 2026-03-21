@@ -117,6 +117,58 @@ describe("Product tests", () => {
         statusCode: 403,
       });
     });
+
+    test("getProductById rejects invalid id", async () => {
+      const { productService } = loadProductService();
+
+      await expect(productService.getProductById("abc")).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid product id",
+      });
+    });
+
+    test("getProductById rejects missing product", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findProductById.mockResolvedValue(null);
+
+      await expect(productService.getProductById(999)).rejects.toMatchObject({
+        statusCode: 404,
+        message: "Product not found",
+      });
+    });
+
+    test("updateProduct rejects empty payload", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: {},
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "At least one field is required for update",
+      });
+    });
+
+    test("deleteProduct rejects unauthorized farmer", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 11 });
+
+      await expect(
+        productService.deleteProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+      });
+    });
   });
 
   describe("product routes", () => {
@@ -198,6 +250,48 @@ describe("Product tests", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.products).toHaveLength(2);
+    });
+
+    test("returns service error for invalid farmer_id during create", async () => {
+      productServiceMock.createProduct.mockRejectedValue(
+        Object.assign(new Error("Invalid farmer_id. Referenced farmer does not exist"), {
+          statusCode: 400,
+        })
+      );
+
+      const response = await request(app)
+        .post("/api/products")
+        .set("x-test-role", "field_agent")
+        .send({
+          farmer_id: 99,
+          name: "Tomato",
+          price: 12,
+          stock: 6,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe("Invalid farmer_id. Referenced farmer does not exist");
+    });
+
+    test("returns 400 for empty request body", async () => {
+      const response = await request(app)
+        .post("/api/products")
+        .set("x-test-role", "field_agent")
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe("farmer_id is required");
+    });
+
+    test("returns product fetch error", async () => {
+      productServiceMock.getProductById.mockRejectedValue(
+        Object.assign(new Error("Product not found"), { statusCode: 404 })
+      );
+
+      const response = await request(app).get("/api/products/999");
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe("Product not found");
     });
   });
 });

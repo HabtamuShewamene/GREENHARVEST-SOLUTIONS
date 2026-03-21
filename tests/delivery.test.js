@@ -17,7 +17,14 @@ const loadDeliveryService = () => {
   }));
 
   jest.doMock("../src/models/deliveryModel", () => ({
+    createDelivery: jest.fn(),
+    findDeliveryByIdForUpdate: jest.fn(),
+    findDeliveryByOrderIdForUpdate: jest.fn(),
     findDeliveryPartnerById: jest.fn(),
+    findOrderById: jest.fn(),
+    getDeliveryByOrderId: jest.fn(),
+    updateDeliveryByOrderId: jest.fn(),
+    updateOrderDeliveryStatus: jest.fn(),
   }));
 
   jest.doMock("../src/models/orderModel", () => ({
@@ -117,6 +124,158 @@ describe("Delivery tests", () => {
         statusCode: 403,
       });
     });
+
+    test("rejects missing order when assigning delivery partner to order", async () => {
+      const { deliveryService, orderModel, client } = loadDeliveryService();
+
+      client.query.mockImplementation(async (sql) => {
+        if (sql === "BEGIN" || sql === "ROLLBACK") {
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+      orderModel.findOrderById.mockResolvedValue(null);
+
+      await expect(
+        deliveryService.assignDeliveryPartnerToOrder({
+          actor: { id: 1, role: "admin" },
+          order_id: 404,
+          delivery_partner_id: 22,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 404,
+      });
+    });
+  });
+
+  describe("deliveryService workflow and tracking", () => {
+    test("assignDelivery creates a delivery record", async () => {
+      const { deliveryService, deliveryModel, client } = loadDeliveryService();
+
+      client.query.mockImplementation(async (sql) => {
+        if (sql === "BEGIN" || sql === "COMMIT") {
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+
+      deliveryModel.findOrderById.mockResolvedValue({ id: 8 });
+      deliveryModel.findDeliveryPartnerById.mockResolvedValue({ id: 22 });
+      deliveryModel.findDeliveryByOrderIdForUpdate.mockResolvedValue(null);
+      deliveryModel.createDelivery.mockResolvedValue({ id: 5, order_id: 8, delivery_partner_id: 22 });
+      deliveryModel.updateOrderDeliveryStatus.mockResolvedValue(undefined);
+
+      const delivery = await deliveryService.assignDelivery({
+        actor: { id: 1, role: "admin" },
+        payload: {
+          order_id: 8,
+          delivery_partner_id: 22,
+          delivery_location: "Addis",
+        },
+      });
+
+      expect(delivery.id).toBe(5);
+    });
+
+    test("assignDelivery rejects duplicate assignment", async () => {
+      const { deliveryService, deliveryModel, client } = loadDeliveryService();
+
+      client.query.mockImplementation(async (sql) => {
+        if (sql === "BEGIN" || sql === "ROLLBACK") {
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+
+      deliveryModel.findOrderById.mockResolvedValue({ id: 8 });
+      deliveryModel.findDeliveryPartnerById.mockResolvedValue({ id: 22 });
+      deliveryModel.findDeliveryByOrderIdForUpdate.mockResolvedValue({ id: 3 });
+
+      await expect(
+        deliveryService.assignDelivery({
+          actor: { id: 1, role: "admin" },
+          payload: {
+            order_id: 8,
+            delivery_partner_id: 22,
+            delivery_location: "Addis",
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 409,
+      });
+    });
+
+    test("updateDeliveryStatus rejects invalid status", async () => {
+      const { deliveryService } = loadDeliveryService();
+
+      await expect(
+        deliveryService.updateDeliveryStatus({
+          actor: { id: 22, role: "delivery_partner" },
+          payload: {
+            order_id: 8,
+            status: "teleported",
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+      });
+    });
+
+    test("updateDeliveryStatus updates using delivery_id path", async () => {
+      const { deliveryService, deliveryModel, client } = loadDeliveryService();
+
+      client.query.mockImplementation(async (sql) => {
+        if (sql === "BEGIN" || sql === "COMMIT") {
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+
+      deliveryModel.findDeliveryByIdForUpdate.mockResolvedValue({
+        id: 3,
+        order_id: 8,
+        delivery_partner_id: 22,
+      });
+      deliveryModel.findOrderById.mockResolvedValue({ id: 8 });
+      deliveryModel.updateDeliveryByOrderId.mockResolvedValue({ id: 3, status: "shipped" });
+      deliveryModel.updateOrderDeliveryStatus.mockResolvedValue(undefined);
+
+      const delivery = await deliveryService.updateDeliveryStatus({
+        actor: { id: 22, role: "delivery_partner" },
+        payload: {
+          delivery_id: 3,
+          status: "shipped",
+        },
+      });
+
+      expect(delivery.status).toBe("shipped");
+    });
+
+    test("trackDelivery allows admin and rejects invalid order ids", async () => {
+      const { deliveryService, deliveryModel } = loadDeliveryService();
+
+      await expect(
+        deliveryService.trackDelivery({
+          actor: { id: 1, role: "admin" },
+          order_id: "bad",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+      });
+
+      deliveryModel.getDeliveryByOrderId.mockResolvedValue({
+        id: 4,
+        buyer_id: 10,
+        delivery_partner_id: 22,
+      });
+
+      const delivery = await deliveryService.trackDelivery({
+        actor: { id: 1, role: "admin" },
+        order_id: 8,
+      });
+
+      expect(delivery.id).toBe(4);
+    });
   });
 
   describe("delivery assignment route", () => {
@@ -153,6 +312,83 @@ describe("Delivery tests", () => {
 
       expect(response.status).toBe(403);
       expect(deliveryServiceMock.assignDeliveryPartnerToOrder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("delivery routes and controllers", () => {
+    test("assign route delegates to controller and service", async () => {
+      jest.resetModules();
+      const deliveryServiceMock = {
+        assignDelivery: jest.fn().mockResolvedValue({ id: 4 }),
+        updateDeliveryStatus: jest.fn(),
+        trackDelivery: jest.fn(),
+      };
+      jest.doMock("../src/services/deliveryService", () => deliveryServiceMock);
+      jest.doMock("../src/middleware/authMiddleware", () => createHeaderAuthMiddleware());
+
+      const deliveryRoutes = require("../src/routes/deliveryRoutes");
+      const { createRouteApp } = require("./helpers/createRouteApp");
+      const app = createRouteApp("/api/delivery", deliveryRoutes);
+
+      const response = await request(app)
+        .post("/api/delivery/assign")
+        .set("x-test-role", "admin")
+        .send({ order_id: 8, delivery_partner_id: 22, delivery_location: "Addis" });
+
+      expect(response.status).toBe(201);
+      expect(deliveryServiceMock.assignDelivery).toHaveBeenCalled();
+    });
+
+    test("update status route delegates to controller", async () => {
+      jest.resetModules();
+      const deliveryServiceMock = {
+        assignDelivery: jest.fn(),
+        updateDeliveryStatus: jest.fn().mockResolvedValue({ id: 4, status: "shipped" }),
+        trackDelivery: jest.fn(),
+      };
+      jest.doMock("../src/services/deliveryService", () => deliveryServiceMock);
+      jest.doMock("../src/middleware/authMiddleware", () => createHeaderAuthMiddleware());
+
+      const deliveryRoutes = require("../src/routes/deliveryRoutes");
+      const { createRouteApp } = require("./helpers/createRouteApp");
+      const app = createRouteApp("/api/delivery", deliveryRoutes);
+
+      const response = await request(app)
+        .patch("/api/delivery/4/status")
+        .set("x-test-role", "delivery_partner")
+        .send({ status: "shipped" });
+
+      expect(response.status).toBe(200);
+      expect(response.body.delivery.status).toBe("shipped");
+    });
+
+    test("track route supports orderId param and service failures", async () => {
+      jest.resetModules();
+      const deliveryServiceMock = {
+        assignDelivery: jest.fn(),
+        updateDeliveryStatus: jest.fn(),
+        trackDelivery: jest
+          .fn()
+          .mockResolvedValueOnce({ id: 9 })
+          .mockRejectedValueOnce(Object.assign(new Error("Delivery not found for this order"), { statusCode: 404 })),
+      };
+      jest.doMock("../src/services/deliveryService", () => deliveryServiceMock);
+      jest.doMock("../src/middleware/authMiddleware", () => createHeaderAuthMiddleware());
+
+      const deliveryRoutes = require("../src/routes/deliveryRoutes");
+      const { createRouteApp } = require("./helpers/createRouteApp");
+      const app = createRouteApp("/api/delivery", deliveryRoutes);
+
+      const okResponse = await request(app)
+        .get("/api/delivery/track/8")
+        .set("x-test-role", "buyer");
+
+      const failResponse = await request(app)
+        .get("/api/delivery/404")
+        .set("x-test-role", "buyer");
+
+      expect(okResponse.status).toBe(200);
+      expect(failResponse.status).toBe(404);
     });
   });
 });

@@ -83,6 +83,40 @@ describe("Auth tests", () => {
       });
     });
 
+    test("registerUser rejects duplicate email", async () => {
+      const { authService, userModel } = loadAuthService();
+
+      userModel.findUserByEmail.mockResolvedValue({ id: 1, email: "alice@example.com" });
+
+      await expect(
+        authService.registerUser({
+          name: "Alice",
+          email: "alice@example.com",
+          password: "Str0ng!Pass",
+          role: "buyer",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 409,
+        message: "User already exists with this email",
+      });
+    });
+
+    test("registerUser rejects invalid role", async () => {
+      const { authService } = loadAuthService();
+
+      await expect(
+        authService.registerUser({
+          name: "Alice",
+          email: "alice@example.com",
+          password: "Str0ng!Pass",
+          role: "manager",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid role provided",
+      });
+    });
+
     test("loginUser authenticates valid credentials", async () => {
       const { authService, userModel, bcrypt, jwtUtils } = loadAuthService();
 
@@ -125,6 +159,31 @@ describe("Auth tests", () => {
       ).rejects.toMatchObject({
         statusCode: 401,
         message: "Invalid credentials",
+      });
+    });
+
+    test("loginUser rejects missing fields", async () => {
+      const { authService } = loadAuthService();
+
+      await expect(
+        authService.loginUser({
+          email: "",
+          password: "",
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Email and password are required",
+      });
+    });
+
+    test("getUserProfile rejects missing user", async () => {
+      const { authService, userModel } = loadAuthService();
+
+      userModel.findUserById.mockResolvedValue(null);
+
+      await expect(authService.getUserProfile(999)).rejects.toMatchObject({
+        statusCode: 404,
+        message: "User not found",
       });
     });
   });
@@ -223,6 +282,28 @@ describe("Auth tests", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.user.id).toBe(9);
+    });
+
+    test("GET /api/auth/profile returns service error", async () => {
+      authServiceMock.getUserProfile.mockRejectedValue(
+        Object.assign(new Error("User not found"), { statusCode: 404 })
+      );
+
+      const response = await request(app).get("/api/auth/profile");
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe("User not found");
+    });
+
+    test("GET /api/auth/profile rejects unauthorized access", async () => {
+      app = buildAuthApp(authServiceMock, (req, res) =>
+        res.status(401).json({ message: "Authentication is required" })
+      );
+
+      const response = await request(app).get("/api/auth/profile");
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Authentication is required");
     });
   });
 });
