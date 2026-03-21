@@ -171,6 +171,167 @@ describe("Product tests", () => {
     });
   });
 
+  describe("productController (unit)", () => {
+    const loadProductController = () => {
+      jest.resetModules();
+
+      const productServiceMock = {
+        createProduct: jest.fn(),
+        updateProduct: jest.fn(),
+        deleteProduct: jest.fn(),
+        getAllProducts: jest.fn(),
+        getProductById: jest.fn(),
+        updateProductStock: jest.fn(),
+      };
+
+      const loggerMock = {
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+      };
+
+      jest.doMock("../src/services/productService", () => productServiceMock);
+      jest.doMock("../src/utils/logger", () => loggerMock);
+
+      const controller = require("../src/controllers/productController");
+      return { controller, productServiceMock, loggerMock };
+    };
+
+    const createMockRes = () => {
+      const res = {};
+      res.status = jest.fn(() => res);
+      res.json = jest.fn(() => res);
+      return res;
+    };
+
+    test("createProduct validates request body and actor role", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      const res1 = createMockRes();
+      await controller.createProduct({ user: { id: 1, role: "field_agent" }, body: null }, res1);
+      expect(res1.status).toHaveBeenCalledWith(400);
+      expect(productServiceMock.createProduct).not.toHaveBeenCalled();
+
+      const res2 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "buyer" }, body: { farmer_id: 8 } },
+        res2
+      );
+      expect(res2.status).toHaveBeenCalledWith(403);
+      expect(productServiceMock.createProduct).not.toHaveBeenCalled();
+    });
+
+    test("createProduct validates farmer_id presence and type", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      const res1 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "field_agent" }, body: { name: "Tomato" } },
+        res1
+      );
+      expect(res1.status).toHaveBeenCalledWith(400);
+      expect(res1.json).toHaveBeenCalledWith({ message: "farmer_id is required" });
+      expect(productServiceMock.createProduct).not.toHaveBeenCalled();
+
+      const res2 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "field_agent" }, body: { farmer_id: "bad" } },
+        res2
+      );
+      expect(res2.status).toHaveBeenCalledWith(400);
+      expect(res2.json).toHaveBeenCalledWith({ message: "farmer_id must be a valid integer" });
+      expect(productServiceMock.createProduct).not.toHaveBeenCalled();
+    });
+
+    test("createProduct passes numeric farmer_id to the service", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      productServiceMock.createProduct.mockResolvedValue({ id: 1, farmer_id: 8, name: "Tomato" });
+
+      const res = createMockRes();
+      await controller.createProduct(
+        {
+          user: { id: 1, role: "field_agent" },
+          body: { farmer_id: "8", name: "Tomato", price: 12, stock: 3 },
+        },
+        res
+      );
+
+      expect(productServiceMock.createProduct).toHaveBeenCalledWith({
+        user: { id: 1, role: "field_agent" },
+        payload: expect.objectContaining({ farmer_id: 8 }),
+      });
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    test("handleControllerError maps postgres codes and masks unknown errors", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      productServiceMock.createProduct.mockRejectedValueOnce(
+        Object.assign(new Error("fk"), { code: "23503", detail: "missing farmer" })
+      );
+      const res1 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "field_agent" }, body: { farmer_id: 8, name: "Tomato" } },
+        res1
+      );
+      expect(res1.status).toHaveBeenCalledWith(400);
+      expect(res1.json).toHaveBeenCalledWith({
+        message: "Referenced record does not exist",
+        detail: "missing farmer",
+      });
+
+      productServiceMock.createProduct.mockRejectedValueOnce(
+        Object.assign(new Error("bad format"), { code: "22P02" })
+      );
+      const res2 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "field_agent" }, body: { farmer_id: 8, name: "Tomato" } },
+        res2
+      );
+      expect(res2.status).toHaveBeenCalledWith(400);
+      expect(res2.json).toHaveBeenCalledWith({ message: "Invalid input format" });
+
+      productServiceMock.createProduct.mockRejectedValueOnce(new Error("db down"));
+      const res3 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "field_agent" }, body: { farmer_id: 8, name: "Tomato" } },
+        res3
+      );
+      expect(res3.status).toHaveBeenCalledWith(500);
+      expect(res3.json).toHaveBeenCalledWith({ message: "Internal server error" });
+    });
+
+    test("updateProduct and updateProductStock validate request bodies", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      const res1 = createMockRes();
+      await controller.updateProduct({ user: { id: 1 }, params: { id: "1" }, body: null }, res1);
+      expect(res1.status).toHaveBeenCalledWith(400);
+      expect(productServiceMock.updateProduct).not.toHaveBeenCalled();
+
+      const res2 = createMockRes();
+      await controller.updateProductStock(
+        { user: { id: 1 }, params: { id: "1" }, body: null },
+        res2
+      );
+      expect(res2.status).toHaveBeenCalledWith(400);
+      expect(productServiceMock.updateProductStock).not.toHaveBeenCalled();
+    });
+
+    test("getAllProducts maps service failures", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      productServiceMock.getAllProducts.mockRejectedValue(
+        Object.assign(new Error("boom"), { statusCode: 503 })
+      );
+
+      const res = createMockRes();
+      await controller.getAllProducts({}, res);
+      expect(res.status).toHaveBeenCalledWith(503);
+    });
+  });
+
   describe("product routes", () => {
     let productServiceMock;
     let app;
