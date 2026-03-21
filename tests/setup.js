@@ -1,10 +1,19 @@
+const path = require("path");
+const dotenv = require("dotenv");
+
+dotenv.config({
+  path: path.resolve(__dirname, "..", ".env.test"),
+});
+
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test-jwt-secret";
 process.env.DISABLE_RATE_LIMIT = "true";
+process.env.DB_SSL = process.env.DB_SSL || "false";
 
 beforeAll(() => {
   jest.spyOn(console, "error").mockImplementation(() => {});
   jest.spyOn(console, "log").mockImplementation(() => {});
+  jest.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterEach(() => {
