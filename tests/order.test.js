@@ -665,4 +665,152 @@ describe("Order tests", () => {
       expect(response.body.message).toBe("Order not found");
     });
   });
+
+  describe("orderController (unit)", () => {
+    const loadOrderController = () => {
+      jest.resetModules();
+
+      const orderServiceMock = {
+        createOrder: jest.fn(),
+        getOrdersForBuyer: jest.fn(),
+        getOrderByIdForBuyer: jest.fn(),
+        updateOrderStatus: jest.fn(),
+      };
+
+      const deliveryServiceMock = {
+        assignDeliveryPartnerToOrder: jest.fn(),
+      };
+
+      const loggerMock = {
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+      };
+
+      jest.doMock("../src/services/orderService", () => orderServiceMock);
+      jest.doMock("../src/services/deliveryService", () => deliveryServiceMock);
+      jest.doMock("../src/utils/logger", () => loggerMock);
+
+      const controller = require("../src/controllers/orderController");
+      return { controller, orderServiceMock, deliveryServiceMock, loggerMock };
+    };
+
+    const createMockRes = () => {
+      const res = {};
+      res.status = jest.fn(() => res);
+      res.json = jest.fn(() => res);
+      return res;
+    };
+
+    test("createOrder and getUserOrders delegate to order service", async () => {
+      const { controller, orderServiceMock } = loadOrderController();
+
+      orderServiceMock.createOrder.mockResolvedValue({ id: 15 });
+      const res1 = createMockRes();
+      await controller.createOrder({ user: { id: 3 }, body: undefined }, res1);
+      expect(orderServiceMock.createOrder).toHaveBeenCalledWith(3, {});
+      expect(res1.status).toHaveBeenCalledWith(201);
+
+      orderServiceMock.getOrdersForBuyer.mockResolvedValue([{ id: 15 }]);
+      const res2 = createMockRes();
+      await controller.getUserOrders({ user: { id: 3 } }, res2);
+      expect(orderServiceMock.getOrdersForBuyer).toHaveBeenCalledWith(3);
+      expect(res2.status).toHaveBeenCalledWith(200);
+    });
+
+    test("getOrderById and updateOrderStatus forward ids and status aliases", async () => {
+      const { controller, orderServiceMock } = loadOrderController();
+
+      orderServiceMock.getOrderByIdForBuyer.mockResolvedValue({ id: 4 });
+      const res1 = createMockRes();
+      await controller.getOrderById({ user: { id: 3 }, params: { id: "4" } }, res1);
+      expect(orderServiceMock.getOrderByIdForBuyer).toHaveBeenCalledWith(3, "4");
+      expect(res1.status).toHaveBeenCalledWith(200);
+
+      orderServiceMock.updateOrderStatus.mockResolvedValue({ id: 8, order_status: "confirmed" });
+      const res2 = createMockRes();
+      await controller.updateOrderStatus(
+        {
+          user: { id: 7, role: "field_agent" },
+          params: { id: "8" },
+          body: { order_status: "confirmed" },
+        },
+        res2
+      );
+      expect(orderServiceMock.updateOrderStatus).toHaveBeenCalledWith({
+        actor: { id: 7, role: "field_agent" },
+        order_id: "8",
+        status: "confirmed",
+      });
+      expect(res2.status).toHaveBeenCalledWith(200);
+    });
+
+    test("assignDeliveryPartner delegates to delivery service", async () => {
+      const { controller, deliveryServiceMock } = loadOrderController();
+
+      deliveryServiceMock.assignDeliveryPartnerToOrder.mockResolvedValue({
+        id: 8,
+        delivery_partner_id: 22,
+      });
+
+      const res = createMockRes();
+      await controller.assignDeliveryPartner(
+        {
+          user: { id: 1, role: "admin" },
+          params: { id: "8" },
+          body: { delivery_partner_id: 22 },
+        },
+        res
+      );
+
+      expect(deliveryServiceMock.assignDeliveryPartnerToOrder).toHaveBeenCalledWith({
+        actor: { id: 1, role: "admin" },
+        order_id: "8",
+        delivery_partner_id: 22,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    test("controller methods propagate statusCode errors and mask unexpected ones", async () => {
+      const { controller, orderServiceMock, deliveryServiceMock, loggerMock } = loadOrderController();
+
+      orderServiceMock.createOrder.mockRejectedValueOnce(
+        Object.assign(new Error("Cart is empty"), { statusCode: 400 })
+      );
+      const res1 = createMockRes();
+      await controller.createOrder({ user: { id: 3 }, body: {} }, res1);
+      expect(res1.status).toHaveBeenCalledWith(400);
+
+      orderServiceMock.getOrdersForBuyer.mockRejectedValueOnce(new Error("boom"));
+      const res2 = createMockRes();
+      await controller.getUserOrders({ user: { id: 3 } }, res2);
+      expect(res2.status).toHaveBeenCalledWith(500);
+
+      orderServiceMock.getOrderByIdForBuyer.mockRejectedValueOnce(
+        Object.assign(new Error("Order not found"), { statusCode: 404 })
+      );
+      const res3 = createMockRes();
+      await controller.getOrderById({ user: { id: 3 }, params: { id: "44" } }, res3);
+      expect(res3.status).toHaveBeenCalledWith(404);
+
+      orderServiceMock.updateOrderStatus.mockRejectedValueOnce(new Error("db down"));
+      const res4 = createMockRes();
+      await controller.updateOrderStatus(
+        { user: { id: 3 }, params: { id: "44" }, body: { status: "confirmed" } },
+        res4
+      );
+      expect(res4.status).toHaveBeenCalledWith(500);
+
+      deliveryServiceMock.assignDeliveryPartnerToOrder.mockRejectedValueOnce(
+        Object.assign(new Error("Order not found"), { statusCode: 404 })
+      );
+      const res5 = createMockRes();
+      await controller.assignDeliveryPartner(
+        { user: { id: 1 }, params: { id: "44" }, body: { delivery_partner_id: 22 } },
+        res5
+      );
+      expect(res5.status).toHaveBeenCalledWith(404);
+      expect(loggerMock.error).toHaveBeenCalled();
+    });
+  });
 });
