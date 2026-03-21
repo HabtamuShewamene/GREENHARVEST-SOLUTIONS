@@ -24,6 +24,58 @@ describe("Middleware tests", () => {
     expect(response.status).toBe(401);
   });
 
+  test("authMiddleware rejects malformed authorization schemes", async () => {
+    jest.resetModules();
+    jest.doMock("../src/config/db", () => ({
+      pool: {
+        query: jest.fn(),
+      },
+    }));
+
+    const authMiddleware = require("../src/middleware/authMiddleware");
+    const errorMiddleware = require("../src/middleware/errorMiddleware");
+    const app = express();
+
+    app.get("/secure", authMiddleware, (req, res) => {
+      res.status(200).json({ ok: true });
+    });
+    app.use(errorMiddleware);
+
+    const wrongScheme = await request(app).get("/secure").set("Authorization", "Token abc");
+    const missingToken = await request(app).get("/secure").set("Authorization", "Bearer");
+
+    expect(wrongScheme.status).toBe(401);
+    expect(missingToken.status).toBe(401);
+  });
+
+  test("authMiddleware returns 500 when JWT_SECRET is missing", async () => {
+    jest.resetModules();
+    jest.doMock("../src/config/db", () => ({
+      pool: {
+        query: jest.fn(),
+      },
+    }));
+
+    const previousSecret = process.env.JWT_SECRET;
+    delete process.env.JWT_SECRET;
+
+    const authMiddleware = require("../src/middleware/authMiddleware");
+    const errorMiddleware = require("../src/middleware/errorMiddleware");
+    const app = express();
+
+    app.get("/secure", authMiddleware, (req, res) => {
+      res.status(200).json({ ok: true });
+    });
+    app.use(errorMiddleware);
+
+    const response = await request(app).get("/secure").set("Authorization", "Bearer any-token");
+
+    process.env.JWT_SECRET = previousSecret;
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toBe("Authentication service is not configured");
+  });
+
   test("authMiddleware validates jwt and resolves field_agent actor", async () => {
     jest.resetModules();
     const verify = jest.fn().mockReturnValue({ id: 14, role: "fieldAgent" });
@@ -56,6 +108,126 @@ describe("Middleware tests", () => {
     expect(response.body.user.role).toBe("field_agent");
   });
 
+  test("authMiddleware resolves buyer, farmer, and delivery_partner actor ids", async () => {
+    jest.resetModules();
+    const verify = jest
+      .fn()
+      .mockReturnValueOnce({ id: 10, role: "buyer" })
+      .mockReturnValueOnce({ id: 11, role: "farmer" })
+      .mockReturnValueOnce({ id: 12, role: "delivery_partner" });
+
+    const poolQuery = jest
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ buyer_id: 101 }] })
+      .mockResolvedValueOnce({ rows: [{ farmer_id: 202 }] })
+      .mockResolvedValueOnce({ rows: [{ delivery_id: 303 }] });
+
+    jest.doMock("jsonwebtoken", () => ({
+      verify,
+    }));
+    jest.doMock("../src/config/db", () => ({
+      pool: {
+        query: poolQuery,
+      },
+    }));
+
+    const authMiddleware = require("../src/middleware/authMiddleware");
+    const errorMiddleware = require("../src/middleware/errorMiddleware");
+    const app = express();
+
+    app.get("/secure", authMiddleware, (req, res) => {
+      res.status(200).json({ user: req.user });
+    });
+    app.use(errorMiddleware);
+
+    const buyer = await request(app).get("/secure").set("Authorization", "Bearer token-1");
+    const farmer = await request(app).get("/secure").set("Authorization", "Bearer token-2");
+    const delivery = await request(app).get("/secure").set("Authorization", "Bearer token-3");
+
+    expect(buyer.status).toBe(200);
+    expect(buyer.body.user.user_id).toBe(10);
+    expect(buyer.body.user.id).toBe(101);
+    expect(buyer.body.user.role).toBe("buyer");
+
+    expect(farmer.status).toBe(200);
+    expect(farmer.body.user.user_id).toBe(11);
+    expect(farmer.body.user.id).toBe(202);
+    expect(farmer.body.user.role).toBe("farmer");
+
+    expect(delivery.status).toBe(200);
+    expect(delivery.body.user.user_id).toBe(12);
+    expect(delivery.body.user.id).toBe(303);
+    expect(delivery.body.user.role).toBe("delivery_partner");
+  });
+
+  test("authMiddleware bypasses db lookups for admin and unknown roles", async () => {
+    jest.resetModules();
+    const verify = jest
+      .fn()
+      .mockReturnValueOnce({ id: 7, role: "admin" })
+      .mockReturnValueOnce({ id: 8, role: "support" });
+    const poolQuery = jest.fn();
+
+    jest.doMock("jsonwebtoken", () => ({
+      verify,
+    }));
+    jest.doMock("../src/config/db", () => ({
+      pool: {
+        query: poolQuery,
+      },
+    }));
+
+    const authMiddleware = require("../src/middleware/authMiddleware");
+    const errorMiddleware = require("../src/middleware/errorMiddleware");
+    const app = express();
+
+    app.get("/secure", authMiddleware, (req, res) => {
+      res.status(200).json({ user: req.user });
+    });
+    app.use(errorMiddleware);
+
+    const admin = await request(app).get("/secure").set("Authorization", "Bearer admin");
+    const support = await request(app).get("/secure").set("Authorization", "Bearer support");
+
+    expect(admin.status).toBe(200);
+    expect(admin.body.user.user_id).toBe(7);
+    expect(admin.body.user.id).toBe(7);
+    expect(admin.body.user.role).toBe("admin");
+
+    expect(support.status).toBe(200);
+    expect(support.body.user.user_id).toBe(8);
+    expect(support.body.user.id).toBe(8);
+    expect(support.body.user.role).toBe("support");
+
+    expect(poolQuery).not.toHaveBeenCalled();
+  });
+
+  test("authMiddleware rejects invalid token payload", async () => {
+    jest.resetModules();
+    jest.doMock("jsonwebtoken", () => ({
+      verify: jest.fn().mockReturnValue({ role: "buyer" }),
+    }));
+    jest.doMock("../src/config/db", () => ({
+      pool: {
+        query: jest.fn(),
+      },
+    }));
+
+    const authMiddleware = require("../src/middleware/authMiddleware");
+    const errorMiddleware = require("../src/middleware/errorMiddleware");
+    const app = express();
+
+    app.get("/secure", authMiddleware, (req, res) => {
+      res.status(200).json({ ok: true });
+    });
+    app.use(errorMiddleware);
+
+    const response = await request(app).get("/secure").set("Authorization", "Bearer token");
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("Invalid token payload");
+  });
+
   test("authMiddleware rejects expired jwt", async () => {
     jest.resetModules();
     jest.doMock("jsonwebtoken", () => ({
@@ -86,6 +258,66 @@ describe("Middleware tests", () => {
 
     expect(response.status).toBe(401);
     expect(response.body.message).toBe("Token has expired");
+  });
+
+  test("authMiddleware rejects invalid jwt", async () => {
+    jest.resetModules();
+    jest.doMock("jsonwebtoken", () => ({
+      verify: jest.fn(() => {
+        const error = new Error("invalid");
+        error.name = "JsonWebTokenError";
+        throw error;
+      }),
+    }));
+    jest.doMock("../src/config/db", () => ({
+      pool: {
+        query: jest.fn(),
+      },
+    }));
+
+    const authMiddleware = require("../src/middleware/authMiddleware");
+    const errorMiddleware = require("../src/middleware/errorMiddleware");
+    const app = express();
+
+    app.get("/secure", authMiddleware, (req, res) => {
+      res.status(200).json({ ok: true });
+    });
+    app.use(errorMiddleware);
+
+    const response = await request(app).get("/secure").set("Authorization", "Bearer bad-token");
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("Invalid token");
+  });
+
+  test("authMiddleware returns 500 for unexpected jwt verification errors", async () => {
+    jest.resetModules();
+    jest.doMock("jsonwebtoken", () => ({
+      verify: jest.fn(() => {
+        const error = new Error("boom");
+        error.name = "SomethingElse";
+        throw error;
+      }),
+    }));
+    jest.doMock("../src/config/db", () => ({
+      pool: {
+        query: jest.fn(),
+      },
+    }));
+
+    const authMiddleware = require("../src/middleware/authMiddleware");
+    const errorMiddleware = require("../src/middleware/errorMiddleware");
+    const app = express();
+
+    app.get("/secure", authMiddleware, (req, res) => {
+      res.status(200).json({ ok: true });
+    });
+    app.use(errorMiddleware);
+
+    const response = await request(app).get("/secure").set("Authorization", "Bearer token");
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toBe("Authentication failed");
   });
 
   test("requireRole normalizes role names", async () => {
