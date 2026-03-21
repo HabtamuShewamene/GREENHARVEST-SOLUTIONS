@@ -6,6 +6,7 @@ npm-packages-offline-cache/
 .env
 .env.*
 !.env.example
+!.env.test.example
 
 # Logs
 logs/
