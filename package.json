@@ -9,7 +9,8 @@
     "seed:roles": "node src/database/seeders/seedRoles.js",
     "seed:admin": "node src/database/seeders/seedAdmin.js",
     "seed:categories": "node src/database/seeders/seedCategories.js",
-    "test": "npm run test:backend:full",
+    "test": "jest --runInBand --coverage",
+    "test:jest": "jest --runInBand",
     "test:api:checklist": "node tmp-api-checklist-runner.js",
     "test:backend:full": "node scripts/run-full-backend-check.js"
   },
@@ -26,5 +27,9 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "jest": "^30.0.5",
+    "supertest": "^7.1.1"
   }
 }
