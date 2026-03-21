@@ -79,6 +79,135 @@ describe("Product tests", () => {
       expect(product.id).toBe(15);
     });
 
+    test("createProduct rejects missing required fields", async () => {
+      const { productService } = loadProductService();
+
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            name: "Tomato",
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "farmer_id, name, price, and stock are required",
+      });
+    });
+
+    test("createProduct rejects invalid price and stock values", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findFarmerById.mockResolvedValue({ id: 8 });
+
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            name: "Tomato",
+            price: 0,
+            stock: 6,
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "price must be a valid number greater than 0",
+      });
+
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            name: "Tomato",
+            price: 10,
+            stock: 1.5,
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "stock must be a positive integer",
+      });
+    });
+
+    test("createProduct validates category_id format and existence", async () => {
+      const { productService, categoryModel, productModel } = loadProductService();
+
+      productModel.findFarmerById.mockResolvedValue({ id: 8 });
+
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            category_id: "abc",
+            name: "Tomato",
+            price: 10,
+            stock: 2,
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "category_id must be an integer",
+      });
+
+      categoryModel.findCategoryById.mockResolvedValue(null);
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            category_id: 999,
+            name: "Tomato",
+            price: 10,
+            stock: 2,
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid category_id. Referenced category does not exist",
+      });
+    });
+
+    test("createProduct allows missing category_id and normalizes optional text fields", async () => {
+      const { productService, categoryModel, inventoryModel, productModel } = loadProductService();
+
+      productModel.findFarmerById.mockResolvedValue({ id: 8 });
+      productModel.createProduct.mockResolvedValue({ id: 15, name: "Tomato" });
+      productModel.findProductById.mockResolvedValue({
+        id: 15,
+        farmer_id: 8,
+        name: "Tomato",
+      });
+
+      await productService.createProduct({
+        user: { id: 3, role: "field_agent" },
+        payload: {
+          farmer_id: 8,
+          category_id: undefined,
+          name: " Tomato ",
+          description: "",
+          farm_location: "  Addis  ",
+          image_url: "  http://img  ",
+          price: 12,
+          stock: 6,
+        },
+      });
+
+      expect(categoryModel.findCategoryById).not.toHaveBeenCalled();
+      expect(productModel.createProduct).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category_id: null,
+          description: null,
+          farm_location: "Addis",
+          image_url: "http://img",
+        })
+      );
+      expect(inventoryModel.upsertInventory).toHaveBeenCalled();
+    });
+
     test("rejects invalid farmer_id", async () => {
       const { productService, productModel } = loadProductService();
 
@@ -155,6 +284,116 @@ describe("Product tests", () => {
       });
     });
 
+    test("updateProduct rejects non-farmer roles", async () => {
+      const { productService } = loadProductService();
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "buyer" },
+          productId: 12,
+          payload: { name: "New" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "Only farmers can perform this action",
+      });
+    });
+
+    test("updateProduct validates product id and ownership", async () => {
+      const { productService, productModel } = loadProductService();
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: "bad",
+          payload: { name: "New" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid product id",
+      });
+
+      productModel.findProductOwnershipById.mockResolvedValue(null);
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: { name: "New" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 404,
+        message: "Product not found",
+      });
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 99 });
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: { name: "New" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "You can only update your own products",
+      });
+    });
+
+    test("updateProduct validates update payload fields and supports stock updates", async () => {
+      const { productService, categoryModel, inventoryModel, productModel } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: { price: 0 },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "price must be a valid number greater than 0",
+      });
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: { stock: 1.2 },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "stock must be a positive integer",
+      });
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: { category_id: "bad" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "category_id must be an integer",
+      });
+
+      categoryModel.findCategoryById.mockResolvedValue({ id: 2 });
+      productModel.updateProductById.mockResolvedValue({ id: 12 });
+      productModel.findProductById.mockResolvedValue({ id: 12, name: "Tomato" });
+
+      const updated = await productService.updateProduct({
+        user: { id: 7, role: "farmer" },
+        productId: 12,
+        payload: { stock: 4, category_id: 2 },
+      });
+
+      expect(inventoryModel.upsertInventory).toHaveBeenCalledWith({
+        product_id: 12,
+        farmer_id: 7,
+        quantity: 4,
+      });
+      expect(updated.id).toBe(12);
+    });
+
     test("deleteProduct rejects unauthorized farmer", async () => {
       const { productService, productModel } = loadProductService();
 
@@ -168,6 +407,73 @@ describe("Product tests", () => {
       ).rejects.toMatchObject({
         statusCode: 403,
       });
+    });
+
+    test("deleteProduct deletes owned products", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      productModel.deleteProductById.mockResolvedValue(undefined);
+
+      const result = await productService.deleteProduct({
+        user: { id: 7, role: "farmer" },
+        productId: 12,
+      });
+
+      expect(productModel.deleteProductById).toHaveBeenCalledWith(12);
+      expect(result).toEqual({ deleted: true });
+    });
+
+    test("updateProductStock validates inputs and ownership", async () => {
+      const { productService, inventoryModel, productModel } = loadProductService();
+
+      await expect(
+        productService.updateProductStock({
+          user: { id: 7, role: "buyer" },
+          productId: 12,
+          stock: 3,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+      });
+
+      await expect(
+        productService.updateProductStock({
+          user: { id: 7, role: "farmer" },
+          productId: "bad",
+          stock: 3,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid product id",
+      });
+
+      await expect(
+        productService.updateProductStock({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          stock: 0,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "stock must be a positive integer",
+      });
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      productModel.findProductById.mockResolvedValue({ id: 12, stock: 3 });
+
+      const updated = await productService.updateProductStock({
+        user: { id: 7, role: "farmer" },
+        productId: 12,
+        stock: 3,
+      });
+
+      expect(inventoryModel.upsertInventory).toHaveBeenCalledWith({
+        product_id: 12,
+        farmer_id: 7,
+        quantity: 3,
+      });
+      expect(updated.id).toBe(12);
     });
   });
 
