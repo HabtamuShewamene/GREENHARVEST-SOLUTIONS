@@ -208,6 +208,27 @@ describe("Product tests", () => {
       expect(inventoryModel.upsertInventory).toHaveBeenCalled();
     });
 
+    test("createProduct falls back when reloading the created product fails", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findFarmerById.mockResolvedValue({ id: 8 });
+      productModel.createProduct.mockResolvedValue({ id: 15, name: "Tomato" });
+      productModel.findProductById.mockRejectedValue(new Error("db error"));
+
+      const product = await productService.createProduct({
+        user: { id: 3, role: "field_agent" },
+        payload: {
+          farmer_id: 8,
+          name: "Tomato",
+          price: 12,
+          stock: 6,
+        },
+      });
+
+      expect(product.id).toBe(15);
+      expect(product.stock).toBe(6);
+    });
+
     test("rejects invalid farmer_id", async () => {
       const { productService, productModel } = loadProductService();
 
@@ -245,6 +266,445 @@ describe("Product tests", () => {
       ).rejects.toMatchObject({
         statusCode: 403,
       });
+    });
+
+    test("getProductById rejects invalid id", async () => {
+      const { productService } = loadProductService();
+
+      await expect(productService.getProductById("abc")).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid product id",
+      });
+    });
+
+    test("getProductById rejects missing product", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findProductById.mockResolvedValue(null);
+
+      await expect(productService.getProductById(999)).rejects.toMatchObject({
+        statusCode: 404,
+        message: "Product not found",
+      });
+    });
+
+    test("getAllProducts delegates to the model", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findAllProducts.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+
+      const products = await productService.getAllProducts();
+      expect(products).toHaveLength(2);
+    });
+
+    test("updateProduct rejects empty payload", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: {},
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "At least one field is required for update",
+      });
+    });
+
+    test("updateProduct rejects non-farmer roles", async () => {
+      const { productService } = loadProductService();
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "buyer" },
+          productId: 12,
+          payload: { name: "New" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "Only farmers can perform this action",
+      });
+    });
+
+    test("updateProduct validates product id and ownership", async () => {
+      const { productService, productModel } = loadProductService();
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: "bad",
+          payload: { name: "New" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid product id",
+      });
+
+      productModel.findProductOwnershipById.mockResolvedValue(null);
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: { name: "New" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 404,
+        message: "Product not found",
+      });
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 99 });
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: { name: "New" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "You can only update your own products",
+      });
+    });
+
+    test("updateProduct validates update payload fields and supports stock updates", async () => {
+      const { productService, categoryModel, inventoryModel, productModel } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: { price: 0 },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "price must be a valid number greater than 0",
+      });
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: { stock: 1.2 },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "stock must be a positive integer",
+      });
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          payload: { category_id: "bad" },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "category_id must be an integer",
+      });
+
+      categoryModel.findCategoryById.mockResolvedValue({ id: 2 });
+      productModel.updateProductById.mockResolvedValue({ id: 12 });
+      productModel.findProductById.mockResolvedValue({ id: 12, name: "Tomato" });
+
+      const updated = await productService.updateProduct({
+        user: { id: 7, role: "farmer" },
+        productId: 12,
+        payload: { stock: 4, category_id: 2 },
+      });
+
+      expect(inventoryModel.upsertInventory).toHaveBeenCalledWith({
+        product_id: 12,
+        farmer_id: 7,
+        quantity: 4,
+      });
+      expect(updated.id).toBe(12);
+    });
+
+    test("updateProduct without stock returns the reloaded product", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      productModel.updateProductById.mockResolvedValue({ id: 12 });
+      productModel.findProductById.mockResolvedValue({ id: 12, name: "Tomato" });
+
+      const updated = await productService.updateProduct({
+        user: { id: 7, role: "farmer" },
+        productId: 12,
+        payload: { name: "Fresh Tomato" },
+      });
+
+      expect(updated.name).toBe("Tomato");
+    });
+
+    test("deleteProduct rejects unauthorized farmer", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 11 });
+
+      await expect(
+        productService.deleteProduct({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+      });
+    });
+
+    test("deleteProduct deletes owned products", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      productModel.deleteProductById.mockResolvedValue(undefined);
+
+      const result = await productService.deleteProduct({
+        user: { id: 7, role: "farmer" },
+        productId: 12,
+      });
+
+      expect(productModel.deleteProductById).toHaveBeenCalledWith(12);
+      expect(result).toEqual({ deleted: true });
+    });
+
+    test("updateProductStock validates inputs and ownership", async () => {
+      const { productService, inventoryModel, productModel } = loadProductService();
+
+      await expect(
+        productService.updateProductStock({
+          user: { id: 7, role: "buyer" },
+          productId: 12,
+          stock: 3,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+      });
+
+      await expect(
+        productService.updateProductStock({
+          user: { id: 7, role: "farmer" },
+          productId: "bad",
+          stock: 3,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid product id",
+      });
+
+      await expect(
+        productService.updateProductStock({
+          user: { id: 7, role: "farmer" },
+          productId: 12,
+          stock: 0,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "stock must be a positive integer",
+      });
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      productModel.findProductById.mockResolvedValue({ id: 12, stock: 3 });
+
+      const updated = await productService.updateProductStock({
+        user: { id: 7, role: "farmer" },
+        productId: 12,
+        stock: 3,
+      });
+
+      expect(inventoryModel.upsertInventory).toHaveBeenCalledWith({
+        product_id: 12,
+        farmer_id: 7,
+        quantity: 3,
+      });
+      expect(updated.id).toBe(12);
+    });
+  });
+
+  describe("productController (unit)", () => {
+    const loadProductController = () => {
+      jest.resetModules();
+
+      const productServiceMock = {
+        createProduct: jest.fn(),
+        updateProduct: jest.fn(),
+        deleteProduct: jest.fn(),
+        getAllProducts: jest.fn(),
+        getProductById: jest.fn(),
+        updateProductStock: jest.fn(),
+      };
+
+      const loggerMock = {
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+      };
+
+      jest.doMock("../src/services/productService", () => productServiceMock);
+      jest.doMock("../src/utils/logger", () => loggerMock);
+
+      const controller = require("../src/controllers/productController");
+      return { controller, productServiceMock, loggerMock };
+    };
+
+    const createMockRes = () => {
+      const res = {};
+      res.status = jest.fn(() => res);
+      res.json = jest.fn(() => res);
+      return res;
+    };
+
+    test("createProduct validates request body and actor role", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      const res1 = createMockRes();
+      await controller.createProduct({ user: { id: 1, role: "field_agent" }, body: null }, res1);
+      expect(res1.status).toHaveBeenCalledWith(400);
+      expect(productServiceMock.createProduct).not.toHaveBeenCalled();
+
+      const res2 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "buyer" }, body: { farmer_id: 8 } },
+        res2
+      );
+      expect(res2.status).toHaveBeenCalledWith(403);
+      expect(productServiceMock.createProduct).not.toHaveBeenCalled();
+    });
+
+    test("createProduct validates farmer_id presence and type", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      const res1 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "field_agent" }, body: { name: "Tomato" } },
+        res1
+      );
+      expect(res1.status).toHaveBeenCalledWith(400);
+      expect(res1.json).toHaveBeenCalledWith({ message: "farmer_id is required" });
+      expect(productServiceMock.createProduct).not.toHaveBeenCalled();
+
+      const res2 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "field_agent" }, body: { farmer_id: "bad" } },
+        res2
+      );
+      expect(res2.status).toHaveBeenCalledWith(400);
+      expect(res2.json).toHaveBeenCalledWith({ message: "farmer_id must be a valid integer" });
+      expect(productServiceMock.createProduct).not.toHaveBeenCalled();
+    });
+
+    test("createProduct passes numeric farmer_id to the service", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      productServiceMock.createProduct.mockResolvedValue({ id: 1, farmer_id: 8, name: "Tomato" });
+
+      const res = createMockRes();
+      await controller.createProduct(
+        {
+          user: { id: 1, role: "field_agent" },
+          body: { farmer_id: "8", name: "Tomato", price: 12, stock: 3 },
+        },
+        res
+      );
+
+      expect(productServiceMock.createProduct).toHaveBeenCalledWith({
+        user: { id: 1, role: "field_agent" },
+        payload: expect.objectContaining({ farmer_id: 8 }),
+      });
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    test("handleControllerError maps postgres codes and masks unknown errors", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      productServiceMock.createProduct.mockRejectedValueOnce(
+        Object.assign(new Error("fk"), { code: "23503", detail: "missing farmer" })
+      );
+      const res1 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "field_agent" }, body: { farmer_id: 8, name: "Tomato" } },
+        res1
+      );
+      expect(res1.status).toHaveBeenCalledWith(400);
+      expect(res1.json).toHaveBeenCalledWith({
+        message: "Referenced record does not exist",
+        detail: "missing farmer",
+      });
+
+      productServiceMock.createProduct.mockRejectedValueOnce(
+        Object.assign(new Error("bad format"), { code: "22P02" })
+      );
+      const res2 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "field_agent" }, body: { farmer_id: 8, name: "Tomato" } },
+        res2
+      );
+      expect(res2.status).toHaveBeenCalledWith(400);
+      expect(res2.json).toHaveBeenCalledWith({ message: "Invalid input format" });
+
+      productServiceMock.createProduct.mockRejectedValueOnce(new Error("db down"));
+      const res3 = createMockRes();
+      await controller.createProduct(
+        { user: { id: 1, role: "field_agent" }, body: { farmer_id: 8, name: "Tomato" } },
+        res3
+      );
+      expect(res3.status).toHaveBeenCalledWith(500);
+      expect(res3.json).toHaveBeenCalledWith({ message: "Internal server error" });
+    });
+
+    test("updateProduct and updateProductStock validate request bodies", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      const res1 = createMockRes();
+      await controller.updateProduct({ user: { id: 1 }, params: { id: "1" }, body: null }, res1);
+      expect(res1.status).toHaveBeenCalledWith(400);
+      expect(productServiceMock.updateProduct).not.toHaveBeenCalled();
+
+      const res2 = createMockRes();
+      await controller.updateProductStock(
+        { user: { id: 1 }, params: { id: "1" }, body: null },
+        res2
+      );
+      expect(res2.status).toHaveBeenCalledWith(400);
+      expect(productServiceMock.updateProductStock).not.toHaveBeenCalled();
+    });
+
+    test("delete/get methods propagate service failures and success", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      productServiceMock.deleteProduct.mockResolvedValue(undefined);
+      const deleteRes = createMockRes();
+      await controller.deleteProduct({ user: { id: 1 }, params: { id: "4" } }, deleteRes);
+      expect(deleteRes.status).toHaveBeenCalledWith(200);
+
+      productServiceMock.getProductById.mockResolvedValue({ id: 4 });
+      const getRes = createMockRes();
+      await controller.getProductById({ params: { id: "4" } }, getRes);
+      expect(getRes.status).toHaveBeenCalledWith(200);
+
+      productServiceMock.deleteProduct.mockRejectedValueOnce(
+        Object.assign(new Error("Product not found"), { statusCode: 404 })
+      );
+      const deleteFailRes = createMockRes();
+      await controller.deleteProduct(
+        { user: { id: 1 }, params: { id: "404" } },
+        deleteFailRes
+      );
+      expect(deleteFailRes.status).toHaveBeenCalledWith(404);
+    });
+
+    test("getAllProducts maps service failures", async () => {
+      const { controller, productServiceMock } = loadProductController();
+
+      productServiceMock.getAllProducts.mockRejectedValue(
+        Object.assign(new Error("boom"), { statusCode: 503 })
+      );
+
+      const res = createMockRes();
+      await controller.getAllProducts({}, res);
+      expect(res.status).toHaveBeenCalledWith(503);
     });
   });
 
@@ -327,6 +787,48 @@ describe("Product tests", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.products).toHaveLength(2);
+    });
+
+    test("returns service error for invalid farmer_id during create", async () => {
+      productServiceMock.createProduct.mockRejectedValue(
+        Object.assign(new Error("Invalid farmer_id. Referenced farmer does not exist"), {
+          statusCode: 400,
+        })
+      );
+
+      const response = await request(app)
+        .post("/api/products")
+        .set("x-test-role", "field_agent")
+        .send({
+          farmer_id: 99,
+          name: "Tomato",
+          price: 12,
+          stock: 6,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe("Invalid farmer_id. Referenced farmer does not exist");
+    });
+
+    test("returns 400 for empty request body", async () => {
+      const response = await request(app)
+        .post("/api/products")
+        .set("x-test-role", "field_agent")
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe("farmer_id is required");
+    });
+
+    test("returns product fetch error", async () => {
+      productServiceMock.getProductById.mockRejectedValue(
+        Object.assign(new Error("Product not found"), { statusCode: 404 })
+      );
+
+      const response = await request(app).get("/api/products/999");
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe("Product not found");
     });
   });
 });
