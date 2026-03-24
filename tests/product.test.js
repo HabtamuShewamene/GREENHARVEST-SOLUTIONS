@@ -79,6 +79,135 @@ describe("Product tests", () => {
       expect(product.id).toBe(15);
     });
 
+    test("createProduct rejects missing required fields", async () => {
+      const { productService } = loadProductService();
+
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            name: "Tomato",
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "farmer_id, name, price, and stock are required",
+      });
+    });
+
+    test("createProduct rejects invalid price and stock values", async () => {
+      const { productService, productModel } = loadProductService();
+
+      productModel.findFarmerById.mockResolvedValue({ id: 8 });
+
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            name: "Tomato",
+            price: 0,
+            stock: 6,
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "price must be a valid number greater than 0",
+      });
+
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            name: "Tomato",
+            price: 10,
+            stock: 1.5,
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "stock must be a positive integer",
+      });
+    });
+
+    test("createProduct validates category_id format and existence", async () => {
+      const { productService, categoryModel, productModel } = loadProductService();
+
+      productModel.findFarmerById.mockResolvedValue({ id: 8 });
+
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            category_id: "abc",
+            name: "Tomato",
+            price: 10,
+            stock: 2,
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "category_id must be an integer",
+      });
+
+      categoryModel.findCategoryById.mockResolvedValue(null);
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            category_id: 999,
+            name: "Tomato",
+            price: 10,
+            stock: 2,
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid category_id. Referenced category does not exist",
+      });
+    });
+
+    test("createProduct allows missing category_id and normalizes optional text fields", async () => {
+      const { productService, categoryModel, inventoryModel, productModel } = loadProductService();
+
+      productModel.findFarmerById.mockResolvedValue({ id: 8 });
+      productModel.createProduct.mockResolvedValue({ id: 15, name: "Tomato" });
+      productModel.findProductById.mockResolvedValue({
+        id: 15,
+        farmer_id: 8,
+        name: "Tomato",
+      });
+
+      await productService.createProduct({
+        user: { id: 3, role: "field_agent" },
+        payload: {
+          farmer_id: 8,
+          category_id: undefined,
+          name: " Tomato ",
+          description: "",
+          farm_location: "  Addis  ",
+          image_url: "  http://img  ",
+          price: 12,
+          stock: 6,
+        },
+      });
+
+      expect(categoryModel.findCategoryById).not.toHaveBeenCalled();
+      expect(productModel.createProduct).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category_id: null,
+          description: null,
+          farm_location: "Addis",
+          image_url: "http://img",
+        })
+      );
+      expect(inventoryModel.upsertInventory).toHaveBeenCalled();
+    });
+
     test("rejects invalid farmer_id", async () => {
       const { productService, productModel } = loadProductService();
 

@@ -79,6 +79,21 @@ describe("Delivery tests", () => {
       expect(order.delivery_partner_id).toBe(22);
     });
 
+    test("rejects invalid ids when assigning delivery partner to order", async () => {
+      const { deliveryService } = loadDeliveryService();
+
+      await expect(
+        deliveryService.assignDeliveryPartnerToOrder({
+          actor: { id: 1, role: "admin" },
+          order_id: "bad",
+          delivery_partner_id: 22,
+        })
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "order_id and delivery_partner_id must be valid integers",
+      });
+    });
+
     test("rejects non-delivery users", async () => {
       const { deliveryService, deliveryModel, orderModel, client } = loadDeliveryService();
 

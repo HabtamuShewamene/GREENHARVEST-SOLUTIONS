@@ -54,6 +54,47 @@ describe("Category tests", () => {
       expect(category.id).toBe(5);
     });
 
+    test("createCategory defaults description to null when omitted", async () => {
+      const { categoryService, categoryModel } = loadCategoryService();
+
+      categoryModel.findCategoryByName.mockResolvedValue(null);
+      categoryModel.createCategory.mockResolvedValue({
+        id: 6,
+        category_name: "Fruits",
+        description: null,
+      });
+
+      await categoryService.createCategory({
+        category_name: "Fruits",
+      });
+
+      expect(categoryModel.createCategory).toHaveBeenCalledWith({
+        category_name: "Fruits",
+        description: null,
+      });
+    });
+
+    test("createCategory normalizes empty description to null", async () => {
+      const { categoryService, categoryModel } = loadCategoryService();
+
+      categoryModel.findCategoryByName.mockResolvedValue(null);
+      categoryModel.createCategory.mockResolvedValue({
+        id: 7,
+        category_name: "Grains",
+        description: null,
+      });
+
+      await categoryService.createCategory({
+        category_name: "Grains",
+        description: "",
+      });
+
+      expect(categoryModel.createCategory).toHaveBeenCalledWith({
+        category_name: "Grains",
+        description: null,
+      });
+    });
+
     test("createCategory rejects missing category_name", async () => {
       const { categoryService } = loadCategoryService();
 
@@ -140,6 +181,158 @@ describe("Category tests", () => {
 
       expect(response.status).toBe(403);
       expect(response.body.message).toContain("Required role: admin");
+    });
+  });
+
+  describe("categoryController (unit)", () => {
+    const loadCategoryController = () => {
+      jest.resetModules();
+
+      const categoryServiceMock = {
+        createCategory: jest.fn(),
+        updateCategory: jest.fn(),
+        deleteCategory: jest.fn(),
+        getAllCategories: jest.fn(),
+        getCategoryById: jest.fn(),
+      };
+
+      const loggerMock = {
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+      };
+
+      jest.doMock("../src/services/categoryService", () => categoryServiceMock);
+      jest.doMock("../src/utils/logger", () => loggerMock);
+
+      const controller = require("../src/controllers/categoryController");
+      return { controller, categoryServiceMock, loggerMock };
+    };
+
+    const createMockRes = () => {
+      const res = {};
+      res.status = jest.fn(() => res);
+      res.json = jest.fn(() => res);
+      return res;
+    };
+
+    test("createCategory returns 401 when req.user is missing", async () => {
+      const { controller, categoryServiceMock } = loadCategoryController();
+      const req = { body: { category_name: "Vegetables" } };
+      const res = createMockRes();
+
+      await controller.createCategory(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(categoryServiceMock.createCategory).not.toHaveBeenCalled();
+    });
+
+    test("createCategory returns 403 when non-admin tries to create categories", async () => {
+      const { controller, categoryServiceMock } = loadCategoryController();
+      const req = { user: { id: 1, role: "buyer" }, body: { category_name: "Vegetables" } };
+      const res = createMockRes();
+
+      await controller.createCategory(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(categoryServiceMock.createCategory).not.toHaveBeenCalled();
+    });
+
+    test("createCategory validates request body type", async () => {
+      const { controller, categoryServiceMock } = loadCategoryController();
+      const req = { user: { id: 1, role: "admin" }, body: null };
+      const res = createMockRes();
+
+      await controller.createCategory(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(categoryServiceMock.createCategory).not.toHaveBeenCalled();
+    });
+
+    test("createCategory maps service errors with statusCode and masks unknown errors", async () => {
+      const { controller, categoryServiceMock, loggerMock } = loadCategoryController();
+
+      const res1 = createMockRes();
+      categoryServiceMock.createCategory.mockRejectedValueOnce(
+        Object.assign(new Error("Category name is required"), { statusCode: 400 })
+      );
+      await controller.createCategory(
+        { user: { id: 1, role: "admin" }, body: { category_name: "" } },
+        res1
+      );
+      expect(res1.status).toHaveBeenCalledWith(400);
+      expect(res1.json).toHaveBeenCalledWith({ message: "Category name is required" });
+
+      const res2 = createMockRes();
+      categoryServiceMock.createCategory.mockRejectedValueOnce(new Error("db down"));
+      await controller.createCategory(
+        { user: { id: 1, role: "admin" }, body: { category_name: "Ok" } },
+        res2
+      );
+      expect(res2.status).toHaveBeenCalledWith(500);
+      expect(res2.json).toHaveBeenCalledWith({ message: "Internal server error" });
+      expect(loggerMock.error).toHaveBeenCalled();
+    });
+
+    test("updateCategory validates request body and forwards service params", async () => {
+      const { controller, categoryServiceMock } = loadCategoryController();
+      const res = createMockRes();
+
+      await controller.updateCategory(
+        { user: { id: 1, role: "admin" }, params: { id: "9" }, body: "bad" },
+        res
+      );
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(categoryServiceMock.updateCategory).not.toHaveBeenCalled();
+
+      categoryServiceMock.updateCategory.mockResolvedValue({ id: 9, category_name: "New" });
+      const res2 = createMockRes();
+      await controller.updateCategory(
+        {
+          user: { id: 1, role: "admin" },
+          params: { id: "9" },
+          body: { category_name: "New", description: "Desc" },
+        },
+        res2
+      );
+      expect(categoryServiceMock.updateCategory).toHaveBeenCalledWith({
+        category_id: "9",
+        category_name: "New",
+        description: "Desc",
+      });
+      expect(res2.status).toHaveBeenCalledWith(200);
+    });
+
+    test("deleteCategory propagates service errors", async () => {
+      const { controller, categoryServiceMock } = loadCategoryController();
+
+      categoryServiceMock.deleteCategory.mockRejectedValue(
+        Object.assign(new Error("Invalid category id"), { statusCode: 400 })
+      );
+
+      const res = createMockRes();
+      await controller.deleteCategory(
+        { user: { id: 1, role: "admin" }, params: { id: "bad" } },
+        res
+      );
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ message: "Invalid category id" });
+    });
+
+    test("getAllCategories and getCategoryById map unexpected errors to 500", async () => {
+      const { controller, categoryServiceMock } = loadCategoryController();
+
+      categoryServiceMock.getAllCategories.mockRejectedValue(new Error("boom"));
+      const res1 = createMockRes();
+      await controller.getAllCategories({}, res1);
+      expect(res1.status).toHaveBeenCalledWith(500);
+
+      categoryServiceMock.getCategoryById.mockRejectedValue(new Error("boom"));
+      const res2 = createMockRes();
+      await controller.getCategoryById({ params: { id: "1" } }, res2);
+      expect(res2.status).toHaveBeenCalledWith(500);
     });
   });
 });
