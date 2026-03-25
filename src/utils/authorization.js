@@ -11,15 +11,16 @@ const isAgentAssignedToFarmer = async (agentId, farmerId) => {
   try {
     const result = await pool.query(
       `
-        SELECT 1
-        FROM agent_farmers
-        WHERE agent_id = $1 AND farmer_id = $2
-        LIMIT 1
+        SELECT EXISTS (
+          SELECT 1
+          FROM agent_farmers
+          WHERE agent_id = $1 AND farmer_id = $2
+        ) AS is_assigned
       `,
       [Number(agentId), Number(farmerId)]
     );
 
-    return result.rows.length > 0;
+    return Boolean(result.rows[0] && result.rows[0].is_assigned);
   } catch (error) {
     const wrappedError = new Error("Failed to verify agent assignment");
     wrappedError.cause = error;
