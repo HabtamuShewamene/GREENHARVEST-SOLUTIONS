@@ -165,8 +165,6 @@ const createProduct = async ({ user, payload }) => {
 };
 
 const updateProduct = async ({ user, productId, payload }) => {
-	ensureFarmerRole(user);
-
 	if (!isPositiveInteger(productId)) {
 		throw createServiceError("Invalid product id", 400);
 	}
@@ -180,7 +178,7 @@ const updateProduct = async ({ user, productId, payload }) => {
 	const isAllowed = await canManageProduct(user, ownedProduct);
 
 	if (!isAllowed) {
-		throw createServiceError("You can only update your own products", 403);
+		throw createServiceError("Not authorized to update this product", 403);
 	}
 
 	const hasUpdateField = [
@@ -229,7 +227,7 @@ const updateProduct = async ({ user, productId, payload }) => {
 	if (productValues.stock !== undefined) {
 		await inventoryModel.upsertInventory({
 			product_id: updatedProduct.id,
-			farmer_id: user.id,
+			farmer_id: Number(ownedProduct.farmer_id),
 			quantity: productValues.stock,
 		});
 

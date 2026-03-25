@@ -20,13 +20,18 @@ const loadProductService = () => {
     findProductOwnershipById: jest.fn(),
     updateProductById: jest.fn(),
   }));
+  jest.doMock("../src/utils/authorization", () => ({
+    canManageProduct: jest.fn(),
+    isAgentAssignedToFarmer: jest.fn(),
+  }));
 
   const productService = require("../src/services/productService");
   const categoryModel = require("../src/models/categoryModel");
   const inventoryModel = require("../src/models/inventoryModel");
   const productModel = require("../src/models/productModel");
+  const authorizationUtils = require("../src/utils/authorization");
 
-  return { productService, categoryModel, inventoryModel, productModel };
+  return { productService, categoryModel, inventoryModel, productModel, authorizationUtils };
 };
 
 const buildProductApp = (productServiceMock) => {
@@ -298,9 +303,10 @@ describe("Product tests", () => {
     });
 
     test("updateProduct rejects empty payload", async () => {
-      const { productService, productModel } = loadProductService();
+      const { productService, productModel, authorizationUtils } = loadProductService();
 
       productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      authorizationUtils.canManageProduct.mockResolvedValue(true);
 
       await expect(
         productService.updateProduct({
@@ -314,8 +320,11 @@ describe("Product tests", () => {
       });
     });
 
-    test("updateProduct rejects non-farmer roles", async () => {
-      const { productService } = loadProductService();
+    test("updateProduct rejects unauthorized roles", async () => {
+      const { productService, productModel, authorizationUtils } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      authorizationUtils.canManageProduct.mockResolvedValue(false);
 
       await expect(
         productService.updateProduct({
@@ -325,12 +334,12 @@ describe("Product tests", () => {
         })
       ).rejects.toMatchObject({
         statusCode: 403,
-        message: "Only farmers can perform this action",
+        message: "Not authorized to update this product",
       });
     });
 
     test("updateProduct validates product id and ownership", async () => {
-      const { productService, productModel } = loadProductService();
+      const { productService, productModel, authorizationUtils } = loadProductService();
 
       await expect(
         productService.updateProduct({
@@ -356,6 +365,7 @@ describe("Product tests", () => {
       });
 
       productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 99 });
+      authorizationUtils.canManageProduct.mockResolvedValue(false);
       await expect(
         productService.updateProduct({
           user: { id: 7, role: "farmer" },
@@ -364,14 +374,15 @@ describe("Product tests", () => {
         })
       ).rejects.toMatchObject({
         statusCode: 403,
-        message: "You can only update your own products",
+        message: "Not authorized to update this product",
       });
     });
 
     test("updateProduct validates update payload fields and supports stock updates", async () => {
-      const { productService, categoryModel, inventoryModel, productModel } = loadProductService();
+      const { productService, categoryModel, inventoryModel, productModel, authorizationUtils } = loadProductService();
 
       productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      authorizationUtils.canManageProduct.mockResolvedValue(true);
 
       await expect(
         productService.updateProduct({
@@ -425,9 +436,10 @@ describe("Product tests", () => {
     });
 
     test("updateProduct without stock returns the reloaded product", async () => {
-      const { productService, productModel } = loadProductService();
+      const { productService, productModel, authorizationUtils } = loadProductService();
 
       productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      authorizationUtils.canManageProduct.mockResolvedValue(true);
       productModel.updateProductById.mockResolvedValue({ id: 12 });
       productModel.findProductById.mockResolvedValue({ id: 12, name: "Tomato" });
 
@@ -440,10 +452,32 @@ describe("Product tests", () => {
       expect(updated.name).toBe("Tomato");
     });
 
+    test("updateProduct allows delegated field_agent access", async () => {
+      const { productService, productModel, authorizationUtils } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 44 });
+      authorizationUtils.canManageProduct.mockResolvedValue(true);
+      productModel.updateProductById.mockResolvedValue({ id: 12 });
+      productModel.findProductById.mockResolvedValue({ id: 12, name: "Tomato" });
+
+      const updated = await productService.updateProduct({
+        user: { id: 3, role: "field_agent" },
+        productId: 12,
+        payload: { price: 15 },
+      });
+
+      expect(updated.id).toBe(12);
+      expect(authorizationUtils.canManageProduct).toHaveBeenCalledWith(
+        { id: 3, role: "field_agent" },
+        { id: 12, farmer_id: 44 }
+      );
+    });
+
     test("deleteProduct rejects unauthorized farmer", async () => {
-      const { productService, productModel } = loadProductService();
+      const { productService, productModel, authorizationUtils } = loadProductService();
 
       productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 11 });
+      authorizationUtils.canManageProduct.mockResolvedValue(false);
 
       await expect(
         productService.deleteProduct({
@@ -456,9 +490,10 @@ describe("Product tests", () => {
     });
 
     test("deleteProduct deletes owned products", async () => {
-      const { productService, productModel } = loadProductService();
+      const { productService, productModel, authorizationUtils } = loadProductService();
 
       productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      authorizationUtils.canManageProduct.mockResolvedValue(true);
       productModel.deleteProductById.mockResolvedValue(undefined);
 
       const result = await productService.deleteProduct({
@@ -471,7 +506,7 @@ describe("Product tests", () => {
     });
 
     test("updateProductStock validates inputs and ownership", async () => {
-      const { productService, inventoryModel, productModel } = loadProductService();
+      const { productService, inventoryModel, productModel, authorizationUtils } = loadProductService();
 
       await expect(
         productService.updateProductStock({
@@ -506,6 +541,7 @@ describe("Product tests", () => {
       });
 
       productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      authorizationUtils.canManageProduct.mockResolvedValue(true);
       productModel.findProductById.mockResolvedValue({ id: 12, stock: 3 });
 
       const updated = await productService.updateProductStock({
