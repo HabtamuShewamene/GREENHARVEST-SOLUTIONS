@@ -529,6 +529,24 @@ describe("Product tests", () => {
       );
     });
 
+    test("updateProduct rejects unassigned field_agent", async () => {
+      const { productService, productModel, authorizationUtils } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 44 });
+      authorizationUtils.canManageProduct.mockResolvedValue(false);
+
+      await expect(
+        productService.updateProduct({
+          user: { id: 3, role: "field_agent" },
+          productId: 12,
+          payload: { price: 15 },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "Not authorized to update this product",
+      });
+    });
+
     test("deleteProduct rejects unauthorized farmer", async () => {
       const { productService, productModel, authorizationUtils } = loadProductService();
 
@@ -892,6 +910,76 @@ describe("Product tests", () => {
 
       expect(response.status).toBe(201);
       expect(response.body.product.farmer_id).toBe(8);
+    });
+
+    test("farmer updates own product -> success", async () => {
+      productServiceMock.updateProduct.mockResolvedValue({ id: 1, name: "Fresh Tomato" });
+
+      const response = await request(app)
+        .put("/api/products/1")
+        .set("x-test-role", "farmer")
+        .send({ name: "Fresh Tomato" });
+
+      expect(response.status).toBe(200);
+      expect(productServiceMock.updateProduct).toHaveBeenCalled();
+    });
+
+    test("assigned agent updates product -> success", async () => {
+      productServiceMock.updateProduct.mockResolvedValue({ id: 1, price: 20 });
+
+      const response = await request(app)
+        .put("/api/products/1")
+        .set("x-test-role", "field_agent")
+        .send({ price: 20 });
+
+      expect(response.status).toBe(200);
+      expect(productServiceMock.updateProduct).toHaveBeenCalled();
+    });
+
+    test("unassigned agent tries update -> fail", async () => {
+      productServiceMock.updateProduct.mockRejectedValue(
+        Object.assign(new Error("Not authorized to update this product"), { statusCode: 403 })
+      );
+
+      const response = await request(app)
+        .put("/api/products/1")
+        .set("x-test-role", "field_agent")
+        .send({ price: 20 });
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toBe("Not authorized to update this product");
+    });
+
+    test("buyer tries update -> fail", async () => {
+      const response = await request(app)
+        .put("/api/products/1")
+        .set("x-test-role", "buyer")
+        .send({ price: 20 });
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toContain("Required role: farmer, field_agent");
+      expect(productServiceMock.updateProduct).not.toHaveBeenCalled();
+    });
+
+    test("assigned agent deletes product -> success", async () => {
+      productServiceMock.deleteProduct.mockResolvedValue({ deleted: true });
+
+      const response = await request(app)
+        .delete("/api/products/1")
+        .set("x-test-role", "field_agent");
+
+      expect(response.status).toBe(200);
+      expect(productServiceMock.deleteProduct).toHaveBeenCalled();
+    });
+
+    test("unauthorized delete -> fail", async () => {
+      const response = await request(app)
+        .delete("/api/products/1")
+        .set("x-test-role", "buyer");
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toContain("Required role: farmer, field_agent");
+      expect(productServiceMock.deleteProduct).not.toHaveBeenCalled();
     });
 
     test("buyer cannot create product", async () => {
