@@ -277,8 +277,6 @@ const getProductById = async (productId) => {
 };
 
 const updateProductStock = async ({ user, productId, stock }) => {
-	ensureFarmerRole(user);
-
 	if (!isPositiveInteger(productId)) {
 		throw createServiceError("Invalid product id", 400);
 	}
@@ -303,7 +301,7 @@ const updateProductStock = async ({ user, productId, stock }) => {
 
 	await inventoryModel.upsertInventory({
 		product_id: Number(productId),
-		farmer_id: user.id,
+		farmer_id: Number(ownedProduct.farmer_id),
 		quantity: parsedStock,
 	});
 

@@ -528,6 +528,9 @@ describe("Product tests", () => {
     test("updateProductStock validates inputs and ownership", async () => {
       const { productService, inventoryModel, productModel, authorizationUtils } = loadProductService();
 
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 7 });
+      authorizationUtils.canManageProduct.mockResolvedValue(false);
+
       await expect(
         productService.updateProductStock({
           user: { id: 7, role: "buyer" },
@@ -574,6 +577,31 @@ describe("Product tests", () => {
         product_id: 12,
         farmer_id: 7,
         quantity: 3,
+      });
+      expect(updated.id).toBe(12);
+    });
+
+    test("updateProductStock allows delegated field_agent access", async () => {
+      const { productService, inventoryModel, productModel, authorizationUtils } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 44 });
+      authorizationUtils.canManageProduct.mockResolvedValue(true);
+      productModel.findProductById.mockResolvedValue({ id: 12, stock: 9 });
+
+      const updated = await productService.updateProductStock({
+        user: { id: 3, role: "field_agent" },
+        productId: 12,
+        stock: 9,
+      });
+
+      expect(authorizationUtils.canManageProduct).toHaveBeenCalledWith(
+        { id: 3, role: "field_agent" },
+        { id: 12, farmer_id: 44 }
+      );
+      expect(inventoryModel.upsertInventory).toHaveBeenCalledWith({
+        product_id: 12,
+        farmer_id: 44,
+        quantity: 9,
       });
       expect(updated.id).toBe(12);
     });
