@@ -3,7 +3,7 @@ const logger = require("../utils/logger");
 const categoryModel = require("../models/categoryModel");
 const inventoryModel = require("../models/inventoryModel");
 const productModel = require("../models/productModel");
-const { canManageProduct } = require("../utils/authorization");
+const { canManageProduct, isAgentAssignedToFarmer } = require("../utils/authorization");
 const { normalizeRole } = require("../utils/roles");
 const {
 	getMissingRequiredFields,
@@ -21,12 +21,6 @@ const createServiceError = (message, statusCode, extra = {}) => {
 const ensureFarmerRole = (user) => {
 	if (!user || normalizeRole(user.role) !== "farmer") {
 		throw createServiceError("Only farmers can perform this action", 403);
-	}
-};
-
-const ensureFieldAgentRole = (user) => {
-	if (!user || normalizeRole(user.role) !== "field_agent") {
-		throw createServiceError("Only field agents can create products", 403);
 	}
 };
 
@@ -99,16 +93,36 @@ const buildProductValues = (payload = {}) => {
 };
 
 const createProduct = async ({ user, payload }) => {
-	ensureFieldAgentRole(user);
+	const role = normalizeRole(user && user.role);
+	let farmer_id;
 
-	const missingFields = getMissingRequiredFields(payload, ["farmer_id", "name", "price", "stock"]);
+	if (role === "field_agent") {
+		const missingFields = getMissingRequiredFields(payload, ["farmer_id", "name", "price", "stock"]);
 
-	if (missingFields.length > 0) {
-		throw createServiceError("farmer_id, name, price, and stock are required", 400);
+		if (missingFields.length > 0) {
+			throw createServiceError("farmer_id, name, price, and stock are required", 400);
+		}
+
+		farmer_id = await validateFarmerId(payload.farmer_id);
+		const agentId = Number(user && user.user_id ? user.user_id : user && user.id);
+		const isAssigned = await isAgentAssignedToFarmer(agentId, farmer_id);
+
+		if (!isAssigned) {
+			throw createServiceError("Field agent is not assigned to this farmer", 403);
+		}
+	} else if (role === "farmer") {
+		const missingFields = getMissingRequiredFields(payload, ["name", "price", "stock"]);
+
+		if (missingFields.length > 0) {
+			throw createServiceError("name, price, and stock are required", 400);
+		}
+
+		farmer_id = await validateFarmerId(user.id);
+	} else {
+		throw createServiceError("Only farmers and field agents can create products", 403);
 	}
 
 	const productValues = buildProductValues(payload);
-	const farmer_id = await validateFarmerId(payload.farmer_id);
 
 	if (!isNonNegativeNumber(productValues.price) || Number(productValues.price) <= 0) {
 		throw createServiceError("price must be a valid number greater than 0", 400);
@@ -139,7 +153,8 @@ const createProduct = async ({ user, payload }) => {
 	logger.info("Product created", {
 		productId: product.id,
 		farmerId: farmer_id,
-		fieldAgentId: user.id,
+		actorId: user.id,
+		actorRole: role,
 	});
 
 	try {

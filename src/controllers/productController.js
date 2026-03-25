@@ -40,25 +40,29 @@ const validateCreateProductRequest = (req, res) => {
     return false;
   }
 
-  if (normalizeRole(req.user && req.user.role) !== "field_agent") {
+  const role = normalizeRole(req.user && req.user.role);
+
+  if (!["field_agent", "farmer"].includes(role)) {
     res.status(403).json({
-      message: "Only field agents can create products",
+      message: "Only farmers and field agents can create products",
     });
     return false;
   }
 
-  if (req.body.farmer_id === undefined || req.body.farmer_id === null) {
-    res.status(400).json({
-      message: "farmer_id is required",
-    });
-    return false;
-  }
+  if (role === "field_agent") {
+    if (req.body.farmer_id === undefined || req.body.farmer_id === null) {
+      res.status(400).json({
+        message: "farmer_id is required",
+      });
+      return false;
+    }
 
-  if (!isPositiveInteger(req.body.farmer_id)) {
-    res.status(400).json({
-      message: "farmer_id must be a valid integer",
-    });
-    return false;
+    if (!isPositiveInteger(req.body.farmer_id)) {
+      res.status(400).json({
+        message: "farmer_id must be a valid integer",
+      });
+      return false;
+    }
   }
 
   return true;
@@ -72,10 +76,13 @@ const createProduct = async (req, res) => {
 
     const product = await productService.createProduct({
       user: req.user,
-      payload: {
-        ...req.body,
-        farmer_id: Number(req.body.farmer_id),
-      },
+      payload:
+        normalizeRole(req.user && req.user.role) === "field_agent"
+          ? {
+              ...req.body,
+              farmer_id: Number(req.body.farmer_id),
+            }
+          : req.body,
     });
 
     return res.status(201).json({

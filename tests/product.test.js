@@ -48,10 +48,11 @@ const buildProductApp = (productServiceMock) => {
 describe("Product tests", () => {
   describe("productService", () => {
     test("field_agent can create a product linked to a farmer", async () => {
-      const { productService, categoryModel, inventoryModel, productModel } = loadProductService();
+      const { productService, categoryModel, inventoryModel, productModel, authorizationUtils } = loadProductService();
 
       categoryModel.findCategoryById.mockResolvedValue({ id: 2 });
       productModel.findFarmerById.mockResolvedValue({ id: 8 });
+      authorizationUtils.isAgentAssignedToFarmer.mockResolvedValue(true);
       productModel.createProduct.mockResolvedValue({ id: 15, name: "Tomato" });
       productModel.findProductById.mockResolvedValue({
         id: 15,
@@ -102,9 +103,10 @@ describe("Product tests", () => {
     });
 
     test("createProduct rejects invalid price and stock values", async () => {
-      const { productService, productModel } = loadProductService();
+      const { productService, productModel, authorizationUtils } = loadProductService();
 
       productModel.findFarmerById.mockResolvedValue({ id: 8 });
+      authorizationUtils.isAgentAssignedToFarmer.mockResolvedValue(true);
 
       await expect(
         productService.createProduct({
@@ -138,9 +140,10 @@ describe("Product tests", () => {
     });
 
     test("createProduct validates category_id format and existence", async () => {
-      const { productService, categoryModel, productModel } = loadProductService();
+      const { productService, categoryModel, productModel, authorizationUtils } = loadProductService();
 
       productModel.findFarmerById.mockResolvedValue({ id: 8 });
+      authorizationUtils.isAgentAssignedToFarmer.mockResolvedValue(true);
 
       await expect(
         productService.createProduct({
@@ -177,9 +180,10 @@ describe("Product tests", () => {
     });
 
     test("createProduct allows missing category_id and normalizes optional text fields", async () => {
-      const { productService, categoryModel, inventoryModel, productModel } = loadProductService();
+      const { productService, categoryModel, inventoryModel, productModel, authorizationUtils } = loadProductService();
 
       productModel.findFarmerById.mockResolvedValue({ id: 8 });
+      authorizationUtils.isAgentAssignedToFarmer.mockResolvedValue(true);
       productModel.createProduct.mockResolvedValue({ id: 15, name: "Tomato" });
       productModel.findProductById.mockResolvedValue({
         id: 15,
@@ -214,9 +218,10 @@ describe("Product tests", () => {
     });
 
     test("createProduct falls back when reloading the created product fails", async () => {
-      const { productService, productModel } = loadProductService();
+      const { productService, productModel, authorizationUtils } = loadProductService();
 
       productModel.findFarmerById.mockResolvedValue({ id: 8 });
+      authorizationUtils.isAgentAssignedToFarmer.mockResolvedValue(true);
       productModel.createProduct.mockResolvedValue({ id: 15, name: "Tomato" });
       productModel.findProductById.mockRejectedValue(new Error("db error"));
 
@@ -271,6 +276,57 @@ describe("Product tests", () => {
       ).rejects.toMatchObject({
         statusCode: 403,
       });
+    });
+
+    test("rejects field_agent creating product for unassigned farmer", async () => {
+      const { productService, productModel, authorizationUtils } = loadProductService();
+
+      productModel.findFarmerById.mockResolvedValue({ id: 8 });
+      authorizationUtils.isAgentAssignedToFarmer.mockResolvedValue(false);
+
+      await expect(
+        productService.createProduct({
+          user: { id: 3, role: "field_agent" },
+          payload: {
+            farmer_id: 8,
+            name: "Tomato",
+            price: 12,
+            stock: 6,
+          },
+        })
+      ).rejects.toMatchObject({
+        statusCode: 403,
+        message: "Field agent is not assigned to this farmer",
+      });
+    });
+
+    test("farmer can create product without farmer_id and links to self", async () => {
+      const { productService, inventoryModel, productModel } = loadProductService();
+
+      productModel.findFarmerById.mockResolvedValue({ id: 7 });
+      productModel.createProduct.mockResolvedValue({ id: 15, name: "Tomato" });
+      productModel.findProductById.mockResolvedValue({ id: 15, farmer_id: 7, name: "Tomato" });
+
+      const product = await productService.createProduct({
+        user: { id: 7, role: "farmer" },
+        payload: {
+          name: "Tomato",
+          price: 12,
+          stock: 6,
+        },
+      });
+
+      expect(productModel.createProduct).toHaveBeenCalledWith(
+        expect.objectContaining({
+          farmer_id: 7,
+        })
+      );
+      expect(inventoryModel.upsertInventory).toHaveBeenCalledWith({
+        product_id: 15,
+        farmer_id: 7,
+        quantity: 6,
+      });
+      expect(product.id).toBe(15);
     });
 
     test("getProductById rejects invalid id", async () => {
@@ -655,6 +711,14 @@ describe("Product tests", () => {
       );
       expect(res2.status).toHaveBeenCalledWith(403);
       expect(productServiceMock.createProduct).not.toHaveBeenCalled();
+
+      const res3 = createMockRes();
+      productServiceMock.createProduct.mockResolvedValue({ id: 2, farmer_id: 1 });
+      await controller.createProduct(
+        { user: { id: 1, role: "farmer" }, body: { name: "Tomato", price: 12, stock: 3 } },
+        res3
+      );
+      expect(res3.status).toHaveBeenCalledWith(201);
     });
 
     test("createProduct validates farmer_id presence and type", async () => {
@@ -842,7 +906,37 @@ describe("Product tests", () => {
         });
 
       expect(response.status).toBe(403);
-      expect(response.body.message).toContain("Required role: field_agent");
+      expect(response.body.message).toContain("Required role: field_agent, farmer");
+    });
+
+    test("farmer can create product", async () => {
+      productServiceMock.createProduct.mockResolvedValue({
+        id: 2,
+        farmer_id: 1,
+        name: "Tomato",
+      });
+
+      const response = await request(app)
+        .post("/api/products")
+        .set("x-test-role", "farmer")
+        .set("x-test-user-id", "1")
+        .send({
+          name: "Tomato",
+          price: 12,
+          stock: 6,
+        });
+
+      expect(response.status).toBe(201);
+      expect(productServiceMock.createProduct).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user: expect.objectContaining({ role: "farmer" }),
+          payload: expect.objectContaining({
+            name: "Tomato",
+            price: 12,
+            stock: 6,
+          }),
+        })
+      );
     });
 
     test("rejects invalid farmer_id before service call", async () => {

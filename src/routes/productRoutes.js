@@ -17,7 +17,7 @@ const router = express.Router();
 
 router.get("/", getAllProducts);
 router.get("/:id", getProductById);
-router.post("/", authMiddleware, requireRole("field_agent"), createProduct);
+router.post("/", authMiddleware, requireRole("field_agent", "farmer"), createProduct);
 router.put("/:id", authMiddleware, updateProduct);
 router.delete("/:id", authMiddleware, deleteProduct);
 router.patch("/:id/stock", authMiddleware, updateProductStock);
