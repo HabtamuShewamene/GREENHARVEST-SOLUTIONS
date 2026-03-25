@@ -238,8 +238,6 @@ const updateProduct = async ({ user, productId, payload }) => {
 };
 
 const deleteProduct = async ({ user, productId }) => {
-	ensureFarmerRole(user);
-
 	if (!isPositiveInteger(productId)) {
 		throw createServiceError("Invalid product id", 400);
 	}
@@ -253,7 +251,7 @@ const deleteProduct = async ({ user, productId }) => {
 	const isAllowed = await canManageProduct(user, ownedProduct);
 
 	if (!isAllowed) {
-		throw createServiceError("You can only delete your own products", 403);
+		throw createServiceError("Not authorized to delete this product", 403);
 	}
 
 	await productModel.deleteProductById(Number(productId));

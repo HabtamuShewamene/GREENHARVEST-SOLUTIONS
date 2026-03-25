@@ -505,6 +505,26 @@ describe("Product tests", () => {
       expect(result).toEqual({ deleted: true });
     });
 
+    test("deleteProduct allows delegated field_agent access", async () => {
+      const { productService, productModel, authorizationUtils } = loadProductService();
+
+      productModel.findProductOwnershipById.mockResolvedValue({ id: 12, farmer_id: 44 });
+      authorizationUtils.canManageProduct.mockResolvedValue(true);
+      productModel.deleteProductById.mockResolvedValue(undefined);
+
+      const result = await productService.deleteProduct({
+        user: { id: 3, role: "field_agent" },
+        productId: 12,
+      });
+
+      expect(authorizationUtils.canManageProduct).toHaveBeenCalledWith(
+        { id: 3, role: "field_agent" },
+        { id: 12, farmer_id: 44 }
+      );
+      expect(productModel.deleteProductById).toHaveBeenCalledWith(12);
+      expect(result).toEqual({ deleted: true });
+    });
+
     test("updateProductStock validates inputs and ownership", async () => {
       const { productService, inventoryModel, productModel, authorizationUtils } = loadProductService();
 
