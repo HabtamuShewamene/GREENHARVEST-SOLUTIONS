@@ -27,7 +27,8 @@ const pool = new Pool({
   max: Number(process.env.DB_POOL_MAX) || 10,
   idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS) || 30000,
   connectionTimeoutMillis: Number(process.env.DB_CONNECTION_TIMEOUT_MS) || 10000,
-  allowExitOnIdle: false,
+  allowExitOnIdle:
+    process.env.DB_ALLOW_EXIT_ON_IDLE === "true" || process.env.NODE_ENV === "test",
   ssl:
     process.env.DB_SSL === "true"
       ? {
