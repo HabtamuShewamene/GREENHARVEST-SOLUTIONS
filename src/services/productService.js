@@ -3,6 +3,7 @@ const logger = require("../utils/logger");
 const categoryModel = require("../models/categoryModel");
 const inventoryModel = require("../models/inventoryModel");
 const productModel = require("../models/productModel");
+const { canManageProduct } = require("../utils/authorization");
 const { normalizeRole } = require("../utils/roles");
 const {
 	getMissingRequiredFields,
@@ -176,7 +177,9 @@ const updateProduct = async ({ user, productId, payload }) => {
 		throw createServiceError("Product not found", 404);
 	}
 
-	if (Number(ownedProduct.farmer_id) !== Number(user.id)) {
+	const isAllowed = await canManageProduct(user, ownedProduct);
+
+	if (!isAllowed) {
 		throw createServiceError("You can only update your own products", 403);
 	}
 
@@ -249,7 +252,9 @@ const deleteProduct = async ({ user, productId }) => {
 		throw createServiceError("Product not found", 404);
 	}
 
-	if (Number(ownedProduct.farmer_id) !== Number(user.id)) {
+	const isAllowed = await canManageProduct(user, ownedProduct);
+
+	if (!isAllowed) {
 		throw createServiceError("You can only delete your own products", 403);
 	}
 
@@ -294,7 +299,9 @@ const updateProductStock = async ({ user, productId, stock }) => {
 		throw createServiceError("Product not found", 404);
 	}
 
-	if (Number(ownedProduct.farmer_id) !== Number(user.id)) {
+	const isAllowed = await canManageProduct(user, ownedProduct);
+
+	if (!isAllowed) {
 		throw createServiceError("You can only update stock for your own products", 403);
 	}
 
