@@ -512,7 +512,7 @@ describeIntegration("Full integration suite (real PostgreSQL)", () => {
       );
 
       expect(cartRow.quantity).toBe(2);
-      expect(Number(cartRow.cart_item_id)).toBe(cartItemId);
+      expect(Number(cartRow.cart_item_id)).toBe(Number(cartItemId));
 
       const invalidAddResponse = await request(app)
         .post("/api/cart")
