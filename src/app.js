@@ -27,6 +27,7 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const agentRoutes = require("./routes/agentRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const healthRoutes = require("./routes/healthRoutes");
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api", healthRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
