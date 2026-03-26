@@ -308,7 +308,7 @@ describeIntegration("Product to order integration flow", () => {
     expect(Number(orderRow.field_agent_id)).toBe(Number(actors.agent.id));
     expect(Number(orderRow.total_amount)).toBe(125);
     expect(orderItems).toHaveLength(1);
-    expect(Number(orderItems[0].product_id)).toBe(productId);
+    expect(Number(orderItems[0].product_id)).toBe(Number(productId));
     expect(orderItems[0].quantity).toBe(5);
     expect(Number(orderItems[0].price)).toBe(25);
     expect(inventoryAfterOrder.quantity).toBe(95);
