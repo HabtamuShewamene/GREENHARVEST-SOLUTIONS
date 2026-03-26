@@ -1,7 +1,7 @@
 // Moved from middleware/authMiddleware.js during the structure refactor.
-const jwt = require("jsonwebtoken");
 const { normalizeRole } = require("../utils/roles");
 const { pool } = require("../config/db");
+const { verifyAccessToken } = require("../utils/jwt");
 
 const resolveActorId = async (user_id, role) => {
   if (role === "admin") {
@@ -102,7 +102,7 @@ const authMiddleware = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verifyAccessToken(token);
 
     if (!decoded || typeof decoded !== "object" || !decoded.id) {
       return res.status(401).json({
