@@ -109,6 +109,31 @@ app.get("/test-db", async (req, res) => {
   }
 });
 
+app.get("/api/db-health", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW() AS current_time");
+
+    res.status(200).json({
+      status: "ok",
+      database: "connected",
+      timestamp: result.rows[0].current_time,
+    });
+  } catch (error) {
+    logger.error("DB health route failed", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      path: req.originalUrl,
+      method: req.method,
+    });
+
+    res.status(500).json({
+      status: "error",
+      message: "Database connection error",
+    });
+  }
+});
+
 app.use((req, res) => {
   res.status(404).json({
     status: "error",
