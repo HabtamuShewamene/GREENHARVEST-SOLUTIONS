@@ -1,157 +1,317 @@
-const request = require('supertest');
-const app = require('../../src/app');
-const { Pool } = require('pg');
+const request = require("supertest");
 
-const pool = new Pool({
-  connectionString: process.env.TEST_DB_URL,
-});
+const {
+  closeIntegrationDatabase,
+  createCategory,
+  createUser,
+  initializeIntegrationDatabase,
+  queryOne,
+  queryRows,
+  resetIntegrationDatabase,
+} = require("../helpers/integrationDb");
 
-describe('🛒 Product → Order Integration Flow', () => {
-  let agentToken, buyerToken;
-  let farmerId, productId;
+const hasRealTestDb =
+  Boolean(process.env.TEST_DB_URL) &&
+  !/your_database_password/i.test(process.env.TEST_DB_URL) &&
+  !/example/i.test(process.env.TEST_DB_URL);
 
-  beforeAll(async () => {
-    // Clean DB
-    await pool.query(`
-      TRUNCATE users, farmer_profiles, buyer_profiles, field_agent_profiles,
-      products, inventory, carts, cart_items, orders, order_items
-      RESTART IDENTITY CASCADE;
-    `);
+const describeIntegration = hasRealTestDb ? describe : describe.skip;
 
-    // 1️⃣ Register Farmer
-    const farmerRes = await request(app).post('/api/auth/register').send({
-      name: 'Farmer One',
-      email: 'farmer@test.com',
-      password: '123456',
-      role: 'farmer',
-    });
+describeIntegration("Product to order integration flow", () => {
+  const password = "Str0ng!Pass1!";
 
-    farmerId = farmerRes.body.user.id;
+  let app;
+  let appPool;
+  let adminPool;
+  let actors;
+  let tokens;
+  let category;
 
-    // 2️⃣ Register Field Agent
-    await request(app).post('/api/auth/register').send({
-      name: 'Agent One',
-      email: 'agent@test.com',
-      password: '123456',
-      role: 'field_agent',
-    });
-
-    const agentLogin = await request(app).post('/api/auth/login').send({
-      email: 'agent@test.com',
-      password: '123456',
-    });
-
-    agentToken = agentLogin.body.token;
-
-    // 3️⃣ Register Buyer
-    await request(app).post('/api/auth/register').send({
-      name: 'Buyer One',
-      email: 'buyer@test.com',
-      password: '123456',
-      role: 'buyer',
-    });
-
-    const buyerLogin = await request(app).post('/api/auth/login').send({
-      email: 'buyer@test.com',
-      password: '123456',
-    });
-
-    buyerToken = buyerLogin.body.token;
-
-    // 4️⃣ Assign Agent → Farmer
-    await pool.query(`
-      INSERT INTO agent_farmers (agent_id, farmer_id)
-      VALUES (2, 1)
-    `);
+  const authHeader = (token) => ({
+    Authorization: `Bearer ${token}`,
   });
 
-  afterAll(async () => {
-    await pool.end();
-  });
+  const loginAndCaptureSession = async (email, userPassword) => {
+    const response = await request(app).post("/api/auth/login").send({
+      email,
+      password: userPassword,
+    });
 
-  // ---------------- PRODUCT ----------------
+    expect(response.status).toBe(200);
+    expect(response.body.access_token).toBeTruthy();
 
-  test('✅ Agent creates product for farmer', async () => {
-    const res = await request(app)
-      .post('/api/products')
-      .set('Authorization', `Bearer ${agentToken}`)
+    return response.body.access_token;
+  };
+
+  const assignAgentToFarmer = async (agentId = actors.agent.id, farmerId = actors.farmer.id) => {
+    const response = await request(app)
+      .post("/api/agents/assign-farmer")
+      .set(authHeader(tokens.adminToken))
       .send({
-        name: 'Tomato',
-        price: 50,
-        category_id: 1,
+        agent_id: agentId,
         farmer_id: farmerId,
       });
 
-    expect(res.statusCode).toBe(201);
-    expect(res.body).toHaveProperty('product');
+    expect(response.status).toBe(201);
+  };
 
-    productId = res.body.product.id;
+  beforeAll(async () => {
+    adminPool = await initializeIntegrationDatabase();
+
+    jest.resetModules();
+    app = require("../../src/app");
+    appPool = require("../../src/config/db").pool;
   });
 
-  test('❌ Agent creates product for unassigned farmer (fail)', async () => {
-    const res = await request(app)
-      .post('/api/products')
-      .set('Authorization', `Bearer ${agentToken}`)
+  beforeEach(async () => {
+    await resetIntegrationDatabase(adminPool);
+
+    category = await createCategory(adminPool, {
+      name: "Order Flow Category",
+      description: "Integration test category",
+    });
+
+    actors = {
+      admin: await createUser(adminPool, {
+        name: "Admin User",
+        email: "admin-order@test.local",
+        password,
+        role: "admin",
+      }),
+      farmer: await createUser(adminPool, {
+        name: "Farmer One",
+        email: "farmer-order@test.local",
+        password,
+        role: "farmer",
+      }),
+      agent: await createUser(adminPool, {
+        name: "Agent One",
+        email: "agent-order@test.local",
+        password,
+        role: "field_agent",
+      }),
+      buyer: await createUser(adminPool, {
+        name: "Buyer One",
+        email: "buyer-order@test.local",
+        password,
+        role: "buyer",
+      }),
+    };
+
+    tokens = {
+      adminToken: await loginAndCaptureSession(actors.admin.email, password),
+      farmerToken: await loginAndCaptureSession(actors.farmer.email, password),
+      agentToken: await loginAndCaptureSession(actors.agent.email, password),
+      buyerToken: await loginAndCaptureSession(actors.buyer.email, password),
+    };
+  });
+
+  afterAll(async () => {
+    if (appPool) {
+      await appPool.end();
+    }
+
+    if (adminPool) {
+      await closeIntegrationDatabase(adminPool);
+    }
+  });
+
+  test("agent creates a product for an assigned farmer", async () => {
+    await assignAgentToFarmer();
+
+    const response = await request(app)
+      .post("/api/products")
+      .set(authHeader(tokens.agentToken))
       .send({
-        name: 'Onion',
-        price: 40,
-        category_id: 1,
-        farmer_id: 999,
+        name: "Tomato",
+        price: 50,
+        category_id: category.id,
+        farmer_id: actors.farmer.id,
+        stock: 20,
       });
 
-    expect(res.statusCode).toBe(403);
+    expect(response.status).toBe(201);
+    expect(response.body.product).toBeTruthy();
+
+    const productRow = await queryOne(
+      adminPool,
+      `
+        SELECT product_id, farmer_id, category_id, name, price
+        FROM products
+        WHERE product_id = $1
+      `,
+      [response.body.product.id]
+    );
+    const inventoryRow = await queryOne(
+      adminPool,
+      `
+        SELECT quantity
+        FROM inventory
+        WHERE product_id = $1
+      `,
+      [response.body.product.id]
+    );
+
+    expect(productRow.name).toBe("Tomato");
+    expect(Number(productRow.price)).toBe(50);
+    expect(Number(productRow.farmer_id)).toBe(Number(actors.farmer.id));
+    expect(Number(productRow.category_id)).toBe(Number(category.id));
+    expect(inventoryRow.quantity).toBe(20);
   });
 
-  // ---------------- INVENTORY ----------------
+  test("agent cannot create a product for an unassigned farmer", async () => {
+    const otherFarmer = await createUser(adminPool, {
+      name: "Farmer Two",
+      email: "farmer-two-order@test.local",
+      password,
+      role: "farmer",
+    });
 
-  test('✅ Set product inventory', async () => {
-    const res = await request(app)
-      .post(`/api/inventory/${productId}`)
-      .set('Authorization', `Bearer ${agentToken}`)
-      .send({ quantity: 100 });
+    const response = await request(app)
+      .post("/api/products")
+      .set(authHeader(tokens.agentToken))
+      .send({
+        name: "Onion",
+        price: 40,
+        category_id: category.id,
+        farmer_id: otherFarmer.id,
+        stock: 10,
+      });
 
-    expect(res.statusCode).toBe(200);
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe("Field agent is not assigned to this farmer");
+
+    const productRows = await queryRows(
+      adminPool,
+      `SELECT product_id FROM products WHERE name = $1`,
+      ["Onion"]
+    );
+
+    expect(productRows).toHaveLength(0);
   });
 
-  // ---------------- CART ----------------
+  test("inventory is updated, buyer adds to cart, creates order, inventory is reduced, and cart is cleared", async () => {
+    await assignAgentToFarmer();
 
-  test('✅ Buyer adds product to cart', async () => {
-    const res = await request(app)
-      .post('/api/cart')
-      .set('Authorization', `Bearer ${buyerToken}`)
+    const productResponse = await request(app)
+      .post("/api/products")
+      .set(authHeader(tokens.agentToken))
+      .send({
+        name: "Order Tomato",
+        price: 25,
+        category_id: category.id,
+        farmer_id: actors.farmer.id,
+        stock: 20,
+      });
+
+    expect(productResponse.status).toBe(201);
+
+    const productId = productResponse.body.product.id;
+
+    const inventoryUpdateResponse = await request(app)
+      .put("/api/inventory/update")
+      .set(authHeader(tokens.agentToken))
+      .send({
+        product_id: productId,
+        quantity: 100,
+      });
+
+    expect(inventoryUpdateResponse.status).toBe(200);
+
+    const inventoryAfterUpdate = await queryOne(
+      adminPool,
+      `
+        SELECT quantity
+        FROM inventory
+        WHERE product_id = $1
+      `,
+      [productId]
+    );
+
+    expect(inventoryAfterUpdate.quantity).toBe(100);
+
+    const addToCartResponse = await request(app)
+      .post("/api/cart")
+      .set(authHeader(tokens.buyerToken))
       .send({
         product_id: productId,
         quantity: 5,
       });
 
-    expect(res.statusCode).toBe(200);
-  });
+    expect(addToCartResponse.status).toBe(200);
+    expect(addToCartResponse.body.cart).toHaveLength(1);
 
-  // ---------------- ORDER ----------------
-
-  test('✅ Buyer creates order', async () => {
-    const res = await request(app)
-      .post('/api/orders')
-      .set('Authorization', `Bearer ${buyerToken}`);
-
-    expect(res.statusCode).toBe(201);
-    expect(res.body).toHaveProperty('order');
-  });
-
-  // ---------------- DB VALIDATION ----------------
-
-  test('✅ Inventory reduced after order', async () => {
-    const result = await pool.query(
-      'SELECT quantity FROM inventory WHERE product_id = $1',
-      [productId]
+    const cartBeforeOrder = await queryRows(
+      adminPool,
+      `
+        SELECT ci.cart_item_id, ci.quantity
+        FROM cart_items ci
+        JOIN carts c ON c.cart_id = ci.cart_id
+        WHERE c.buyer_id = $1
+      `,
+      [actors.buyer.id]
     );
 
-    expect(result.rows[0].quantity).toBe(95);
-  });
+    expect(cartBeforeOrder).toHaveLength(1);
+    expect(cartBeforeOrder[0].quantity).toBe(5);
 
-  test('✅ Cart cleared after order', async () => {
-    const result = await pool.query('SELECT * FROM cart_items');
+    const orderResponse = await request(app)
+      .post("/api/orders")
+      .set(authHeader(tokens.buyerToken))
+      .send({});
 
-    expect(result.rows.length).toBe(0);
+    expect(orderResponse.status).toBe(201);
+    expect(orderResponse.body.order).toBeTruthy();
+
+    const orderId = orderResponse.body.order.id;
+
+    const orderRow = await queryOne(
+      adminPool,
+      `
+        SELECT order_id, buyer_id, farmer_id, field_agent_id, total_amount
+        FROM orders
+        WHERE order_id = $1
+      `,
+      [orderId]
+    );
+    const orderItems = await queryRows(
+      adminPool,
+      `
+        SELECT product_id, quantity, price
+        FROM order_items
+        WHERE order_id = $1
+      `,
+      [orderId]
+    );
+    const inventoryAfterOrder = await queryOne(
+      adminPool,
+      `
+        SELECT quantity
+        FROM inventory
+        WHERE product_id = $1
+      `,
+      [productId]
+    );
+    const cartAfterOrder = await queryRows(
+      adminPool,
+      `
+        SELECT ci.cart_item_id
+        FROM cart_items ci
+        JOIN carts c ON c.cart_id = ci.cart_id
+        WHERE c.buyer_id = $1
+      `,
+      [actors.buyer.id]
+    );
+
+    expect(Number(orderRow.buyer_id)).toBe(Number(actors.buyer.id));
+    expect(Number(orderRow.farmer_id)).toBe(Number(actors.farmer.id));
+    expect(Number(orderRow.field_agent_id)).toBe(Number(actors.agent.id));
+    expect(Number(orderRow.total_amount)).toBe(125);
+    expect(orderItems).toHaveLength(1);
+    expect(Number(orderItems[0].product_id)).toBe(productId);
+    expect(orderItems[0].quantity).toBe(5);
+    expect(Number(orderItems[0].price)).toBe(25);
+    expect(inventoryAfterOrder.quantity).toBe(95);
+    expect(cartAfterOrder).toHaveLength(0);
   });
 });
