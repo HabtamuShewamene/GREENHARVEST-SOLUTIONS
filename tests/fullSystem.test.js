@@ -1037,7 +1037,45 @@ describeIntegration("Full integration suite (real PostgreSQL)", () => {
       expect(notificationRow.title).toBe("Order created");
       expect(notificationRow.message).toContain(String(order.id));
     });
-    test.todo("emit a notification automatically when a payment succeeds");
+    test("emits a notification automatically when a payment succeeds", async () => {
+      await assignAgentToFarmer();
+      const product = await createProductAsFarmer({
+        name: "Payment Notification Tomato",
+        stock: 5,
+        price: 12,
+      });
+
+      await addItemToCart(product.id, 2);
+      const order = await createOrder();
+
+      const paymentResponse = await request(app)
+        .post("/api/payments/process")
+        .set(authHeader(tokens.buyerToken))
+        .send({
+          order_id: order.id,
+          payment_method: "card",
+          amount: 24,
+        });
+
+      expect(paymentResponse.status).toBe(201);
+
+      const notificationRow = await queryOne(
+        adminPool,
+        `
+          SELECT notification_id, user_id, title, message
+          FROM notifications
+          WHERE user_id = $1
+          ORDER BY notification_id DESC
+          LIMIT 1
+        `,
+        [actors.buyer.id]
+      );
+
+      expect(notificationRow).toBeTruthy();
+      expect(notificationRow.user_id).toBe(String(actors.buyer.id));
+      expect(notificationRow.title).toBe("Payment received");
+      expect(notificationRow.message).toContain(String(order.id));
+    });
   });
 
   describe("Security and validation", () => {
