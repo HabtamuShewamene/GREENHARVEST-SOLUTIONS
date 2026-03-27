@@ -5,10 +5,20 @@ const hasRealTestDb =
   !/your_database_password/i.test(testDbUrl) &&
   !/example/i.test(testDbUrl);
 
+const isTruthyEnv = (value) => {
+  if (value == null) {
+    return false;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+
+  return normalized !== "" && normalized !== "0" && normalized !== "false";
+};
+
 const isCi =
-  process.env.CI === "true" ||
-  process.env.GITHUB_ACTIONS === "true" ||
-  Boolean(process.env.BUILD_BUILDID);
+  isTruthyEnv(process.env.CI) ||
+  isTruthyEnv(process.env.GITHUB_ACTIONS) ||
+  isTruthyEnv(process.env.BUILD_BUILDID);
 
 if (isCi && !hasRealTestDb) {
   throw new Error(
