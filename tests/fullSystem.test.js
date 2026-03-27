@@ -1009,7 +1009,34 @@ describeIntegration("Full integration suite (real PostgreSQL)", () => {
       expect(updatedNotificationRow.is_read).toBe(true);
     });
 
-    test.todo("emit a notification automatically when an order is created");
+    test("emits a notification automatically when an order is created", async () => {
+      await assignAgentToFarmer();
+      const product = await createProductAsFarmer({
+        name: "Order Notification Tomato",
+        stock: 5,
+        price: 14,
+      });
+
+      await addItemToCart(product.id, 2);
+      const order = await createOrder();
+
+      const notificationRow = await queryOne(
+        adminPool,
+        `
+          SELECT notification_id, user_id, title, message
+          FROM notifications
+          WHERE user_id = $1
+          ORDER BY notification_id DESC
+          LIMIT 1
+        `,
+        [actors.buyer.id]
+      );
+
+      expect(notificationRow).toBeTruthy();
+      expect(notificationRow.user_id).toBe(String(actors.buyer.id));
+      expect(notificationRow.title).toBe("Order created");
+      expect(notificationRow.message).toContain(String(order.id));
+    });
     test.todo("emit a notification automatically when a payment succeeds");
   });
 
