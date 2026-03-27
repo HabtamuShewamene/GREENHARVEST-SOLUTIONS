@@ -936,7 +936,31 @@ describeIntegration("Full integration suite (real PostgreSQL)", () => {
       expect(reviewRow.comment).toBe("Excellent quality");
     });
 
-    test.todo("restrict review creation to buyers once role-based review authorization is implemented");
+    test("rejects review creation for non-buyer roles", async () => {
+      const product = await createProductAsFarmer({
+        name: "Unauthorized Review Tomato",
+      });
+
+      const response = await request(app)
+        .post("/api/reviews")
+        .set(authHeader(tokens.farmerToken))
+        .send({
+          product_id: product.id,
+          rating: 4,
+          comment: "Should be rejected",
+        });
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toContain("Required role: buyer");
+
+      const reviewRows = await queryRows(
+        adminPool,
+        `SELECT review_id FROM reviews WHERE product_id = $1`,
+        [product.id]
+      );
+
+      expect(reviewRows).toHaveLength(0);
+    });
   });
 
   describe("Notification flow", () => {
