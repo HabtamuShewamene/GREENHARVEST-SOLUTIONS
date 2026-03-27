@@ -3,6 +3,7 @@
 const express = require("express");
 
 const authMiddleware = require("../middleware/authMiddleware");
+const { requireRole } = require("../middleware/roleMiddleware");
 const {
   addToCart,
   updateCartItem,
@@ -13,6 +14,7 @@ const {
 const router = express.Router();
 
 router.use(authMiddleware);
+router.use(requireRole("buyer"));
 
 router.get("/", getCart);
 router.post("/", addToCart);

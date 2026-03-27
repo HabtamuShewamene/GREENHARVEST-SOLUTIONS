@@ -559,7 +559,25 @@ describeIntegration("Full integration suite (real PostgreSQL)", () => {
       expect(deletedRow).toBeNull();
     });
 
-    test.todo("restrict cart usage to buyer role once route-level authorization is implemented");
+    test("rejects cart usage for non-buyer roles", async () => {
+      const farmerCartResponse = await request(app)
+        .get("/api/cart")
+        .set(authHeader(tokens.farmerToken));
+
+      expect(farmerCartResponse.status).toBe(403);
+      expect(farmerCartResponse.body.message).toContain("Required role: buyer");
+
+      const adminCartResponse = await request(app)
+        .post("/api/cart")
+        .set(authHeader(tokens.adminToken))
+        .send({
+          product_id: 1,
+          quantity: 1,
+        });
+
+      expect(adminCartResponse.status).toBe(403);
+      expect(adminCartResponse.body.message).toContain("Required role: buyer");
+    });
   });
 
   describe("Order flow", () => {
