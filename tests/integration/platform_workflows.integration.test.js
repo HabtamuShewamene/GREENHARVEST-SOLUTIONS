@@ -10,13 +10,7 @@ const {
   resetIntegrationDatabase,
 } = require("../helpers/integrationDb");
 const { createRouteApp } = require("../helpers/createRouteApp");
-
-const hasRealTestDb =
-  Boolean(process.env.TEST_DB_URL) &&
-  !/your_database_password/i.test(process.env.TEST_DB_URL) &&
-  !/example/i.test(process.env.TEST_DB_URL);
-
-const describeIntegration = hasRealTestDb ? describe : describe.skip;
+const describeIntegration = require("../helpers/integrationGate");
 
 describeIntegration("Platform workflows integration", () => {
   const password = "Str0ng!Pass1!";

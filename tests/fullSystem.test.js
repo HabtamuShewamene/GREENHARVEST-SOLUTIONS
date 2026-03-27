@@ -9,12 +9,7 @@ const {
   queryRows,
   resetIntegrationDatabase,
 } = require("./helpers/integrationDb");
-
-const hasRealTestDb =
-  Boolean(process.env.TEST_DB_URL) &&
-  !/your_database_password/i.test(process.env.TEST_DB_URL) &&
-  !/example/i.test(process.env.TEST_DB_URL);
-const describeIntegration = hasRealTestDb ? describe : describe.skip;
+const describeIntegration = require("./helpers/integrationGate");
 
 describeIntegration("Full integration suite (real PostgreSQL)", () => {
   const password = "Str0ng!Pass1!";
