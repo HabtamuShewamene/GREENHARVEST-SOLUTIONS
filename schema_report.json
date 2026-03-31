@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-31T06:49:01.587Z",
+  "generatedAt": "2026-03-31T07:08:32.940Z",
   "fixMode": false,
   "modelsDir": "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models",
   "reportPath": "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\schema_report.json",
@@ -7,11 +7,11 @@
   "summary": {
     "tablesChecked": 26,
     "modelTables": 22,
-    "dbTables": 24,
-    "criticalIssues": 2,
-    "errors": 11,
-    "warnings": 16,
-    "safeFixes": 11
+    "dbTables": 26,
+    "criticalIssues": 0,
+    "errors": 1,
+    "warnings": 23,
+    "safeFixes": 1
   },
   "modelSchema": {
     "kind": "model",
@@ -3062,6 +3062,19 @@
             "defaultValue": null,
             "confidence": "low",
             "sources": []
+          },
+          {
+            "name": "description",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
           }
         ],
         "foreignKeys": [],
@@ -4008,6 +4021,144 @@
         "explicitCreateSql": null
       },
       {
+        "name": "otp_codes",
+        "sources": [],
+        "primaryKeys": [
+          "id"
+        ],
+        "columns": [
+          {
+            "name": "attempts",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "0",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "challenge_hash",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "consumed_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": "now()",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "expires_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "bigint",
+            "udtName": "int8",
+            "defaultValue": "nextval('otp_codes_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "otp_hash",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "purpose",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "bigint",
+            "udtName": "int8",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "user_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "otp_codes_user_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
         "name": "payments",
         "sources": [],
         "primaryKeys": [
@@ -4284,6 +4435,183 @@
         "explicitCreateSql": null
       },
       {
+        "name": "refresh_tokens",
+        "sources": [],
+        "primaryKeys": [
+          "id"
+        ],
+        "columns": [
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": "now()",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "created_by_ip",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "expires_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "family_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "bigint",
+            "udtName": "int8",
+            "defaultValue": "nextval('refresh_tokens_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "last_used_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "replaced_by_token_hash",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "revoked_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "revoked_reason",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "token_hash",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_agent",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "bigint",
+            "udtName": "int8",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "user_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "refresh_tokens_user_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
         "name": "reviews",
         "sources": [],
         "primaryKeys": [
@@ -4509,6 +4837,19 @@
         ],
         "columns": [
           {
+            "name": "backup_email",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
             "name": "created_at",
             "expectedTypes": [],
             "inferredTypes": [],
@@ -4531,6 +4872,45 @@
             "dataType": "character varying",
             "udtName": "varchar",
             "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "is_verified",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "boolean",
+            "udtName": "bool",
+            "defaultValue": "false",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "last_login_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "mfa_enabled",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "boolean",
+            "udtName": "bool",
+            "defaultValue": "false",
             "confidence": "low",
             "sources": []
           },
@@ -4561,7 +4941,46 @@
             "sources": []
           },
           {
+            "name": "password_reset_token_expiry",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "password_reset_token_hash",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
             "name": "phone",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "recovery_phone",
             "expectedTypes": [],
             "inferredTypes": [],
             "typeSources": [],
@@ -4596,6 +5015,32 @@
             "dataType": "integer",
             "udtName": "int4",
             "defaultValue": "nextval('users_user_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "verification_token_expiry",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "verification_token_hash",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
             "confidence": "low",
             "sources": []
           }
@@ -4753,24 +5198,13 @@
         "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\categoryModel.js",
         "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
       ],
-      "status": "error",
+      "status": "ok",
       "matches": [
         "Column match: category_id",
-        "Column match: category_name"
+        "Column match: category_name",
+        "Column match: description"
       ],
-      "issues": [
-        {
-          "severity": "error",
-          "code": "missing_column",
-          "column": "description",
-          "message": "Missing column in DB: description",
-          "sql": [
-            "ALTER TABLE categories ADD COLUMN IF NOT EXISTS description text;"
-          ],
-          "backendSuggestion": "Add description to categories or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
-        }
-      ],
+      "issues": [],
       "expectedPrimaryKeys": [],
       "actualPrimaryKeys": [
         "category_id"
@@ -5061,20 +5495,40 @@
       "sources": [
         "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
       ],
-      "status": "critical",
-      "matches": [],
+      "status": "warning",
+      "matches": [
+        "Column match: attempts",
+        "Column match: challenge_hash",
+        "Column match: consumed_at",
+        "Column match: expires_at",
+        "Column match: otp_hash",
+        "Column match: purpose",
+        "Column match: user_id"
+      ],
       "issues": [
         {
-          "severity": "critical",
-          "code": "missing_table",
-          "message": "Table is referenced by models but missing in DB: otp_codes",
-          "sql": null,
-          "backendSuggestion": "Create otp_codes in PostgreSQL or update the model queries to use the correct table.",
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "created_at",
+          "message": "Extra column in DB: created_at",
+          "sql": "-- Review before removal: ALTER TABLE otp_codes DROP COLUMN created_at;",
+          "backendSuggestion": "Either add created_at to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        },
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "id",
+          "message": "Extra column in DB: id",
+          "sql": "-- Review before removal: ALTER TABLE otp_codes DROP COLUMN id;",
+          "backendSuggestion": "Either add id to the model layer or confirm it is intentionally database-only.",
           "autoFixable": false
         }
       ],
       "expectedPrimaryKeys": [],
-      "actualPrimaryKeys": []
+      "actualPrimaryKeys": [
+        "id"
+      ]
     },
     {
       "tableName": "payments",
@@ -5154,20 +5608,52 @@
       "sources": [
         "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
       ],
-      "status": "critical",
-      "matches": [],
+      "status": "warning",
+      "matches": [
+        "Column match: created_by_ip",
+        "Column match: expires_at",
+        "Column match: family_id",
+        "Column match: last_used_at",
+        "Column match: replaced_by_token_hash",
+        "Column match: revoked_at",
+        "Column match: revoked_reason",
+        "Column match: token_hash",
+        "Column match: user_agent",
+        "Column match: user_id"
+      ],
       "issues": [
         {
-          "severity": "critical",
-          "code": "missing_table",
-          "message": "Table is referenced by models but missing in DB: refresh_tokens",
-          "sql": null,
-          "backendSuggestion": "Create refresh_tokens in PostgreSQL or update the model queries to use the correct table.",
+          "severity": "warning",
+          "code": "type_mismatch",
+          "column": "family_id",
+          "message": "Type mismatch: family_id (expected bigint, found character varying)",
+          "sql": "ALTER TABLE refresh_tokens ALTER COLUMN family_id TYPE bigint USING family_id::bigint;",
+          "backendSuggestion": "Align refresh_tokens.family_id in the model layer and database so both use the same type family.",
+          "autoFixable": false
+        },
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "created_at",
+          "message": "Extra column in DB: created_at",
+          "sql": "-- Review before removal: ALTER TABLE refresh_tokens DROP COLUMN created_at;",
+          "backendSuggestion": "Either add created_at to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        },
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "id",
+          "message": "Extra column in DB: id",
+          "sql": "-- Review before removal: ALTER TABLE refresh_tokens DROP COLUMN id;",
+          "backendSuggestion": "Either add id to the model layer or confirm it is intentionally database-only.",
           "autoFixable": false
         }
       ],
       "expectedPrimaryKeys": [],
-      "actualPrimaryKeys": []
+      "actualPrimaryKeys": [
+        "id"
+      ]
     },
     {
       "tableName": "reviews",
@@ -5239,93 +5725,34 @@
         "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js",
         "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
       ],
-      "status": "error",
+      "status": "warning",
       "matches": [
+        "Column match: backup_email",
         "Column match: created_at",
         "Column match: email",
+        "Column match: is_verified",
+        "Column match: last_login_at",
+        "Column match: mfa_enabled",
         "Column match: name",
         "Column match: password_hash",
+        "Column match: password_reset_token_expiry",
+        "Column match: password_reset_token_hash",
         "Column match: phone",
+        "Column match: recovery_phone",
         "Column match: role_id",
-        "Column match: user_id"
+        "Column match: user_id",
+        "Column match: verification_token_expiry",
+        "Column match: verification_token_hash"
       ],
       "issues": [
         {
-          "severity": "error",
-          "code": "missing_column",
-          "column": "backup_email",
-          "message": "Missing column in DB: backup_email",
-          "sql": [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS backup_email text;"
-          ],
-          "backendSuggestion": "Add backup_email to users or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
-        },
-        {
-          "severity": "error",
-          "code": "missing_column",
-          "column": "is_verified",
-          "message": "Missing column in DB: is_verified",
-          "sql": [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified boolean;"
-          ],
-          "backendSuggestion": "Add is_verified to users or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
-        },
-        {
-          "severity": "error",
-          "code": "missing_column",
-          "column": "last_login_at",
-          "message": "Missing column in DB: last_login_at",
-          "sql": [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at timestamptz;"
-          ],
-          "backendSuggestion": "Add last_login_at to users or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
-        },
-        {
-          "severity": "error",
-          "code": "missing_column",
-          "column": "mfa_enabled",
-          "message": "Missing column in DB: mfa_enabled",
-          "sql": [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled boolean;"
-          ],
-          "backendSuggestion": "Add mfa_enabled to users or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
-        },
-        {
-          "severity": "error",
-          "code": "missing_column",
+          "severity": "warning",
+          "code": "type_mismatch",
           "column": "password_reset_token_expiry",
-          "message": "Missing column in DB: password_reset_token_expiry",
-          "sql": [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expiry text;"
-          ],
-          "backendSuggestion": "Add password_reset_token_expiry to users or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
-        },
-        {
-          "severity": "error",
-          "code": "missing_column",
-          "column": "password_reset_token_hash",
-          "message": "Missing column in DB: password_reset_token_hash",
-          "sql": [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_hash text;"
-          ],
-          "backendSuggestion": "Add password_reset_token_hash to users or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
-        },
-        {
-          "severity": "error",
-          "code": "missing_column",
-          "column": "recovery_phone",
-          "message": "Missing column in DB: recovery_phone",
-          "sql": [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_phone text;"
-          ],
-          "backendSuggestion": "Add recovery_phone to users or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
+          "message": "Type mismatch: password_reset_token_expiry (expected text, found timestamp with time zone)",
+          "sql": "ALTER TABLE users ALTER COLUMN password_reset_token_expiry TYPE text USING password_reset_token_expiry::text;",
+          "backendSuggestion": "Align users.password_reset_token_expiry in the model layer and database so both use the same type family.",
+          "autoFixable": false
         },
         {
           "severity": "error",
@@ -5339,26 +5766,13 @@
           "autoFixable": true
         },
         {
-          "severity": "error",
-          "code": "missing_column",
+          "severity": "warning",
+          "code": "type_mismatch",
           "column": "verification_token_expiry",
-          "message": "Missing column in DB: verification_token_expiry",
-          "sql": [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry text;"
-          ],
-          "backendSuggestion": "Add verification_token_expiry to users or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
-        },
-        {
-          "severity": "error",
-          "code": "missing_column",
-          "column": "verification_token_hash",
-          "message": "Missing column in DB: verification_token_hash",
-          "sql": [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_hash text;"
-          ],
-          "backendSuggestion": "Add verification_token_hash to users or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
+          "message": "Type mismatch: verification_token_expiry (expected text, found timestamp with time zone)",
+          "sql": "ALTER TABLE users ALTER COLUMN verification_token_expiry TYPE text USING verification_token_expiry::text;",
+          "backendSuggestion": "Align users.verification_token_expiry in the model layer and database so both use the same type family.",
+          "autoFixable": false
         }
       ],
       "expectedPrimaryKeys": [],
@@ -5369,22 +5783,11 @@
   ],
   "fixes": {
     "safeFixes": [
-      "ALTER TABLE categories ADD COLUMN IF NOT EXISTS description text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS backup_email text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified boolean;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at timestamptz;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled boolean;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expiry text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_hash text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_phone text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS role text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_hash text;"
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS role text;"
     ],
     "suggestedFixes": [
       "-- Review before removal: ALTER TABLE buyer_profiles DROP COLUMN buyer_id;",
       "-- Review before removal: ALTER TABLE carts DROP COLUMN created_at;",
-      "ALTER TABLE categories ADD COLUMN IF NOT EXISTS description text;",
       "-- Review before removal: ALTER TABLE delivery_profiles DROP COLUMN vehicle_type;",
       "-- Review before removal: ALTER TABLE farmer_profiles DROP COLUMN farm_location;",
       "-- Review before removal: ALTER TABLE farmer_profiles DROP COLUMN farm_name;",
@@ -5394,17 +5797,15 @@
       "-- Review before removal: ALTER TABLE notifications DROP COLUMN notification_id;",
       "-- Review before removal: ALTER TABLE orders DROP COLUMN status;",
       "-- Review before removal: ALTER TABLE orders DROP COLUMN updated_at;",
+      "-- Review before removal: ALTER TABLE otp_codes DROP COLUMN created_at;",
+      "-- Review before removal: ALTER TABLE otp_codes DROP COLUMN id;",
       "-- Review before removal: ALTER TABLE product_images DROP COLUMN image_id;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS backup_email text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified boolean;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at timestamptz;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled boolean;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expiry text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_hash text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_phone text;",
+      "ALTER TABLE refresh_tokens ALTER COLUMN family_id TYPE bigint USING family_id::bigint;",
+      "-- Review before removal: ALTER TABLE refresh_tokens DROP COLUMN created_at;",
+      "-- Review before removal: ALTER TABLE refresh_tokens DROP COLUMN id;",
+      "ALTER TABLE users ALTER COLUMN password_reset_token_expiry TYPE text USING password_reset_token_expiry::text;",
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS role text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_hash text;"
+      "ALTER TABLE users ALTER COLUMN verification_token_expiry TYPE text USING verification_token_expiry::text;"
     ]
   },
   "appliedFixes": []
