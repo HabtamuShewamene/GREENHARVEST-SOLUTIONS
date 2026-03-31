@@ -161,20 +161,6 @@ const findFarmerById = async (farmerId) => {
 		}
 	}
 
-	if (userColumns.includes("role")) {
-		const userResult = await pool.query(
-			`
-				SELECT u.${userIdColumn} AS id
-				FROM users u
-				WHERE u.${userIdColumn} = $1
-					AND LOWER(COALESCE(u.role, '')) = 'farmer'
-			`,
-			[farmerId]
-		);
-
-		return userResult.rows[0] || null;
-	}
-
 	return null;
 };
 

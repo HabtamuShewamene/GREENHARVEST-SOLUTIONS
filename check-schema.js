@@ -189,11 +189,12 @@ function splitCommaAware(input) {
 
 function inferTypeFromName(name) {
   const column = name.toLowerCase();
+  if (column === "family_id") return { type: "varchar", confidence: "medium", source: "naming:family_id" };
   if (column === "id" || column.endsWith("_id")) return { type: "bigint", confidence: "medium", source: "naming:_id" };
   if (column.startsWith("is_") || column.startsWith("has_") || column.endsWith("_enabled") || column.endsWith("_verified") || column.endsWith("_read")) {
     return { type: "boolean", confidence: "medium", source: "naming:boolean" };
   }
-  if (column.endsWith("_at") || column.endsWith("_time") || column.endsWith("_date")) {
+  if (column.endsWith("_at") || column.endsWith("_time") || column.endsWith("_date") || column.endsWith("_expiry") || column.includes("expires_")) {
     return { type: "timestamptz", confidence: "medium", source: "naming:timestamp" };
   }
   if (column.includes("price") || column.includes("amount") || column.includes("total")) {

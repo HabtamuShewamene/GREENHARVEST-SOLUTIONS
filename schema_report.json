@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-31T07:08:32.940Z",
+  "generatedAt": "2026-03-31T07:10:24.108Z",
   "fixMode": false,
   "modelsDir": "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models",
   "reportPath": "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\schema_report.json",
@@ -9,9 +9,9 @@
     "modelTables": 22,
     "dbTables": 26,
     "criticalIssues": 0,
-    "errors": 1,
-    "warnings": 23,
-    "safeFixes": 1
+    "errors": 0,
+    "warnings": 20,
+    "safeFixes": 0
   },
   "modelSchema": {
     "kind": "model",
@@ -1738,10 +1738,10 @@
             "name": "family_id",
             "expectedTypes": [],
             "inferredTypes": [
-              "bigint"
+              "varchar"
             ],
             "typeSources": [
-              "naming:_id"
+              "naming:family_id"
             ],
             "required": null,
             "nullable": null,
@@ -2337,17 +2337,17 @@
             "name": "password_reset_token_expiry",
             "expectedTypes": [],
             "inferredTypes": [
-              "text"
+              "timestamptz"
             ],
             "typeSources": [
-              "naming:text"
+              "naming:timestamp"
             ],
             "required": null,
             "nullable": null,
             "dataType": null,
             "udtName": null,
             "defaultValue": null,
-            "confidence": "low",
+            "confidence": "medium",
             "sources": [
               "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
             ]
@@ -2412,25 +2412,6 @@
             ]
           },
           {
-            "name": "role",
-            "expectedTypes": [],
-            "inferredTypes": [
-              "text"
-            ],
-            "typeSources": [
-              "naming:text"
-            ],
-            "required": null,
-            "nullable": null,
-            "dataType": null,
-            "udtName": null,
-            "defaultValue": null,
-            "confidence": "low",
-            "sources": [
-              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
-            ]
-          },
-          {
             "name": "role_id",
             "expectedTypes": [],
             "inferredTypes": [
@@ -2482,17 +2463,17 @@
             "name": "verification_token_expiry",
             "expectedTypes": [],
             "inferredTypes": [
-              "text"
+              "timestamptz"
             ],
             "typeSources": [
-              "naming:text"
+              "naming:timestamp"
             ],
             "required": null,
             "nullable": null,
             "dataType": null,
             "udtName": null,
             "defaultValue": null,
-            "confidence": "low",
+            "confidence": "medium",
             "sources": [
               "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
             ]
@@ -5624,15 +5605,6 @@
       "issues": [
         {
           "severity": "warning",
-          "code": "type_mismatch",
-          "column": "family_id",
-          "message": "Type mismatch: family_id (expected bigint, found character varying)",
-          "sql": "ALTER TABLE refresh_tokens ALTER COLUMN family_id TYPE bigint USING family_id::bigint;",
-          "backendSuggestion": "Align refresh_tokens.family_id in the model layer and database so both use the same type family.",
-          "autoFixable": false
-        },
-        {
-          "severity": "warning",
           "code": "extra_column",
           "column": "created_at",
           "message": "Extra column in DB: created_at",
@@ -5725,7 +5697,7 @@
         "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js",
         "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
       ],
-      "status": "warning",
+      "status": "ok",
       "matches": [
         "Column match: backup_email",
         "Column match: created_at",
@@ -5744,37 +5716,7 @@
         "Column match: verification_token_expiry",
         "Column match: verification_token_hash"
       ],
-      "issues": [
-        {
-          "severity": "warning",
-          "code": "type_mismatch",
-          "column": "password_reset_token_expiry",
-          "message": "Type mismatch: password_reset_token_expiry (expected text, found timestamp with time zone)",
-          "sql": "ALTER TABLE users ALTER COLUMN password_reset_token_expiry TYPE text USING password_reset_token_expiry::text;",
-          "backendSuggestion": "Align users.password_reset_token_expiry in the model layer and database so both use the same type family.",
-          "autoFixable": false
-        },
-        {
-          "severity": "error",
-          "code": "missing_column",
-          "column": "role",
-          "message": "Missing column in DB: role",
-          "sql": [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS role text;"
-          ],
-          "backendSuggestion": "Add role to users or rename the model field if the live schema uses a different name.",
-          "autoFixable": true
-        },
-        {
-          "severity": "warning",
-          "code": "type_mismatch",
-          "column": "verification_token_expiry",
-          "message": "Type mismatch: verification_token_expiry (expected text, found timestamp with time zone)",
-          "sql": "ALTER TABLE users ALTER COLUMN verification_token_expiry TYPE text USING verification_token_expiry::text;",
-          "backendSuggestion": "Align users.verification_token_expiry in the model layer and database so both use the same type family.",
-          "autoFixable": false
-        }
-      ],
+      "issues": [],
       "expectedPrimaryKeys": [],
       "actualPrimaryKeys": [
         "user_id"
@@ -5782,9 +5724,7 @@
     }
   ],
   "fixes": {
-    "safeFixes": [
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS role text;"
-    ],
+    "safeFixes": [],
     "suggestedFixes": [
       "-- Review before removal: ALTER TABLE buyer_profiles DROP COLUMN buyer_id;",
       "-- Review before removal: ALTER TABLE carts DROP COLUMN created_at;",
@@ -5800,12 +5740,8 @@
       "-- Review before removal: ALTER TABLE otp_codes DROP COLUMN created_at;",
       "-- Review before removal: ALTER TABLE otp_codes DROP COLUMN id;",
       "-- Review before removal: ALTER TABLE product_images DROP COLUMN image_id;",
-      "ALTER TABLE refresh_tokens ALTER COLUMN family_id TYPE bigint USING family_id::bigint;",
       "-- Review before removal: ALTER TABLE refresh_tokens DROP COLUMN created_at;",
-      "-- Review before removal: ALTER TABLE refresh_tokens DROP COLUMN id;",
-      "ALTER TABLE users ALTER COLUMN password_reset_token_expiry TYPE text USING password_reset_token_expiry::text;",
-      "ALTER TABLE users ADD COLUMN IF NOT EXISTS role text;",
-      "ALTER TABLE users ALTER COLUMN verification_token_expiry TYPE text USING verification_token_expiry::text;"
+      "-- Review before removal: ALTER TABLE refresh_tokens DROP COLUMN id;"
     ]
   },
   "appliedFixes": []
