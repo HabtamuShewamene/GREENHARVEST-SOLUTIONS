@@ -1,0 +1,5411 @@
+{
+  "generatedAt": "2026-03-31T06:49:01.587Z",
+  "fixMode": false,
+  "modelsDir": "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models",
+  "reportPath": "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\schema_report.json",
+  "currentSchema": "public",
+  "summary": {
+    "tablesChecked": 26,
+    "modelTables": 22,
+    "dbTables": 24,
+    "criticalIssues": 2,
+    "errors": 11,
+    "warnings": 16,
+    "safeFixes": 11
+  },
+  "modelSchema": {
+    "kind": "model",
+    "tables": [
+      {
+        "name": "agent_farmers",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+        ],
+        "primaryKeys": [
+          "id"
+        ],
+        "columns": [
+          {
+            "name": "agent_id",
+            "expectedTypes": [
+              "BIGINT"
+            ],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "create_table",
+              "naming:_id"
+            ],
+            "required": true,
+            "nullable": false,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "explicit",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "assigned_by",
+            "expectedTypes": [
+              "BIGINT"
+            ],
+            "inferredTypes": [],
+            "typeSources": [
+              "create_table"
+            ],
+            "required": null,
+            "nullable": true,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "explicit",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js"
+            ]
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [
+              "TIMESTAMPTZ"
+            ],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "create_table",
+              "naming:timestamp"
+            ],
+            "required": true,
+            "nullable": false,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "explicit",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js"
+            ]
+          },
+          {
+            "name": "farmer_id",
+            "expectedTypes": [
+              "BIGINT"
+            ],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "create_table",
+              "naming:_id"
+            ],
+            "required": true,
+            "nullable": false,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "explicit",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "id",
+            "expectedTypes": [
+              "BIGSERIAL"
+            ],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "create_table",
+              "naming:_id"
+            ],
+            "required": true,
+            "nullable": false,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "explicit",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "agent_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js"
+            ]
+          },
+          {
+            "column": "assigned_by",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js"
+            ]
+          },
+          {
+            "column": "farmer_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js"
+            ]
+          }
+        ],
+        "explicitCreateSql": "CREATE TABLE IF NOT EXISTS agent_farmers ( id BIGSERIAL PRIMARY KEY, agent_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE, farmer_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE, assigned_by BIGINT REFERENCES users(user_id) ON DELETE SET NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), CONSTRAINT unique_agent_farmer_assignment UNIQUE (agent_id, farmer_id) )"
+      },
+      {
+        "name": "buyer_profiles",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "cart_items",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "cart_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+            ]
+          },
+          {
+            "name": "cart_item_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+            ]
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+            ]
+          },
+          {
+            "name": "quantity",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "integer"
+            ],
+            "typeSources": [
+              "naming:integer"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "cart_id",
+            "referencedTable": "carts",
+            "referencedColumn": "cart_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+            ]
+          },
+          {
+            "column": "product_id",
+            "referencedTable": "products",
+            "referencedColumn": "product_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "carts",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "buyer_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+            ]
+          },
+          {
+            "name": "cart_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "categories",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\categoryModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "category_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "category_name",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\categoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "description",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\categoryModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "deliveries",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "delivery_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js"
+            ]
+          },
+          {
+            "name": "delivery_partner_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js"
+            ]
+          },
+          {
+            "name": "delivery_status",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "estimated_time",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js"
+            ]
+          },
+          {
+            "name": "order_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "order_id",
+            "referencedTable": "orders",
+            "referencedColumn": "order_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "delivery_profiles",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "delivery_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js"
+            ]
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "user_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "farmer_profiles",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "field_agent_profiles",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "inventory",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "inventory_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js"
+            ]
+          },
+          {
+            "name": "last_updated",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "quantity",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "integer"
+            ],
+            "typeSources": [
+              "naming:integer"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "product_id",
+            "referencedTable": "products",
+            "referencedColumn": "product_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "notifications",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\notificationModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\notificationModel.js"
+            ]
+          },
+          {
+            "name": "is_read",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "boolean"
+            ],
+            "typeSources": [
+              "naming:boolean"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\notificationModel.js"
+            ]
+          },
+          {
+            "name": "message",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\notificationModel.js"
+            ]
+          },
+          {
+            "name": "title",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\notificationModel.js"
+            ]
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\notificationModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "order_items",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "order_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "order_item_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "price",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "numeric"
+            ],
+            "typeSources": [
+              "naming:numeric"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "quantity",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "integer"
+            ],
+            "typeSources": [
+              "naming:integer"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "order_id",
+            "referencedTable": "orders",
+            "referencedColumn": "order_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "column": "product_id",
+            "referencedTable": "products",
+            "referencedColumn": "product_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "orders",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "address_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "buyer_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "delivery_partner_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "farmer_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "field_agent_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+            ]
+          },
+          {
+            "name": "order_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "order_status",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "total_amount",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "numeric"
+            ],
+            "typeSources": [
+              "naming:numeric"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "otp_codes",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "attempts",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "integer"
+            ],
+            "typeSources": [
+              "naming:integer"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "challenge_hash",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "consumed_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "expires_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "otp_hash",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "purpose",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "payments",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "order_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "paid_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "payment_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "payment_method",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "payment_status",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "order_id",
+            "referencedTable": "orders",
+            "referencedColumn": "order_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "product_images",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "image_url",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "products",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "category_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "description",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "farmer_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "name",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "price",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "numeric"
+            ],
+            "typeSources": [
+              "naming:numeric"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "category_id",
+            "referencedTable": "categories",
+            "referencedColumn": "category_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "refresh_tokens",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "created_by_ip",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "expires_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "family_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "last_used_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "replaced_by_token_hash",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "revoked_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "revoked_reason",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "token_hash",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "user_agent",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "reviews",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "buyer_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js"
+            ]
+          },
+          {
+            "name": "comment",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js"
+            ]
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js"
+            ]
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js"
+            ]
+          },
+          {
+            "name": "rating",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js"
+            ]
+          },
+          {
+            "name": "review_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "roles",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "role_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "role_name",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "transactions",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "amount",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "numeric"
+            ],
+            "typeSources": [
+              "naming:numeric"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "payment_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "transaction_date",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          },
+          {
+            "name": "transaction_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "payment_id",
+            "referencedTable": "payments",
+            "referencedColumn": "payment_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "users",
+        "sources": [
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js",
+          "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+        ],
+        "primaryKeys": [],
+        "columns": [
+          {
+            "name": "backup_email",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "email",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "is_verified",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "boolean"
+            ],
+            "typeSources": [
+              "naming:boolean"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "last_login_at",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "timestamptz"
+            ],
+            "typeSources": [
+              "naming:timestamp"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "mfa_enabled",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "boolean"
+            ],
+            "typeSources": [
+              "naming:boolean"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "name",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "password_hash",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "password_reset_token_expiry",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "password_reset_token_hash",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "phone",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "recovery_phone",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "role",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+            ]
+          },
+          {
+            "name": "role_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "bigint"
+            ],
+            "typeSources": [
+              "naming:_id"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "medium",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "verification_token_expiry",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          },
+          {
+            "name": "verification_token_hash",
+            "expectedTypes": [],
+            "inferredTypes": [
+              "text"
+            ],
+            "typeSources": [
+              "naming:text"
+            ],
+            "required": null,
+            "nullable": null,
+            "dataType": null,
+            "udtName": null,
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "role_id",
+            "referencedTable": "roles",
+            "referencedColumn": "role_id",
+            "confidence": "high",
+            "sources": [
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+              "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      }
+    ]
+  },
+  "dbSchema": {
+    "kind": "database",
+    "tables": [
+      {
+        "name": "addresses",
+        "sources": [],
+        "primaryKeys": [
+          "address_id"
+        ],
+        "columns": [
+          {
+            "name": "address_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('addresses_address_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "city",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "country",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "postal_code",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "region",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "street",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "user_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "addresses_user_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "admin_actions",
+        "sources": [],
+        "primaryKeys": [
+          "action_id"
+        ],
+        "columns": [
+          {
+            "name": "action_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('admin_actions_action_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "action_type",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "admin_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "description",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "admin_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "admin_actions_admin_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "agent_farmers",
+        "sources": [],
+        "primaryKeys": [
+          "id"
+        ],
+        "columns": [
+          {
+            "name": "agent_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "bigint",
+            "udtName": "int8",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "assigned_by",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "bigint",
+            "udtName": "int8",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "timestamp with time zone",
+            "udtName": "timestamptz",
+            "defaultValue": "now()",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "farmer_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "bigint",
+            "udtName": "int8",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "bigint",
+            "udtName": "int8",
+            "defaultValue": "nextval('agent_farmers_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "agent_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "agent_farmers_agent_id_fkey"
+            ]
+          },
+          {
+            "column": "assigned_by",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "agent_farmers_assigned_by_fkey"
+            ]
+          },
+          {
+            "column": "farmer_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "agent_farmers_farmer_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "buyer_profiles",
+        "sources": [],
+        "primaryKeys": [
+          "buyer_id"
+        ],
+        "columns": [
+          {
+            "name": "buyer_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('buyer_profiles_buyer_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "user_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "buyer_profiles_user_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "cart_items",
+        "sources": [],
+        "primaryKeys": [
+          "cart_item_id"
+        ],
+        "columns": [
+          {
+            "name": "cart_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "cart_item_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('cart_items_cart_item_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "quantity",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "cart_id",
+            "referencedTable": "carts",
+            "referencedColumn": "cart_id",
+            "confidence": "explicit",
+            "sources": [
+              "cart_items_cart_id_fkey"
+            ]
+          },
+          {
+            "column": "product_id",
+            "referencedTable": "products",
+            "referencedColumn": "product_id",
+            "confidence": "explicit",
+            "sources": [
+              "cart_items_product_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "carts",
+        "sources": [],
+        "primaryKeys": [
+          "cart_id"
+        ],
+        "columns": [
+          {
+            "name": "buyer_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "cart_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('carts_cart_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "buyer_id",
+            "referencedTable": "buyer_profiles",
+            "referencedColumn": "buyer_id",
+            "confidence": "explicit",
+            "sources": [
+              "carts_buyer_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "categories",
+        "sources": [],
+        "primaryKeys": [
+          "category_id"
+        ],
+        "columns": [
+          {
+            "name": "category_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('categories_category_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "category_name",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "deliveries",
+        "sources": [],
+        "primaryKeys": [
+          "delivery_id"
+        ],
+        "columns": [
+          {
+            "name": "delivery_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('deliveries_delivery_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "delivery_partner_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "delivery_status",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "estimated_time",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "order_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "delivery_partner_id",
+            "referencedTable": "delivery_profiles",
+            "referencedColumn": "delivery_id",
+            "confidence": "explicit",
+            "sources": [
+              "deliveries_delivery_partner_id_fkey"
+            ]
+          },
+          {
+            "column": "order_id",
+            "referencedTable": "orders",
+            "referencedColumn": "order_id",
+            "confidence": "explicit",
+            "sources": [
+              "deliveries_order_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "delivery_profiles",
+        "sources": [],
+        "primaryKeys": [
+          "delivery_id"
+        ],
+        "columns": [
+          {
+            "name": "delivery_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('delivery_profiles_delivery_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "vehicle_type",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "user_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "delivery_profiles_user_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "farmer_profiles",
+        "sources": [],
+        "primaryKeys": [
+          "farmer_id"
+        ],
+        "columns": [
+          {
+            "name": "farm_location",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "farm_name",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "farmer_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('farmer_profiles_farmer_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "user_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "farmer_profiles_user_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "farmers",
+        "sources": [],
+        "primaryKeys": [
+          "farmer_id"
+        ],
+        "columns": [
+          {
+            "name": "address",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "farmer_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('farmers_farmer_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "field_agent_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "full_name",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "phone",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "field_agent_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "fk_farmer_field_agent"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "field_agent_profiles",
+        "sources": [],
+        "primaryKeys": [
+          "agent_id"
+        ],
+        "columns": [
+          {
+            "name": "agent_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('field_agent_profiles_agent_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "region",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "user_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "field_agent_profiles_user_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "inventory",
+        "sources": [],
+        "primaryKeys": [
+          "inventory_id"
+        ],
+        "columns": [
+          {
+            "name": "inventory_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('inventory_inventory_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "last_updated",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "quantity",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "product_id",
+            "referencedTable": "products",
+            "referencedColumn": "product_id",
+            "confidence": "explicit",
+            "sources": [
+              "inventory_product_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "logs",
+        "sources": [],
+        "primaryKeys": [
+          "log_id"
+        ],
+        "columns": [
+          {
+            "name": "action",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "log_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('logs_log_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "table_name",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "user_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "logs_user_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "notifications",
+        "sources": [],
+        "primaryKeys": [
+          "notification_id"
+        ],
+        "columns": [
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "is_read",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "boolean",
+            "udtName": "bool",
+            "defaultValue": "false",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "message",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "notification_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('notifications_notification_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "title",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "user_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "notifications_user_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "order_items",
+        "sources": [],
+        "primaryKeys": [
+          "order_item_id"
+        ],
+        "columns": [
+          {
+            "name": "order_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "order_item_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('order_items_order_item_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "price",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "numeric",
+            "udtName": "numeric",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "quantity",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "order_id",
+            "referencedTable": "orders",
+            "referencedColumn": "order_id",
+            "confidence": "explicit",
+            "sources": [
+              "order_items_order_id_fkey"
+            ]
+          },
+          {
+            "column": "product_id",
+            "referencedTable": "products",
+            "referencedColumn": "product_id",
+            "confidence": "explicit",
+            "sources": [
+              "order_items_product_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "orders",
+        "sources": [],
+        "primaryKeys": [
+          "order_id"
+        ],
+        "columns": [
+          {
+            "name": "address_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "buyer_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "delivery_partner_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "farmer_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "field_agent_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "order_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('orders_order_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "order_status",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "status",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": "'pending'::character varying",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "total_amount",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "numeric",
+            "udtName": "numeric",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "updated_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "address_id",
+            "referencedTable": "addresses",
+            "referencedColumn": "address_id",
+            "confidence": "explicit",
+            "sources": [
+              "orders_address_id_fkey"
+            ]
+          },
+          {
+            "column": "buyer_id",
+            "referencedTable": "buyer_profiles",
+            "referencedColumn": "buyer_id",
+            "confidence": "explicit",
+            "sources": [
+              "orders_buyer_id_fkey"
+            ]
+          },
+          {
+            "column": "delivery_partner_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "fk_order_delivery"
+            ]
+          },
+          {
+            "column": "farmer_id",
+            "referencedTable": "farmers",
+            "referencedColumn": "farmer_id",
+            "confidence": "explicit",
+            "sources": [
+              "fk_order_farmer"
+            ]
+          },
+          {
+            "column": "field_agent_id",
+            "referencedTable": "users",
+            "referencedColumn": "user_id",
+            "confidence": "explicit",
+            "sources": [
+              "fk_order_field_agent"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "payments",
+        "sources": [],
+        "primaryKeys": [
+          "payment_id"
+        ],
+        "columns": [
+          {
+            "name": "order_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "paid_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "payment_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('payments_payment_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "payment_method",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "payment_status",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "order_id",
+            "referencedTable": "orders",
+            "referencedColumn": "order_id",
+            "confidence": "explicit",
+            "sources": [
+              "payments_order_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "product_images",
+        "sources": [],
+        "primaryKeys": [
+          "image_id"
+        ],
+        "columns": [
+          {
+            "name": "image_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('product_images_image_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "image_url",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "product_id",
+            "referencedTable": "products",
+            "referencedColumn": "product_id",
+            "confidence": "explicit",
+            "sources": [
+              "product_images_product_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "products",
+        "sources": [],
+        "primaryKeys": [
+          "product_id"
+        ],
+        "columns": [
+          {
+            "name": "category_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "description",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "farmer_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "name",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "price",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "numeric",
+            "udtName": "numeric",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('products_product_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "category_id",
+            "referencedTable": "categories",
+            "referencedColumn": "category_id",
+            "confidence": "explicit",
+            "sources": [
+              "products_category_id_fkey"
+            ]
+          },
+          {
+            "column": "farmer_id",
+            "referencedTable": "farmer_profiles",
+            "referencedColumn": "farmer_id",
+            "confidence": "explicit",
+            "sources": [
+              "products_farmer_id_fkey"
+            ]
+          },
+          {
+            "column": "farmer_id",
+            "referencedTable": "farmers",
+            "referencedColumn": "farmer_id",
+            "confidence": "explicit",
+            "sources": [
+              "fk_product_farmer"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "reviews",
+        "sources": [],
+        "primaryKeys": [
+          "review_id"
+        ],
+        "columns": [
+          {
+            "name": "buyer_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "comment",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "product_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "rating",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "review_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('reviews_review_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "buyer_id",
+            "referencedTable": "buyer_profiles",
+            "referencedColumn": "buyer_id",
+            "confidence": "explicit",
+            "sources": [
+              "reviews_buyer_id_fkey"
+            ]
+          },
+          {
+            "column": "product_id",
+            "referencedTable": "products",
+            "referencedColumn": "product_id",
+            "confidence": "explicit",
+            "sources": [
+              "reviews_product_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "roles",
+        "sources": [],
+        "primaryKeys": [
+          "role_id"
+        ],
+        "columns": [
+          {
+            "name": "role_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('roles_role_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "role_name",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "transactions",
+        "sources": [],
+        "primaryKeys": [
+          "transaction_id"
+        ],
+        "columns": [
+          {
+            "name": "amount",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "numeric",
+            "udtName": "numeric",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "payment_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "transaction_date",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "transaction_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('transactions_transaction_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "payment_id",
+            "referencedTable": "payments",
+            "referencedColumn": "payment_id",
+            "confidence": "explicit",
+            "sources": [
+              "transactions_payment_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      },
+      {
+        "name": "users",
+        "sources": [],
+        "primaryKeys": [
+          "user_id"
+        ],
+        "columns": [
+          {
+            "name": "created_at",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "timestamp without time zone",
+            "udtName": "timestamp",
+            "defaultValue": "CURRENT_TIMESTAMP",
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "email",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "name",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "password_hash",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "text",
+            "udtName": "text",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "phone",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "character varying",
+            "udtName": "varchar",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "role_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": true,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": null,
+            "confidence": "low",
+            "sources": []
+          },
+          {
+            "name": "user_id",
+            "expectedTypes": [],
+            "inferredTypes": [],
+            "typeSources": [],
+            "required": null,
+            "nullable": false,
+            "dataType": "integer",
+            "udtName": "int4",
+            "defaultValue": "nextval('users_user_id_seq'::regclass)",
+            "confidence": "low",
+            "sources": []
+          }
+        ],
+        "foreignKeys": [
+          {
+            "column": "role_id",
+            "referencedTable": "roles",
+            "referencedColumn": "role_id",
+            "confidence": "explicit",
+            "sources": [
+              "users_role_id_fkey"
+            ]
+          }
+        ],
+        "explicitCreateSql": null
+      }
+    ]
+  },
+  "tables": [
+    {
+      "tableName": "addresses",
+      "sources": [],
+      "status": "warning",
+      "matches": [],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "unmodeled_table",
+          "message": "Table exists in DB but is not referenced by the model layer: addresses",
+          "sql": null,
+          "backendSuggestion": "Confirm whether addresses should be covered by a backend model.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "address_id"
+      ]
+    },
+    {
+      "tableName": "admin_actions",
+      "sources": [],
+      "status": "warning",
+      "matches": [],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "unmodeled_table",
+          "message": "Table exists in DB but is not referenced by the model layer: admin_actions",
+          "sql": null,
+          "backendSuggestion": "Confirm whether admin_actions should be covered by a backend model.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "action_id"
+      ]
+    },
+    {
+      "tableName": "agent_farmers",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+      ],
+      "status": "ok",
+      "matches": [
+        "Column match: agent_id",
+        "Column match: assigned_by",
+        "Column match: created_at",
+        "Column match: farmer_id",
+        "Column match: id"
+      ],
+      "issues": [],
+      "expectedPrimaryKeys": [
+        "id"
+      ],
+      "actualPrimaryKeys": [
+        "id"
+      ]
+    },
+    {
+      "tableName": "buyer_profiles",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+      ],
+      "status": "warning",
+      "matches": [
+        "Column match: user_id"
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "buyer_id",
+          "message": "Extra column in DB: buyer_id",
+          "sql": "-- Review before removal: ALTER TABLE buyer_profiles DROP COLUMN buyer_id;",
+          "backendSuggestion": "Either add buyer_id to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "buyer_id"
+      ]
+    },
+    {
+      "tableName": "cart_items",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+      ],
+      "status": "ok",
+      "matches": [
+        "Column match: cart_id",
+        "Column match: cart_item_id",
+        "Column match: product_id",
+        "Column match: quantity"
+      ],
+      "issues": [],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "cart_item_id"
+      ]
+    },
+    {
+      "tableName": "carts",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js"
+      ],
+      "status": "warning",
+      "matches": [
+        "Column match: buyer_id",
+        "Column match: cart_id"
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "created_at",
+          "message": "Extra column in DB: created_at",
+          "sql": "-- Review before removal: ALTER TABLE carts DROP COLUMN created_at;",
+          "backendSuggestion": "Either add created_at to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "cart_id"
+      ]
+    },
+    {
+      "tableName": "categories",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\categoryModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+      ],
+      "status": "error",
+      "matches": [
+        "Column match: category_id",
+        "Column match: category_name"
+      ],
+      "issues": [
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "description",
+          "message": "Missing column in DB: description",
+          "sql": [
+            "ALTER TABLE categories ADD COLUMN IF NOT EXISTS description text;"
+          ],
+          "backendSuggestion": "Add description to categories or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "category_id"
+      ]
+    },
+    {
+      "tableName": "deliveries",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+      ],
+      "status": "ok",
+      "matches": [
+        "Column match: delivery_id",
+        "Column match: delivery_partner_id",
+        "Column match: delivery_status",
+        "Column match: estimated_time",
+        "Column match: order_id"
+      ],
+      "issues": [],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "delivery_id"
+      ]
+    },
+    {
+      "tableName": "delivery_profiles",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+      ],
+      "status": "warning",
+      "matches": [
+        "Column match: delivery_id",
+        "Column match: user_id"
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "vehicle_type",
+          "message": "Extra column in DB: vehicle_type",
+          "sql": "-- Review before removal: ALTER TABLE delivery_profiles DROP COLUMN vehicle_type;",
+          "backendSuggestion": "Either add vehicle_type to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "delivery_id"
+      ]
+    },
+    {
+      "tableName": "farmer_profiles",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+      ],
+      "status": "warning",
+      "matches": [
+        "Column match: user_id"
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "farm_location",
+          "message": "Extra column in DB: farm_location",
+          "sql": "-- Review before removal: ALTER TABLE farmer_profiles DROP COLUMN farm_location;",
+          "backendSuggestion": "Either add farm_location to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        },
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "farm_name",
+          "message": "Extra column in DB: farm_name",
+          "sql": "-- Review before removal: ALTER TABLE farmer_profiles DROP COLUMN farm_name;",
+          "backendSuggestion": "Either add farm_name to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        },
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "farmer_id",
+          "message": "Extra column in DB: farmer_id",
+          "sql": "-- Review before removal: ALTER TABLE farmer_profiles DROP COLUMN farmer_id;",
+          "backendSuggestion": "Either add farmer_id to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "farmer_id"
+      ]
+    },
+    {
+      "tableName": "farmers",
+      "sources": [],
+      "status": "warning",
+      "matches": [],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "unmodeled_table",
+          "message": "Table exists in DB but is not referenced by the model layer: farmers",
+          "sql": null,
+          "backendSuggestion": "Confirm whether farmers should be covered by a backend model.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "farmer_id"
+      ]
+    },
+    {
+      "tableName": "field_agent_profiles",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+      ],
+      "status": "warning",
+      "matches": [
+        "Column match: user_id"
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "agent_id",
+          "message": "Extra column in DB: agent_id",
+          "sql": "-- Review before removal: ALTER TABLE field_agent_profiles DROP COLUMN agent_id;",
+          "backendSuggestion": "Either add agent_id to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        },
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "region",
+          "message": "Extra column in DB: region",
+          "sql": "-- Review before removal: ALTER TABLE field_agent_profiles DROP COLUMN region;",
+          "backendSuggestion": "Either add region to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "agent_id"
+      ]
+    },
+    {
+      "tableName": "inventory",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+      ],
+      "status": "ok",
+      "matches": [
+        "Column match: inventory_id",
+        "Column match: last_updated",
+        "Column match: product_id",
+        "Column match: quantity"
+      ],
+      "issues": [],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "inventory_id"
+      ]
+    },
+    {
+      "tableName": "logs",
+      "sources": [],
+      "status": "warning",
+      "matches": [],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "unmodeled_table",
+          "message": "Table exists in DB but is not referenced by the model layer: logs",
+          "sql": null,
+          "backendSuggestion": "Confirm whether logs should be covered by a backend model.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "log_id"
+      ]
+    },
+    {
+      "tableName": "notifications",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\notificationModel.js"
+      ],
+      "status": "warning",
+      "matches": [
+        "Column match: created_at",
+        "Column match: is_read",
+        "Column match: message",
+        "Column match: title",
+        "Column match: user_id"
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "notification_id",
+          "message": "Extra column in DB: notification_id",
+          "sql": "-- Review before removal: ALTER TABLE notifications DROP COLUMN notification_id;",
+          "backendSuggestion": "Either add notification_id to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "notification_id"
+      ]
+    },
+    {
+      "tableName": "order_items",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js"
+      ],
+      "status": "ok",
+      "matches": [
+        "Column match: order_id",
+        "Column match: order_item_id",
+        "Column match: price",
+        "Column match: product_id",
+        "Column match: quantity"
+      ],
+      "issues": [],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "order_item_id"
+      ]
+    },
+    {
+      "tableName": "orders",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+      ],
+      "status": "warning",
+      "matches": [
+        "Column match: address_id",
+        "Column match: buyer_id",
+        "Column match: created_at",
+        "Column match: delivery_partner_id",
+        "Column match: farmer_id",
+        "Column match: field_agent_id",
+        "Column match: order_id",
+        "Column match: order_status",
+        "Column match: total_amount"
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "status",
+          "message": "Extra column in DB: status",
+          "sql": "-- Review before removal: ALTER TABLE orders DROP COLUMN status;",
+          "backendSuggestion": "Either add status to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        },
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "updated_at",
+          "message": "Extra column in DB: updated_at",
+          "sql": "-- Review before removal: ALTER TABLE orders DROP COLUMN updated_at;",
+          "backendSuggestion": "Either add updated_at to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "order_id"
+      ]
+    },
+    {
+      "tableName": "otp_codes",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+      ],
+      "status": "critical",
+      "matches": [],
+      "issues": [
+        {
+          "severity": "critical",
+          "code": "missing_table",
+          "message": "Table is referenced by models but missing in DB: otp_codes",
+          "sql": null,
+          "backendSuggestion": "Create otp_codes in PostgreSQL or update the model queries to use the correct table.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": []
+    },
+    {
+      "tableName": "payments",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+      ],
+      "status": "ok",
+      "matches": [
+        "Column match: order_id",
+        "Column match: paid_at",
+        "Column match: payment_id",
+        "Column match: payment_method",
+        "Column match: payment_status"
+      ],
+      "issues": [],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "payment_id"
+      ]
+    },
+    {
+      "tableName": "product_images",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+      ],
+      "status": "warning",
+      "matches": [
+        "Column match: image_url",
+        "Column match: product_id"
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "extra_column",
+          "column": "image_id",
+          "message": "Extra column in DB: image_id",
+          "sql": "-- Review before removal: ALTER TABLE product_images DROP COLUMN image_id;",
+          "backendSuggestion": "Either add image_id to the model layer or confirm it is intentionally database-only.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "image_id"
+      ]
+    },
+    {
+      "tableName": "products",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\orderModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js"
+      ],
+      "status": "ok",
+      "matches": [
+        "Column match: category_id",
+        "Column match: created_at",
+        "Column match: description",
+        "Column match: farmer_id",
+        "Column match: name",
+        "Column match: price",
+        "Column match: product_id"
+      ],
+      "issues": [],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "product_id"
+      ]
+    },
+    {
+      "tableName": "refresh_tokens",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\authSecurityModel.js"
+      ],
+      "status": "critical",
+      "matches": [],
+      "issues": [
+        {
+          "severity": "critical",
+          "code": "missing_table",
+          "message": "Table is referenced by models but missing in DB: refresh_tokens",
+          "sql": null,
+          "backendSuggestion": "Create refresh_tokens in PostgreSQL or update the model queries to use the correct table.",
+          "autoFixable": false
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": []
+    },
+    {
+      "tableName": "reviews",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js"
+      ],
+      "status": "ok",
+      "matches": [
+        "Column match: buyer_id",
+        "Column match: comment",
+        "Column match: created_at",
+        "Column match: product_id",
+        "Column match: rating",
+        "Column match: review_id"
+      ],
+      "issues": [],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "review_id"
+      ]
+    },
+    {
+      "tableName": "roles",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+      ],
+      "status": "ok",
+      "matches": [
+        "Column match: role_id",
+        "Column match: role_name"
+      ],
+      "issues": [],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "role_id"
+      ]
+    },
+    {
+      "tableName": "transactions",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\paymentModel.js"
+      ],
+      "status": "ok",
+      "matches": [
+        "Column match: amount",
+        "Column match: payment_id",
+        "Column match: transaction_date",
+        "Column match: transaction_id"
+      ],
+      "issues": [],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "transaction_id"
+      ]
+    },
+    {
+      "tableName": "users",
+      "sources": [
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\adminModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\agentModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\cartModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\deliveryModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\inventoryModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\productModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\reviewModel.js",
+        "C:\\ecommerce hub\\GREENHARVEST-SOLUTIONS\\src\\models\\userModel.js"
+      ],
+      "status": "error",
+      "matches": [
+        "Column match: created_at",
+        "Column match: email",
+        "Column match: name",
+        "Column match: password_hash",
+        "Column match: phone",
+        "Column match: role_id",
+        "Column match: user_id"
+      ],
+      "issues": [
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "backup_email",
+          "message": "Missing column in DB: backup_email",
+          "sql": [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS backup_email text;"
+          ],
+          "backendSuggestion": "Add backup_email to users or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        },
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "is_verified",
+          "message": "Missing column in DB: is_verified",
+          "sql": [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified boolean;"
+          ],
+          "backendSuggestion": "Add is_verified to users or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        },
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "last_login_at",
+          "message": "Missing column in DB: last_login_at",
+          "sql": [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at timestamptz;"
+          ],
+          "backendSuggestion": "Add last_login_at to users or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        },
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "mfa_enabled",
+          "message": "Missing column in DB: mfa_enabled",
+          "sql": [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled boolean;"
+          ],
+          "backendSuggestion": "Add mfa_enabled to users or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        },
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "password_reset_token_expiry",
+          "message": "Missing column in DB: password_reset_token_expiry",
+          "sql": [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expiry text;"
+          ],
+          "backendSuggestion": "Add password_reset_token_expiry to users or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        },
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "password_reset_token_hash",
+          "message": "Missing column in DB: password_reset_token_hash",
+          "sql": [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_hash text;"
+          ],
+          "backendSuggestion": "Add password_reset_token_hash to users or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        },
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "recovery_phone",
+          "message": "Missing column in DB: recovery_phone",
+          "sql": [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_phone text;"
+          ],
+          "backendSuggestion": "Add recovery_phone to users or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        },
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "role",
+          "message": "Missing column in DB: role",
+          "sql": [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS role text;"
+          ],
+          "backendSuggestion": "Add role to users or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        },
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "verification_token_expiry",
+          "message": "Missing column in DB: verification_token_expiry",
+          "sql": [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry text;"
+          ],
+          "backendSuggestion": "Add verification_token_expiry to users or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        },
+        {
+          "severity": "error",
+          "code": "missing_column",
+          "column": "verification_token_hash",
+          "message": "Missing column in DB: verification_token_hash",
+          "sql": [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_hash text;"
+          ],
+          "backendSuggestion": "Add verification_token_hash to users or rename the model field if the live schema uses a different name.",
+          "autoFixable": true
+        }
+      ],
+      "expectedPrimaryKeys": [],
+      "actualPrimaryKeys": [
+        "user_id"
+      ]
+    }
+  ],
+  "fixes": {
+    "safeFixes": [
+      "ALTER TABLE categories ADD COLUMN IF NOT EXISTS description text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS backup_email text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified boolean;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at timestamptz;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled boolean;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expiry text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_hash text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_phone text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS role text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_hash text;"
+    ],
+    "suggestedFixes": [
+      "-- Review before removal: ALTER TABLE buyer_profiles DROP COLUMN buyer_id;",
+      "-- Review before removal: ALTER TABLE carts DROP COLUMN created_at;",
+      "ALTER TABLE categories ADD COLUMN IF NOT EXISTS description text;",
+      "-- Review before removal: ALTER TABLE delivery_profiles DROP COLUMN vehicle_type;",
+      "-- Review before removal: ALTER TABLE farmer_profiles DROP COLUMN farm_location;",
+      "-- Review before removal: ALTER TABLE farmer_profiles DROP COLUMN farm_name;",
+      "-- Review before removal: ALTER TABLE farmer_profiles DROP COLUMN farmer_id;",
+      "-- Review before removal: ALTER TABLE field_agent_profiles DROP COLUMN agent_id;",
+      "-- Review before removal: ALTER TABLE field_agent_profiles DROP COLUMN region;",
+      "-- Review before removal: ALTER TABLE notifications DROP COLUMN notification_id;",
+      "-- Review before removal: ALTER TABLE orders DROP COLUMN status;",
+      "-- Review before removal: ALTER TABLE orders DROP COLUMN updated_at;",
+      "-- Review before removal: ALTER TABLE product_images DROP COLUMN image_id;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS backup_email text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified boolean;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at timestamptz;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled boolean;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expiry text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_hash text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_phone text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS role text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry text;",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_hash text;"
+    ]
+  },
+  "appliedFixes": []
+}
