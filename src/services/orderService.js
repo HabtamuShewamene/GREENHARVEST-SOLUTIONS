@@ -1,6 +1,7 @@
 // Order service that manages order creation, totals, inventory updates, and status changes.
 const { pool } = require("../config/db");
 const logger = require("../utils/logger");
+const notificationModel = require("../models/notificationModel");
 const orderModel = require("../models/orderModel");
 const { normalizeRole } = require("../utils/roles");
 const { isPositiveInteger } = require("../utils/validators");
@@ -22,6 +23,28 @@ const createServiceError = (message, statusCode, extra = {}) => {
 	error.statusCode = statusCode;
 	Object.assign(error, extra);
 	return error;
+};
+
+const emitOrderCreatedNotification = async ({ order }) => {
+	if (!order || !order.id || !order.buyer_id) {
+		return;
+	}
+
+	try {
+		await notificationModel.createNotificationForUser({
+			user_id: Number(order.buyer_id),
+			title: "Order created",
+			message: `Your order #${order.id} was created successfully.`,
+			type: "order",
+		});
+	} catch (error) {
+		logger.warn("Order notification emit failed", {
+			order_id: order.id,
+			buyer_id: order.buyer_id,
+			message: error.message,
+			code: error.code,
+		});
+	}
 };
 
 const getOrdersForBuyer = async (buyer_id, order_id = null) => {
@@ -221,7 +244,11 @@ const createOrder = async (buyer_id, payload = {}) => {
 
 		logger.info("Order created", { order_id: order.id, buyer_id });
 		const createdOrders = await getOrdersForBuyer(buyer_id, order.id);
-		return createdOrders[0];
+		const createdOrder = createdOrders[0];
+
+		await emitOrderCreatedNotification({ order: createdOrder });
+
+		return createdOrder;
 	} catch (error) {
 		await client.query("ROLLBACK");
 		throw error;

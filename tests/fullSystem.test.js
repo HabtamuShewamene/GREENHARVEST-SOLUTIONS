@@ -9,12 +9,7 @@ const {
   queryRows,
   resetIntegrationDatabase,
 } = require("./helpers/integrationDb");
-
-const hasRealTestDb =
-  Boolean(process.env.TEST_DB_URL) &&
-  !/your_database_password/i.test(process.env.TEST_DB_URL) &&
-  !/example/i.test(process.env.TEST_DB_URL);
-const describeIntegration = hasRealTestDb ? describe : describe.skip;
+const describeIntegration = require("./helpers/integrationGate");
 
 describeIntegration("Full integration suite (real PostgreSQL)", () => {
   const password = "Str0ng!Pass1!";
@@ -564,7 +559,25 @@ describeIntegration("Full integration suite (real PostgreSQL)", () => {
       expect(deletedRow).toBeNull();
     });
 
-    test.todo("restrict cart usage to buyer role once route-level authorization is implemented");
+    test("rejects cart usage for non-buyer roles", async () => {
+      const farmerCartResponse = await request(app)
+        .get("/api/cart")
+        .set(authHeader(tokens.farmerToken));
+
+      expect(farmerCartResponse.status).toBe(403);
+      expect(farmerCartResponse.body.message).toContain("Required role: buyer");
+
+      const adminCartResponse = await request(app)
+        .post("/api/cart")
+        .set(authHeader(tokens.adminToken))
+        .send({
+          product_id: 1,
+          quantity: 1,
+        });
+
+      expect(adminCartResponse.status).toBe(403);
+      expect(adminCartResponse.body.message).toContain("Required role: buyer");
+    });
   });
 
   describe("Order flow", () => {
@@ -923,7 +936,31 @@ describeIntegration("Full integration suite (real PostgreSQL)", () => {
       expect(reviewRow.comment).toBe("Excellent quality");
     });
 
-    test.todo("restrict review creation to buyers once role-based review authorization is implemented");
+    test("rejects review creation for non-buyer roles", async () => {
+      const product = await createProductAsFarmer({
+        name: "Unauthorized Review Tomato",
+      });
+
+      const response = await request(app)
+        .post("/api/reviews")
+        .set(authHeader(tokens.farmerToken))
+        .send({
+          product_id: product.id,
+          rating: 4,
+          comment: "Should be rejected",
+        });
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toContain("Required role: buyer");
+
+      const reviewRows = await queryRows(
+        adminPool,
+        `SELECT review_id FROM reviews WHERE product_id = $1`,
+        [product.id]
+      );
+
+      expect(reviewRows).toHaveLength(0);
+    });
   });
 
   describe("Notification flow", () => {
@@ -972,8 +1009,73 @@ describeIntegration("Full integration suite (real PostgreSQL)", () => {
       expect(updatedNotificationRow.is_read).toBe(true);
     });
 
-    test.todo("emit a notification automatically when an order is created");
-    test.todo("emit a notification automatically when a payment succeeds");
+    test("emits a notification automatically when an order is created", async () => {
+      await assignAgentToFarmer();
+      const product = await createProductAsFarmer({
+        name: "Order Notification Tomato",
+        stock: 5,
+        price: 14,
+      });
+
+      await addItemToCart(product.id, 2);
+      const order = await createOrder();
+
+      const notificationRow = await queryOne(
+        adminPool,
+        `
+          SELECT notification_id, user_id, title, message
+          FROM notifications
+          WHERE user_id = $1
+          ORDER BY notification_id DESC
+          LIMIT 1
+        `,
+        [actors.buyer.id]
+      );
+
+      expect(notificationRow).toBeTruthy();
+      expect(notificationRow.user_id).toBe(String(actors.buyer.id));
+      expect(notificationRow.title).toBe("Order created");
+      expect(notificationRow.message).toContain(String(order.id));
+    });
+    test("emits a notification automatically when a payment succeeds", async () => {
+      await assignAgentToFarmer();
+      const product = await createProductAsFarmer({
+        name: "Payment Notification Tomato",
+        stock: 5,
+        price: 12,
+      });
+
+      await addItemToCart(product.id, 2);
+      const order = await createOrder();
+
+      const paymentResponse = await request(app)
+        .post("/api/payments/process")
+        .set(authHeader(tokens.buyerToken))
+        .send({
+          order_id: order.id,
+          payment_method: "card",
+          amount: 24,
+        });
+
+      expect(paymentResponse.status).toBe(201);
+
+      const notificationRow = await queryOne(
+        adminPool,
+        `
+          SELECT notification_id, user_id, title, message
+          FROM notifications
+          WHERE user_id = $1
+          ORDER BY notification_id DESC
+          LIMIT 1
+        `,
+        [actors.buyer.id]
+      );
+
+      expect(notificationRow).toBeTruthy();
+      expect(notificationRow.user_id).toBe(String(actors.buyer.id));
+      expect(notificationRow.title).toBe("Payment received");
+      expect(notificationRow.message).toContain(String(order.id));
+    });
   });
 
   describe("Security and validation", () => {

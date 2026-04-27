@@ -5,13 +5,7 @@ const {
   closeIntegrationDatabase,
   initializeIntegrationDatabase,
 } = require("../helpers/integrationDb");
-
-const hasRealTestDb =
-  Boolean(process.env.TEST_DB_URL) &&
-  !/your_database_password/i.test(process.env.TEST_DB_URL) &&
-  !/example/i.test(process.env.TEST_DB_URL);
-
-const describeLiveDb = hasRealTestDb ? describe : describe.skip;
+const describeLiveDb = require("../helpers/integrationGate");
 
 describeLiveDb("Health integration with live PostgreSQL", () => {
   let app;

@@ -3,6 +3,7 @@ const crypto = require("crypto");
 
 const { pool } = require("../config/db");
 const logger = require("../utils/logger");
+const notificationModel = require("../models/notificationModel");
 const paymentModel = require("../models/paymentModel");
 const { isPositiveInteger } = require("../utils/validators");
 
@@ -17,6 +18,28 @@ const createServiceError = (message, statusCode, extra = {}) => {
 
 const buildTransactionId = () => {
 	return `txn_${crypto.randomBytes(8).toString("hex")}`;
+};
+
+const emitPaymentSucceededNotification = async ({ user_id, order_id }) => {
+	if (!user_id || !order_id) {
+		return;
+	}
+
+	try {
+		await notificationModel.createNotificationForUser({
+			user_id: Number(user_id),
+			title: "Payment received",
+			message: `Payment for order #${order_id} was successful.`,
+			type: "payment",
+		});
+	} catch (error) {
+		logger.warn("Payment notification emit failed", {
+			order_id,
+			user_id,
+			message: error.message,
+			code: error.code,
+		});
+	}
 };
 
 const processPayment = async ({ user_id, order_id, payment_method, amount }) => {
@@ -77,6 +100,10 @@ const processPayment = async ({ user_id, order_id, payment_method, amount }) => 
 		});
 
 		await client.query("COMMIT");
+		await emitPaymentSucceededNotification({
+			user_id,
+			order_id: parsed_order_id,
+		});
 		logger.info("Payment processed", { order_id: parsed_order_id, user_id, payment_id: payment.id });
 		return payment;
 	} catch (error) {
