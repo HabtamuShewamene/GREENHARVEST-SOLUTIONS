@@ -27,6 +27,7 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const agentRoutes = require("./routes/agentRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const healthRoutes = require("./routes/healthRoutes");
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api", healthRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
@@ -95,6 +97,31 @@ app.get("/test-db", async (req, res) => {
     });
   } catch (error) {
     logger.error("Test DB route failed", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      path: req.originalUrl,
+      method: req.method,
+    });
+
+    res.status(500).json({
+      status: "error",
+      message: "Database connection error",
+    });
+  }
+});
+
+app.get("/api/db-health", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW() AS current_time");
+
+    res.status(200).json({
+      status: "ok",
+      database: "connected",
+      timestamp: result.rows[0].current_time,
+    });
+  } catch (error) {
+    logger.error("DB health route failed", {
       message: error.message,
       code: error.code,
       stack: error.stack,

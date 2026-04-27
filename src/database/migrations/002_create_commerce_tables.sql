@@ -1,3 +1,4 @@
+
 -- Creates order, order item, payment, and delivery tables for commerce workflows.
 CREATE TABLE IF NOT EXISTS orders (
   id BIGSERIAL PRIMARY KEY,

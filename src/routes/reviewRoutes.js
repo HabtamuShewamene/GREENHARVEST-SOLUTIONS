@@ -3,6 +3,7 @@
 const express = require("express");
 
 const authMiddleware = require("../middleware/authMiddleware");
+const { requireRole } = require("../middleware/roleMiddleware");
 const {
   addReview,
   updateReview,
@@ -13,7 +14,7 @@ const {
 const router = express.Router();
 
 router.get("/product/:product_id", getProductReviews);
-router.post("/", authMiddleware, addReview);
+router.post("/", authMiddleware, requireRole("buyer"), addReview);
 router.patch("/:id", authMiddleware, updateReview);
 router.delete("/:id", authMiddleware, deleteReview);
 

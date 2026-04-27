@@ -70,11 +70,17 @@ const isAgentAssignedToFarmer = async ({ agent_id, farmer_id }) => {
 
 	try {
 		const result = await pool.query(
-			`SELECT id FROM agent_farmers WHERE agent_id = $1 AND farmer_id = $2`,
+			`
+				SELECT EXISTS (
+					SELECT 1
+					FROM agent_farmers
+					WHERE agent_id = $1 AND farmer_id = $2
+				) AS is_assigned
+			`,
 			[agent_id, farmer_id]
 		);
 
-		return result.rows.length > 0;
+		return Boolean(result.rows[0] && result.rows[0].is_assigned);
 	} catch (error) {
 		throw error;
 	}
