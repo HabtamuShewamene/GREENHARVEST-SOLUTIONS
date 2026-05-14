@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Raleway:wght@300;400;500;600;700&display=swap');
+
+/* Design System - GreenHarvest Solutions */
+@theme inline {
+  /* Colors */
+  --color-primary: #7C3AED;
+  --color-primary-50: #F5F3FF;
+  --color-primary-100: #EDE9FE;
+  --color-primary-200: #DDD6FE;
+  --color-primary-300: #C4B5FD;
+  --color-primary-400: #A78BFA;
+  --color-primary-500: #7C3AED;
+  --color-primary-600: #6D28D9;
+  --color-primary-700: #5B21B6;
+  --color-primary-800: #4C1D95;
+  --color-primary-900: #3B0764;
+  
+  --color-secondary: #A78BFA;
+  --color-secondary-500: #A78BFA;
+  
+  --color-cta: #22C55E;
+  --color-cta-50: #F0FDF4;
+  --color-cta-100: #DCFCE7;
+  --color-cta-500: #22C55E;
+  --color-cta-600: #16A34A;
+  --color-cta-700: #15803D;
+  
+  --color-background: #FAF5FF;
+  --color-text: #4C1D95;
+  
+  /* Font Families */
+  --font-family-heading: 'Lora', serif;
+  --font-family-body: 'Raleway', sans-serif;
+  
+  /* Border Radius (Organic) */
+  --radius-organic: 16px;
+  --radius-organic-lg: 24px;
+  --radius-organic-xl: 32px;
+  
+  /* Shadows (Natural) */
+  --shadow-natural: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-natural-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-natural-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family-body);
+  color: var(--color-text);
+  background-color: var(--color-background);
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-heading);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Accessibility - Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom Utilities */
+.btn-primary {
+  @apply bg-cta hover:bg-cta-600 text-white font-medium px-6 py-3 rounded-2xl transition-colors duration-200 cursor-pointer;
+}
+
+.btn-secondary {
+  @apply bg-primary hover:bg-primary-700 text-white font-medium px-6 py-3 rounded-2xl transition-colors duration-200 cursor-pointer;
+}
+
+.btn-outline {
+  @apply border-2 border-primary text-primary hover:bg-primary hover:text-white font-medium px-6 py-3 rounded-2xl transition-all duration-200 cursor-pointer;
+}
+
+.btn-ghost {
+  @apply text-primary hover:bg-primary-50 font-medium px-6 py-3 rounded-2xl transition-colors duration-200 cursor-pointer;
+}
+
+.card {
+  @apply bg-white rounded-3xl shadow-natural hover:shadow-natural-lg transition-shadow duration-200;
+}
+
+.input-field {
+  @apply w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all;
+}
+
+.badge-success {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800;
+}
+
+.badge-warning {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800;
+}
+
+.badge-error {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800;
+}
+
+.badge-info {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800;
+}
