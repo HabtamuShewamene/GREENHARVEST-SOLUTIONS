@@ -1,6 +1,7 @@
 node_modules/
 npm-packages-offline-cache/
 .pnpm-store/
+.kiro
 
 # Environment files
 .env
