@@ -5,7 +5,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Facebook, Twitter, Instagram, Mail } from 'lucide-react';
+import { Globe, X, Share2, Mail } from 'lucide-react';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -22,13 +22,13 @@ const Footer: React.FC = () => {
             </p>
             <div className="flex space-x-4 mt-4">
               <a href="#" className="text-gray-400 hover:text-white transition-colors" aria-label="Facebook">
-                <Facebook className="w-5 h-5" />
+                <Globe className="w-5 h-5" />
               </a>
               <a href="#" className="text-gray-400 hover:text-white transition-colors" aria-label="Twitter">
-                <Twitter className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </a>
               <a href="#" className="text-gray-400 hover:text-white transition-colors" aria-label="Instagram">
-                <Instagram className="w-5 h-5" />
+                <Share2 className="w-5 h-5" />
               </a>
             </div>
           </div>
