@@ -42,12 +42,12 @@ const getUserCartItems = async (user_id) => {
 				u.name AS farmer_name
 			FROM carts c
 			JOIN cart_items ci ON ci.cart_id = c.cart_id
-			JOIN products p ON p.product_id = ci.product_id
-			LEFT JOIN inventory i ON i.product_id = p.product_id
+			JOIN products p ON p.id = ci.product_id
+			LEFT JOIN inventory i ON i.product_id = p.id
 			LEFT JOIN LATERAL (
 				SELECT image_url
 				FROM product_images
-				WHERE product_id = p.product_id
+				WHERE product_id = p.id
 				ORDER BY image_id ASC
 				LIMIT 1
 			) pi ON TRUE
@@ -98,8 +98,8 @@ const findCartItemWithStockById = async (cart_item_id) => {
 			SELECT ci.cart_item_id AS id, c.user_id, ci.product_id, ci.quantity, COALESCE(i.quantity, 0) AS stock
 			FROM cart_items ci
 			JOIN carts c ON c.cart_id = ci.cart_id
-			JOIN products p ON p.product_id = ci.product_id
-			LEFT JOIN inventory i ON i.product_id = p.product_id
+			JOIN products p ON p.id = ci.product_id
+			LEFT JOIN inventory i ON i.product_id = p.id
 			WHERE ci.cart_item_id = $1
 		`,
 		[cart_item_id]
