@@ -12,12 +12,20 @@ export default function BuyerDashboard() {
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  };
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
-  const [priceLimit, setPriceLimit] = useState(100);
+  const [priceLimit, setPriceLimit] = useState(500);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     loadData();
@@ -28,7 +36,7 @@ export default function BuyerDashboard() {
       const [productsRes, cartRes, userRes, notifRes, catRes] = await Promise.all([
         api.getProducts().catch(() => ({ products: [] })),
         api.getCart().catch(() => ({ cart: [] })),
-        api.getUserProfile().catch(() => ({ user: null })),
+        api.getUserProfile().catch((err) => { console.error("Profile error:", err); return { user: null }; }),
         api.getNotifications().catch(() => ({ notifications: [] })),
         api.getCategories().catch(() => ({ categories: [] }))
       ]);
@@ -78,29 +86,20 @@ export default function BuyerDashboard() {
   const tax = cartSubtotal * 0.05;
   const cartTotal = cartSubtotal + deliveryFee + tax;
 
+  // Dynamically compute max price from loaded products
+  const maxPrice = products.length > 0
+    ? Math.ceil(Math.max(...products.map(p => Number(p.price) || 0)) * 1.2)
+    : 500;
+
   const filteredProducts = products.filter(p => {
     const matchSearch = (p.name?.toLowerCase() || '').includes(searchQuery.toLowerCase());
-    const matchPrice = (p.price || 0) <= priceLimit;
-    const matchCategory = selectedCategory ? (p.category_id?.toString() === selectedCategory || p.category?.name === selectedCategory) : true;
+    const matchPrice = (Number(p.price) || 0) <= priceLimit;
+    const matchCategory = selectedCategory ? (p.category_id?.toString() === selectedCategory || p.category?.name === selectedCategory || p.category_name === selectedCategory) : true;
     return matchSearch && matchPrice && matchCategory;
   });
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-body-md text-on-surface">
-      {/* Dark Top Strip */}
-      <div className="bg-[#1a1c29] text-white text-[11px] md:text-xs py-2 px-4 md:px-8 flex justify-between">
-        <div className="flex items-center gap-1 md:gap-2">
-          <span className="material-symbols-outlined text-[14px] md:text-[16px]">location_on</span>
-          <span>Delivery to <span className="font-bold text-[#286c00]">{user?.address || 'Addis Ababa'}</span></span>
-          <span className="material-symbols-outlined text-[16px]">expand_more</span>
-        </div>
-        <div className="hidden md:flex gap-6">
-          <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px] text-[#286c00]">verified</span> Trusted Shipping</span>
-          <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px] text-[#286c00]">sync</span> Easy RETURNS</span>
-          <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px] text-[#286c00]">security</span> Secure Shopping</span>
-        </div>
-      </div>
-
       {/* Main Header */}
       <header className="bg-white border-b border-gray-200 py-4 px-4 md:px-8 sticky top-0 z-40">
         <div className="flex items-center justify-between gap-4 md:gap-8 max-w-[1400px] mx-auto">
@@ -128,13 +127,13 @@ export default function BuyerDashboard() {
                <span className="material-symbols-outlined text-gray-600">search</span>
             </div>
             
-            <button className="relative p-1 md:p-2 text-gray-600 hover:text-[#286c00] transition-colors" onClick={toggleCart}>
+            <button className="relative p-1 md:p-2 text-gray-600 hover:text-[#286c00] transition-colors cursor-pointer" onClick={toggleCart}>
               <span className="material-symbols-outlined">shopping_cart</span>
               {cart.length > 0 && (
                 <span className="absolute top-0 right-0 w-[18px] h-[18px] bg-[#ff8296] text-white text-[10px] rounded-full flex items-center justify-center font-bold border-2 border-white">{cart.length}</span>
               )}
             </button>
-            <button className="relative p-1 md:p-2 text-gray-600 hover:text-[#286c00] transition-colors hidden sm:block">
+            <button className="relative p-1 md:p-2 text-gray-600 hover:text-[#286c00] transition-colors hidden sm:block cursor-pointer">
               <span className="material-symbols-outlined">notifications</span>
               {notifications.filter(n => n.status === 'unread').length > 0 && (
                 <span className="absolute top-0 right-0 w-[18px] h-[18px] bg-[#ff8296] text-white text-[10px] rounded-full flex items-center justify-center font-bold border-2 border-white">
@@ -145,20 +144,38 @@ export default function BuyerDashboard() {
 
             <div className="hidden md:block h-8 w-px bg-gray-200"></div>
 
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-1 cursor-pointer hover:text-[#286c00]">
-                <img src="https://flagcdn.com/w20/us.png" alt="English" className="w-4 h-3 object-cover rounded-sm" />
-                <span className="text-sm font-medium text-gray-600">English</span>
-                <span className="material-symbols-outlined text-[18px] text-gray-400">expand_more</span>
+            <div className="relative">
+              <div 
+                className="flex items-center gap-2 cursor-pointer group"
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+              >
+                <div className="w-8 h-8 rounded-full border border-[#d5edc4] bg-[#f6fdf0] text-[#286c00] flex items-center justify-center font-bold text-xs uppercase shadow-sm group-hover:bg-[#eaf8e0] transition-colors">
+                  {user?.name?.substring(0, 2) || 'GH'}
+                </div>
+                <div className="hidden lg:block text-right leading-tight ml-2">
+                  <p className="text-[10px] text-gray-400">Welcome Back!</p>
+                  <p className="text-xs font-bold text-gray-800 truncate max-w-[120px]">{user?.name || 'Guest'}</p>
+                </div>
+                <span className={`material-symbols-outlined text-[18px] text-gray-400 hidden lg:block transition-transform ${isProfileOpen ? 'rotate-180' : ''}`}>expand_more</span>
               </div>
-              <div className="w-8 h-8 rounded-full border border-[#d5edc4] bg-[#f6fdf0] text-[#286c00] flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                {user?.name?.substring(0, 2) || 'GH'}
-              </div>
-              <div className="hidden lg:block text-right leading-tight ml-2">
-                <p className="text-[10px] text-gray-400">Welcome Back!</p>
-                <p className="text-xs font-bold text-gray-800 truncate max-w-[120px]">{user?.name || 'Guest'}</p>
-              </div>
-              <span className="material-symbols-outlined text-[18px] text-gray-400 hidden lg:block cursor-pointer">expand_more</span>
+
+              {isProfileOpen && (
+                <div className="absolute right-0 top-full mt-3 w-48 bg-white border border-gray-100 rounded-lg shadow-lg py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                  <Link href="/buyer/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-[#286c00] transition-colors">
+                    <span className="material-symbols-outlined text-[18px]">person</span>
+                    My Profile
+                  </Link>
+                  <Link href="/buyer/orders" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-[#286c00] transition-colors">
+                    <span className="material-symbols-outlined text-[18px]">local_shipping</span>
+                    My Orders
+                  </Link>
+                  <div className="h-px bg-gray-100 my-1"></div>
+                  <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#ff8296] hover:bg-[#fff0f2] transition-colors">
+                    <span className="material-symbols-outlined text-[18px]">logout</span>
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -177,7 +194,10 @@ export default function BuyerDashboard() {
             <h3 className="text-3xl md:text-4xl font-light mb-4">Fresh From Farm</h3>
             <p className="text-lg opacity-90 mt-2 font-medium">100% Organic, direct to your table.</p>
           </div>
-          <div className="absolute bottom-6 right-6 md:bottom-12 md:right-12 w-10 h-10 md:w-12 md:h-12 rounded-full border border-white/40 text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors backdrop-blur-sm cursor-pointer">
+          <div 
+            onClick={() => document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' })}
+            className="absolute bottom-6 right-6 md:bottom-12 md:right-12 w-10 h-10 md:w-12 md:h-12 rounded-full border border-white/40 text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors backdrop-blur-sm cursor-pointer"
+          >
             <span className="material-symbols-outlined text-[20px]">arrow_downward</span>
           </div>
         </div>
@@ -220,16 +240,16 @@ export default function BuyerDashboard() {
                   </div>
                 </label>
                 {categories.map((category) => (
-                  <label key={category.id || category.category_id || category.name} className="flex items-center justify-between cursor-pointer group">
+                  <label key={category.id || category.category_id || category.category_name || category.name} className="flex items-center justify-between cursor-pointer group">
                     <div className="flex items-center gap-3">
                       <input 
                         type="radio" 
                         name="category" 
-                        checked={selectedCategory === (category.id?.toString() || category.category_id?.toString() || category.name)} 
-                        onChange={() => setSelectedCategory(category.id?.toString() || category.category_id?.toString() || category.name)}
+                        checked={selectedCategory === (category.id?.toString() || category.category_id?.toString() || category.category_name || category.name)} 
+                        onChange={() => setSelectedCategory(category.id?.toString() || category.category_id?.toString() || category.category_name || category.name)}
                         className="w-4 h-4 text-[#286c00] focus:ring-[#286c00]"
                       />
-                      <span className={`text-sm ${selectedCategory === (category.id?.toString() || category.category_id?.toString() || category.name) ? 'text-gray-900 font-bold' : 'text-gray-600 font-medium'}`}>{category.name}</span>
+                      <span className={`text-sm ${selectedCategory === (category.id?.toString() || category.category_id?.toString() || category.category_name || category.name) ? 'text-gray-900 font-bold' : 'text-gray-600 font-medium'}`}>{category.category_name || category.name}</span>
                     </div>
                   </label>
                 ))}
@@ -254,7 +274,7 @@ export default function BuyerDashboard() {
                 <input 
                   type="range" 
                   min="0" 
-                  max="100" 
+                  max={maxPrice}
                   value={priceLimit}
                   onChange={(e) => setPriceLimit(Number(e.target.value))}
                   className="w-full h-[3px] bg-[#d5edc4] rounded-full appearance-none outline-none accent-[#286c00] mb-6 absolute top-0 left-0 z-10" 
@@ -262,40 +282,83 @@ export default function BuyerDashboard() {
               </div>
               
               <div className="flex justify-between text-[10px] text-gray-400 font-bold tracking-wider mb-2 mt-4 px-1">
-                <span>0.00 SAR</span>
-                <span>100.00 SAR</span>
+                <span>$0.00</span>
+                <span>${maxPrice.toFixed(2)}</span>
               </div>
 
               <div className="flex items-center gap-4 mt-2">
                 <div className="flex-1 bg-white border border-gray-200 rounded-md px-3 py-2 shadow-sm">
-                  <span className="text-sm font-bold text-gray-700">0.00</span>
+                  <span className="text-[10px] text-gray-400">Min</span>
+                  <p className="text-sm font-bold text-gray-700">$0.00</p>
                 </div>
                 <div className="flex-1 bg-white border border-gray-200 rounded-md px-3 py-2 shadow-sm">
-                  <span className="text-sm font-bold text-gray-700">{priceLimit.toFixed(2)}</span>
+                  <span className="text-[10px] text-gray-400">Max</span>
+                  <p className="text-sm font-bold text-[#286c00]">${priceLimit.toFixed(2)}</p>
                 </div>
               </div>
             </div>
           </aside>
 
           {/* Product Grid Area */}
-          <section className="flex-1">
+          <section className="flex-1" id="products-section">
             {/* Top Controls */}
             <div className="flex items-center justify-between mb-6">
               <div className="hidden sm:flex gap-1">
-                 <button className="p-1.5 rounded-md bg-[#f6fdf0] text-[#286c00] border border-[#d5edc4]"><span className="material-symbols-outlined text-[20px]">grid_view</span></button>
-                 <button className="p-1.5 rounded-md text-gray-400 hover:bg-gray-50 border border-transparent"><span className="material-symbols-outlined text-[20px]">view_list</span></button>
+                 <button 
+                   onClick={() => setViewMode('grid')}
+                   className={`p-1.5 rounded-md border transition-colors ${viewMode === 'grid' ? 'bg-[#f6fdf0] text-[#286c00] border-[#d5edc4]' : 'text-gray-400 hover:bg-gray-50 border-transparent'}`}
+                 >
+                   <span className="material-symbols-outlined text-[20px]">grid_view</span>
+                 </button>
+                 <button 
+                   onClick={() => setViewMode('list')}
+                   className={`p-1.5 rounded-md border transition-colors ${viewMode === 'list' ? 'bg-[#f6fdf0] text-[#286c00] border-[#d5edc4]' : 'text-gray-400 hover:bg-gray-50 border-transparent'}`}
+                 >
+                   <span className="material-symbols-outlined text-[20px]">view_list</span>
+                 </button>
               </div>
             </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            {/* Grid / List */}
+            <div className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6' : 'flex flex-col gap-4'}>
               {loading ? (
                 <p className="col-span-full text-center text-gray-500 py-10">Loading products...</p>
               ) : filteredProducts.length === 0 ? (
                 <div className="col-span-full text-center py-20 text-gray-500">No products found.</div>
               ) : (
-                filteredProducts.map((product, idx) => {
+                filteredProducts.map((product) => {
                   const isLowStock = product.stock > 0 && product.stock <= 12;
+
+                  if (viewMode === 'list') {
+                    return (
+                      <div key={product.id} className="group flex items-center gap-4 bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-md hover:border-[#d5edc4] transition-all cursor-pointer" onClick={() => handleAddToCart(product.id)}>
+                        <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                          {product.image_url ? (
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-3xl">🥦</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">{product.category_name || 'Produce'}</p>
+                          <h3 className="text-sm font-bold text-[#1a1c29] group-hover:text-[#286c00] transition-colors truncate">{product.name}</h3>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1">{product.description}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <span className="text-base font-bold text-[#286c00]">${Number(product.price).toFixed(2)}</span>
+                          {isLowStock ? (
+                            <span className="text-[10px] font-bold text-[#ff8296] bg-[#fff0f2] px-1.5 py-0.5 rounded-sm">{product.stock} left!</span>
+                          ) : (
+                            <span className="text-[10px] text-gray-400">{product.stock} in stock</span>
+                          )}
+                          <button className="text-xs font-bold text-white bg-[#286c00] px-3 py-1.5 rounded-lg hover:bg-[#1e5200] transition-colors">
+                            Add to Cart
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div key={product.id} className="group relative flex flex-col cursor-pointer" onClick={() => handleAddToCart(product.id)}>
                       {/* Image Container */}
@@ -315,12 +378,12 @@ export default function BuyerDashboard() {
                       {/* Product Details */}
                       <div className="flex flex-col px-1">
                         <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">{product.farmer?.name || 'Local Farm'}</p>
+                          <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">{product.category_name || product.farmer_name || 'Local Farm'}</p>
                         </div>
                         <h3 className="text-[14px] font-bold text-[#1a1c29] leading-snug mb-3 line-clamp-1 group-hover:text-[#286c00] transition-colors">{product.name}</h3>
                         
                         <div className="flex items-center justify-between mt-auto">
-                          <span className="text-[15px] font-bold text-[#286c00]">SAR {Number(product.price).toFixed(2)}</span>
+                          <span className="text-[15px] font-bold text-[#286c00]">${Number(product.price).toFixed(2)}</span>
                           {isLowStock ? (
                             <span className="text-[10px] font-bold text-[#ff8296] bg-[#fff0f2] px-1.5 py-0.5 rounded-sm">{product.stock} items left!</span>
                           ) : (
