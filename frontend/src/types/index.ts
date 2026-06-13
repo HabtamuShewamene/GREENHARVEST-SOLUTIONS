@@ -2,7 +2,7 @@
  * TypeScript Type Definitions for GreenHarvest Solutions
  */
 
-export type UserRole = 'buyer' | 'farmer' | 'admin' | 'delivery' | 'field_agent';
+export type UserRole = 'buyer' | 'farmer' | 'admin' | 'delivery_partner' | 'field_agent';
 
 export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
