@@ -2,30 +2,22 @@ const { pool } = require("../config/db");
 
 const productSelect = `
 	SELECT
-		p.product_id AS id,
+		p.id,
 		p.name,
 		p.description,
 		p.price,
-		COALESCE(i.quantity, 0) AS stock,
-		NULL::text AS farm_location,
-		pi.image_url,
+		p.stock,
+		p.farm_location,
+		p.image_url,
 		p.created_at,
 		p.category_id,
 		p.farmer_id,
 		u.name AS farmer_name,
 		u.email AS farmer_email,
-		c.category_name
+		c.name AS category_name
 	FROM products p
-	JOIN users u ON u.user_id = p.farmer_id
-	LEFT JOIN categories c ON c.category_id = p.category_id
-	LEFT JOIN inventory i ON i.product_id = p.product_id
-	LEFT JOIN LATERAL (
-		SELECT image_url
-		FROM product_images
-		WHERE product_id = p.product_id
-		ORDER BY image_id ASC
-		LIMIT 1
-	) pi ON TRUE
+	JOIN users u ON u.id = p.farmer_id
+	LEFT JOIN categories c ON c.id = p.category_id
 `;
 
 const createProduct = async ({
@@ -44,22 +36,24 @@ const createProduct = async ({
 				category_id,
 				name,
 				description,
-				price
+				price,
+				farm_location,
+				image_url
 			)
-			VALUES ($1, $2, $3, $4, $5)
-			RETURNING product_id AS id, farmer_id, category_id, name, description, price, created_at
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
 		`,
-		[farmer_id, category_id, name, description, price]
+		[farmer_id, category_id, name, description, price, farm_location, image_url]
 	);
 
 	if (image_url) {
-		await pool.query(
-			`
-				INSERT INTO product_images (product_id, image_url)
-				VALUES ($1, $2)
-			`,
-			[result.rows[0].id, image_url]
-		);
+		const hasImagesTable = await tableExists('product_images');
+		if (hasImagesTable) {
+			await pool.query(
+				`INSERT INTO product_images (product_id, image_url) VALUES ($1, $2)`,
+				[result.rows[0].id, image_url]
+			);
+		}
 	}
 
 	return result.rows[0];
@@ -165,17 +159,16 @@ const findFarmerById = async (farmerId) => {
 };
 
 const findProductOwnershipById = async (productId) => {
-	const result = await pool.query("SELECT product_id AS id, farmer_id FROM products WHERE product_id = $1", [productId]);
+	const result = await pool.query("SELECT id, farmer_id FROM products WHERE id = $1", [productId]);
 	return result.rows[0] || null;
 };
 
 const findProductStockById = async (productId) => {
 	const result = await pool.query(
 		`
-			SELECT p.product_id AS id, p.farmer_id, COALESCE(i.quantity, 0) AS stock
+			SELECT p.id, p.farmer_id, p.stock
 			FROM products p
-			LEFT JOIN inventory i ON i.product_id = p.product_id
-			WHERE p.product_id = $1
+			WHERE p.id = $1
 		`,
 		[productId]
 	);
@@ -186,10 +179,9 @@ const findProductStockById = async (productId) => {
 const findProductStockForUpdateById = async (client, productId) => {
 	const result = await client.query(
 		`
-			SELECT p.product_id AS id, p.farmer_id, COALESCE(i.quantity, 0) AS stock
+			SELECT p.id, p.farmer_id, p.stock
 			FROM products p
-			LEFT JOIN inventory i ON i.product_id = p.product_id
-			WHERE p.product_id = $1
+			WHERE p.id = $1
 			FOR UPDATE
 		`,
 		[productId]
@@ -213,7 +205,7 @@ const findProductById = async (productId) => {
 	const result = await pool.query(
 		`
 			${productSelect}
-			WHERE p.product_id = $1
+			WHERE p.id = $1
 		`,
 		[productId]
 	);
@@ -232,31 +224,14 @@ const updateProductById = async (
 				name = COALESCE($1, name),
 				description = COALESCE($2, description),
 				price = COALESCE($3, price),
-				category_id = COALESCE($4, category_id)
-			WHERE product_id = $5
-			RETURNING product_id AS id, farmer_id, category_id, name, description, price, created_at
+				category_id = COALESCE($4, category_id),
+				farm_location = COALESCE($5, farm_location),
+				image_url = COALESCE($6, image_url)
+			WHERE id = $7
+			RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
 		`,
-		[name, description, price, category_id, productId]
+		[name, description, price, category_id, farm_location, image_url, productId]
 	);
-
-	if (image_url !== undefined && image_url !== null) {
-		const imageResult = await pool.query(
-			`SELECT image_id FROM product_images WHERE product_id = $1 ORDER BY image_id ASC LIMIT 1`,
-			[productId]
-		);
-
-		if (imageResult.rows[0]) {
-			await pool.query(
-				`UPDATE product_images SET image_url = $1 WHERE image_id = $2`,
-				[image_url, imageResult.rows[0].image_id]
-			);
-		} else {
-			await pool.query(
-				`INSERT INTO product_images (product_id, image_url) VALUES ($1, $2)`,
-				[productId, image_url]
-			);
-		}
-	}
 
 	return result.rows[0] || null;
 };
@@ -264,10 +239,9 @@ const updateProductById = async (
 const updateProductStockById = async (productId, stock) => {
 	await pool.query(
 		`
-			UPDATE inventory
-			SET quantity = $1,
-					last_updated = NOW()
-			WHERE product_id = $2
+			UPDATE products
+			SET stock = $1
+			WHERE id = $2
 		`,
 		[stock, productId]
 	);
@@ -279,8 +253,8 @@ const deleteProductById = async (productId) => {
 	const result = await pool.query(
 		`
 			DELETE FROM products
-			WHERE product_id = $1
-			RETURNING product_id AS id
+			WHERE id = $1
+			RETURNING id
 		`,
 		[productId]
 	);
