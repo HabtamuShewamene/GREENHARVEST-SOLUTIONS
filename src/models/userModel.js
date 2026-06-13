@@ -17,12 +17,12 @@ const toDbRoleName = (role) => {
 
 const baseUserSelect = `
 	SELECT
-		u.user_id AS id,
+		u.id,
 		u.name,
 		u.email,
-		u.password_hash AS password,
+		u.password,
 		u.phone,
-		NULL::text AS address,
+		u.address,
 		u.created_at,
 		u.role_id,
 		r.role_name,
@@ -77,20 +77,23 @@ const createUser = async ({
 				INSERT INTO users (
 					name,
 					email,
-					password_hash,
+					password,
+					role,
 					role_id,
 					phone,
+					address,
 					is_verified,
 					mfa_enabled,
 					backup_email,
 					recovery_phone
 				)
-				VALUES ($1, $2, $3, $4, $5, FALSE, FALSE, $6, $7)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, FALSE, $8, $9)
 				RETURNING
-					user_id,
+					id,
 					name,
 					email,
 					phone,
+					address,
 					created_at,
 					role_id,
 					is_verified,
@@ -98,41 +101,42 @@ const createUser = async ({
 					backup_email,
 					recovery_phone
 			`,
-			[name, email, password, roleRecord.role_id, phone, backup_email, recovery_phone]
+			[name, email, password, roleName, roleRecord.role_id, phone, address, backup_email, recovery_phone]
 		);
 
 		const user = insertedUser.rows[0];
+		const userId = user.id;
 
 		if (roleName === "buyer") {
 			await client.query(
 				`INSERT INTO buyer_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
-				[user.user_id]
+				[userId]
 			);
 		} else if (roleName === "farmer") {
 			await client.query(
 				`INSERT INTO farmer_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
-				[user.user_id]
+				[userId]
 			);
 		} else if (roleName === "delivery_partner") {
 			await client.query(
 				`INSERT INTO delivery_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
-				[user.user_id]
+				[userId]
 			);
 		} else if (roleName === "field_agent") {
 			await client.query(
 				`INSERT INTO field_agent_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
-				[user.user_id]
+				[userId]
 			);
 		}
 
 		await client.query("COMMIT");
 
 		return {
-			id: user.user_id,
+			id: userId,
 			name: user.name,
 			email: user.email,
 			phone: user.phone,
-			address: null,
+			address: user.address,
 			created_at: user.created_at,
 			role_id: user.role_id,
 			role_name: roleRecord.role_name,
@@ -166,7 +170,7 @@ const findUserById = async (userId) => {
 	const result = await pool.query(
 		`
 			${baseUserSelect}
-			WHERE u.user_id = $1
+			WHERE u.id = $1
 		`,
 		[userId]
 	);
@@ -183,7 +187,7 @@ const findAllUsers = async () => {
 	const result = await pool.query(
 		`
 			${baseUserSelect}
-			ORDER BY u.user_id DESC
+			ORDER BY u.id DESC
 		`
 	);
 
@@ -197,7 +201,7 @@ const findUserByIdWithPassword = async (userId) => {
 	const result = await pool.query(
 		`
 			${baseUserSelect}
-			WHERE u.user_id = $1
+			WHERE u.id = $1
 		`,
 		[userId]
 	);
@@ -206,7 +210,7 @@ const findUserByIdWithPassword = async (userId) => {
 };
 
 const updateLastLoginAt = async (userId) => {
-	await pool.query(`UPDATE users SET last_login_at = NOW() WHERE user_id = $1`, [userId]);
+	await pool.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [userId]);
 };
 
 const storeEmailVerificationToken = async ({ user_id, token_hash, expires_at }) => {
@@ -216,7 +220,7 @@ const storeEmailVerificationToken = async ({ user_id, token_hash, expires_at }) 
 			SET
 				verification_token_hash = $1,
 				verification_token_expiry = $2
-			WHERE user_id = $3
+			WHERE id = $3
 		`,
 		[token_hash, expires_at, user_id]
 	);
@@ -242,8 +246,8 @@ const markEmailVerified = async (userId) => {
 				is_verified = TRUE,
 				verification_token_hash = NULL,
 				verification_token_expiry = NULL
-			WHERE user_id = $1
-			RETURNING user_id AS id, is_verified
+			WHERE id = $1
+			RETURNING id, is_verified
 		`,
 		[userId]
 	);
@@ -258,7 +262,7 @@ const storePasswordResetToken = async ({ user_id, token_hash, expires_at }) => {
 			SET
 				password_reset_token_hash = $1,
 				password_reset_token_expiry = $2
-			WHERE user_id = $3
+			WHERE id = $3
 		`,
 		[token_hash, expires_at, user_id]
 	);
@@ -283,7 +287,7 @@ const clearPasswordResetToken = async (userId) => {
 			SET
 				password_reset_token_hash = NULL,
 				password_reset_token_expiry = NULL
-			WHERE user_id = $1
+			WHERE id = $1
 		`,
 		[userId]
 	);
@@ -293,8 +297,8 @@ const updateUserPassword = async ({ user_id, password_hash }) => {
 	await pool.query(
 		`
 			UPDATE users
-			SET password_hash = $1
-			WHERE user_id = $2
+			SET password = $1
+			WHERE id = $2
 		`,
 		[password_hash, user_id]
 	);
@@ -305,8 +309,8 @@ const updateMfaPreference = async ({ user_id, enabled }) => {
 		`
 			UPDATE users
 			SET mfa_enabled = $1
-			WHERE user_id = $2
-			RETURNING user_id AS id, mfa_enabled
+			WHERE id = $2
+			RETURNING id, mfa_enabled
 		`,
 		[enabled, user_id]
 	);

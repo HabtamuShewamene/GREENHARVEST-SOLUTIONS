@@ -1,6 +1,5 @@
 /**
  * Registration Page
- * New user signup with role selection
  */
 
 'use client';
@@ -8,110 +7,72 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, Mail, Lock, Phone, MapPin, AlertCircle, CheckCircle } from 'lucide-react';
-import Button from '@/components/common/Button';
-import Input from '@/components/common/Input';
-import Card from '@/components/common/Card';
 import { api } from '@/lib/api';
 import type { UserRole } from '@/types';
+
+const roles = [
+  {
+    value: 'buyer' as UserRole,
+    title: 'Buyer',
+    description: 'Shop for fresh farm produce',
+    icon: 'shopping_basket',
+  },
+  {
+    value: 'farmer' as UserRole,
+    title: 'Farmer',
+    description: 'Sell your agricultural products',
+    icon: 'agriculture',
+  },
+  {
+    value: 'delivery_partner' as UserRole,
+    title: 'Delivery Partner',
+    description: 'Deliver products to customers',
+    icon: 'local_shipping',
+  },
+  {
+    value: 'field_agent' as UserRole,
+    title: 'Field Agent',
+    description: 'Help farmers list products',
+    icon: 'support_agent',
+  },
+];
 
 export default function RegisterPage() {
   const router = useRouter();
   const [step, setStep] = useState<'role' | 'details'>('role');
   const [selectedRole, setSelectedRole] = useState<UserRole | ''>('');
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
-    address: '',
+    name: '', email: '', password: '', confirmPassword: '', phone: '', address: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const roles = [
-    {
-      value: 'buyer' as UserRole,
-      title: 'Buyer',
-      description: 'Shop for fresh farm products',
-      icon: '🛒',
-    },
-    {
-      value: 'farmer' as UserRole,
-      title: 'Farmer',
-      description: 'Sell your agricultural products',
-      icon: '🌾',
-    },
-    {
-      value: 'delivery' as UserRole,
-      title: 'Delivery Partner',
-      description: 'Deliver products to customers',
-      icon: '🚚',
-    },
-    {
-      value: 'field_agent' as UserRole,
-      title: 'Field Agent',
-      description: 'Help farmers list their products',
-      icon: '👨‍💼',
-    },
-  ];
-
-  const handleRoleSelect = (role: UserRole) => {
-    setSelectedRole(role);
-    setStep('details');
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (!formData.phone) {
-      newErrors.phone = 'Phone number is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const e: Record<string, string> = {};
+    if (!formData.name.trim()) e.name = 'Full name is required';
+    if (!formData.email) e.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) e.email = 'Enter a valid email';
+    if (!formData.password) e.password = 'Password is required';
+    else if (formData.password.length < 8) e.password = 'At least 8 characters';
+    if (formData.password !== formData.confirmPassword) e.confirmPassword = 'Passwords do not match';
+    if (!formData.phone) e.phone = 'Phone number is required';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     setLoading(true);
     setErrors({});
-
     try {
       await api.register({
         name: formData.name,
@@ -121,17 +82,11 @@ export default function RegisterPage() {
         phone: formData.phone,
         address: formData.address || undefined,
       });
-
       setSuccess(true);
-      
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
-    } catch (error: any) {
-      setErrors({
-        general: error.response?.data?.message || 'Registration failed. Please try again.',
-      });
+      setTimeout(() => router.push('/login'), 2500);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      setErrors({ general: err.response?.data?.message || 'Registration failed. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -139,197 +94,214 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center py-12 px-4">
-        <Card padding="lg" className="max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-cta-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-cta" />
+      <div className="min-h-screen flex items-center justify-center bg-surface-container-low px-4 font-body-md text-on-surface">
+        <div className="bg-surface-container-lowest rounded-[40px] shadow-[0_20px_60px_rgba(0,0,0,0.05)] border border-surface-container p-12 max-w-md w-full text-center">
+          <div className="w-24 h-24 bg-primary-container/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="material-symbols-outlined text-primary text-5xl">check_circle</span>
           </div>
-          <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
-            Registration Successful!
-          </h2>
-          <p className="text-gray-600 mb-4">
-            Your account has been created. Redirecting to login...
-          </p>
-        </Card>
+          <h2 className="font-headline-md text-3xl font-bold text-on-background mb-2">Account Created!</h2>
+          <p className="font-body-md text-on-surface-variant">Redirecting you to sign in...</p>
+          <div className="mt-8 w-full bg-surface-variant rounded-full h-2 overflow-hidden">
+            <div className="h-full bg-primary rounded-full animate-[grow_2.5s_linear_forwards]" style={{ width: '100%', transformOrigin: 'left', animation: 'none', transition: 'width 2.5s linear' }} />
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="font-heading text-4xl font-bold text-primary mb-2">
-            Join GreenHarvest
-          </h1>
-          <p className="text-gray-600">
-            Create your account and start your journey
+    <div className="min-h-screen bg-surface-container-low py-12 px-4 font-body-md text-on-surface flex flex-col justify-center">
+      <div className="max-w-2xl mx-auto w-full">
+
+        {/* Header */}
+        <div className="text-center mb-12">
+          <Link href="/" className="inline-flex items-center gap-2 mb-8 group">
+            <span className="material-symbols-outlined text-primary text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>eco</span>
+            <span className="font-headline-md font-bold text-2xl text-on-background">
+              Green<span className="text-primary">Harvest</span>
+            </span>
+          </Link>
+          <h1 className="font-headline-md text-4xl font-bold text-on-background mb-3">Create your account</h1>
+          <p className="font-body-md text-on-surface-variant text-lg">
+            Already have one?{' '}
+            <Link href="/login" className="text-primary hover:text-primary-container font-bold transition-colors">
+              Sign in
+            </Link>
           </p>
         </div>
 
-        {step === 'role' ? (
-          <div>
-            <h2 className="font-heading text-2xl font-semibold text-center text-gray-900 mb-8">
-              Choose Your Role
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {roles.map((role) => (
-                <Card
-                  key={role.value}
-                  hover
-                  padding="lg"
-                  onClick={() => handleRoleSelect(role.value)}
-                  className="text-center cursor-pointer"
-                >
-                  <div className="text-6xl mb-4">{role.icon}</div>
-                  <h3 className="font-heading text-xl font-semibold text-gray-900 mb-2">
-                    {role.title}
-                  </h3>
-                  <p className="text-gray-600">{role.description}</p>
-                </Card>
-              ))}
-            </div>
+        {/* Step indicator */}
+        <div className="flex items-center justify-center gap-4 mb-12">
+          {['Choose Role', 'Your Details'].map((label, i) => {
+            const isActive = (i === 0 && step === 'role') || (i === 1 && step === 'details');
+            const isDone = i === 0 && step === 'details';
+            return (
+              <React.Fragment key={label}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-label-lg transition-all ${
+                    isDone ? 'bg-primary text-on-primary' : isActive ? 'bg-secondary-container text-on-background' : 'bg-surface-variant text-on-surface-variant'
+                  }`}>
+                    {isDone ? <span className="material-symbols-outlined text-sm font-bold">check</span> : i + 1}
+                  </div>
+                  <span className={`font-label-lg ${isActive ? 'text-on-background' : 'text-on-surface-variant'}`}>{label}</span>
+                </div>
+                {i === 0 && <div className={`w-16 h-1 rounded-full ${step === 'details' ? 'bg-primary' : 'bg-surface-variant'}`} />}
+              </React.Fragment>
+            );
+          })}
+        </div>
+
+        {/* Step 1 — Role */}
+        {step === 'role' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {roles.map((role) => (
+              <button
+                key={role.value}
+                onClick={() => { setSelectedRole(role.value); setStep('details'); }}
+                className={`group text-left p-8 rounded-[32px] border-2 transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(0,0,0,0.05)] ${
+                  selectedRole === role.value 
+                    ? 'border-primary bg-primary/5 shadow-md ring-4 ring-primary/10' 
+                    : 'bg-surface-container-lowest border-surface-container hover:border-primary/30'
+                }`}
+              >
+                <div className="w-16 h-16 rounded-[20px] bg-secondary-container/20 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary-container/20 transition-all duration-300">
+                  <span className="material-symbols-outlined text-4xl text-primary">{role.icon}</span>
+                </div>
+                <h3 className="font-headline-md font-bold text-on-background text-[24px] mb-2">{role.title}</h3>
+                <p className="font-body-md text-on-surface-variant leading-relaxed">{role.description}</p>
+              </button>
+            ))}
           </div>
-        ) : (
-          <div className="max-w-2xl mx-auto">
+        )}
+
+        {/* Step 2 — Details */}
+        {step === 'details' && (
+          <div className="bg-surface-container-lowest rounded-[40px] shadow-[0_20px_60px_rgba(0,0,0,0.03)] border border-surface-container p-8 md:p-12">
             <button
               onClick={() => setStep('role')}
-              className="text-primary hover:text-primary-700 mb-6 flex items-center"
+              className="flex items-center gap-2 text-on-surface-variant hover:text-primary font-label-md mb-8 transition-colors cursor-pointer"
             >
-              ← Change Role
+              <span className="material-symbols-outlined text-lg">arrow_back</span>
+              Change role
             </button>
 
-            <Card padding="lg">
-              <div className="mb-6">
-                <h2 className="font-heading text-2xl font-semibold text-gray-900 mb-2">
-                  Complete Your Profile
-                </h2>
-                <p className="text-gray-600">
-                  Registering as: <span className="font-semibold text-primary">{selectedRole}</span>
-                </p>
+            <div className="flex items-center gap-4 mb-10 p-5 bg-surface-container-low rounded-[24px] border border-outline-variant/30">
+              <div className="w-12 h-12 rounded-[16px] bg-primary/10 flex items-center justify-center">
+                 <span className="material-symbols-outlined text-primary text-2xl">{roles.find(r => r.value === selectedRole)?.icon}</span>
               </div>
+              <div>
+                <p className="font-label-md text-on-surface-variant uppercase tracking-widest mb-1">Registering as</p>
+                <p className="font-headline-md text-on-background text-xl capitalize">{selectedRole}</p>
+              </div>
+            </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {errors.general && (
-                  <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-                    <div className="flex">
-                      <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-                      <p className="text-sm text-red-800">{errors.general}</p>
-                    </div>
-                  </div>
-                )}
+            {errors.general && (
+              <div className="flex items-start gap-3 bg-error-container border border-error/20 text-on-error-container rounded-[20px] p-4 mb-8">
+                <span className="material-symbols-outlined shrink-0 mt-0.5">error</span>
+                <p className="font-body-md text-sm">{errors.general}</p>
+              </div>
+            )}
 
-                <Input
-                  label="Full Name"
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  error={errors.name}
-                  placeholder="John Doe"
-                  required
-                />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Name */}
+                <div className="md:col-span-2">
+                  <label className="block font-label-lg text-on-background mb-2">Full Name</label>
+                  <input
+                    type="text" name="name" value={formData.name} onChange={handleChange}
+                    placeholder="John Doe" required
+                    className={`w-full px-6 py-4 bg-surface-container-low border rounded-[24px] text-on-background placeholder-on-surface-variant/50 text-base focus:outline-none focus:bg-surface-container-lowest focus:ring-2 transition-all ${errors.name ? 'border-error focus:ring-error-container' : 'border-outline-variant focus:border-primary focus:ring-primary-container/30'}`}
+                  />
+                  {errors.name && <p className="text-error font-body-md text-xs mt-2">{errors.name}</p>}
+                </div>
 
-                <Input
-                  label="Email Address"
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  error={errors.email}
-                  placeholder="you@example.com"
-                  required
-                />
-
-                <Input
-                  label="Phone Number"
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  error={errors.phone}
-                  placeholder="+1 (555) 000-0000"
-                  required
-                />
-
+                {/* Email */}
                 <div>
-                  <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-                    Address
+                  <label className="block font-label-lg text-on-background mb-2">Email Address</label>
+                  <input
+                    type="email" name="email" value={formData.email} onChange={handleChange}
+                    placeholder="you@example.com" required
+                    className={`w-full px-6 py-4 bg-surface-container-low border rounded-[24px] text-on-background placeholder-on-surface-variant/50 text-base focus:outline-none focus:bg-surface-container-lowest focus:ring-2 transition-all ${errors.email ? 'border-error focus:ring-error-container' : 'border-outline-variant focus:border-primary focus:ring-primary-container/30'}`}
+                  />
+                  {errors.email && <p className="text-error font-body-md text-xs mt-2">{errors.email}</p>}
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block font-label-lg text-on-background mb-2">Phone Number</label>
+                  <input
+                    type="tel" name="phone" value={formData.phone} onChange={handleChange}
+                    placeholder="+1 (555) 000-0000" required
+                    className={`w-full px-6 py-4 bg-surface-container-low border rounded-[24px] text-on-background placeholder-on-surface-variant/50 text-base focus:outline-none focus:bg-surface-container-lowest focus:ring-2 transition-all ${errors.phone ? 'border-error focus:ring-error-container' : 'border-outline-variant focus:border-primary focus:ring-primary-container/30'}`}
+                  />
+                  {errors.phone && <p className="text-error font-body-md text-xs mt-2">{errors.phone}</p>}
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block font-label-lg text-on-background mb-2">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange}
+                      placeholder="Min. 8 characters" required
+                      className={`w-full px-6 pr-14 py-4 bg-surface-container-low border rounded-[24px] text-on-background placeholder-on-surface-variant/50 text-base focus:outline-none focus:bg-surface-container-lowest focus:ring-2 transition-all ${errors.password ? 'border-error focus:ring-error-container' : 'border-outline-variant focus:border-primary focus:ring-primary-container/30'}`}
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-background cursor-pointer">
+                      <span className="material-symbols-outlined">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                    </button>
+                  </div>
+                  {errors.password && <p className="text-error font-body-md text-xs mt-2">{errors.password}</p>}
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label className="block font-label-lg text-on-background mb-2">Confirm Password</label>
+                  <input
+                    type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange}
+                    placeholder="••••••••" required
+                    className={`w-full px-6 py-4 bg-surface-container-low border rounded-[24px] text-on-background placeholder-on-surface-variant/50 text-base focus:outline-none focus:bg-surface-container-lowest focus:ring-2 transition-all ${errors.confirmPassword ? 'border-error focus:ring-error-container' : 'border-outline-variant focus:border-primary focus:ring-primary-container/30'}`}
+                  />
+                  {errors.confirmPassword && <p className="text-error font-body-md text-xs mt-2">{errors.confirmPassword}</p>}
+                </div>
+
+                {/* Address */}
+                <div className="md:col-span-2">
+                  <label className="block font-label-lg text-on-background mb-2">
+                    Address <span className="font-body-md text-on-surface-variant/60 font-normal">(optional)</span>
                   </label>
                   <textarea
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    placeholder="Your address (optional)"
+                    name="address" value={formData.address} onChange={handleChange}
+                    rows={2} placeholder="Your address"
+                    className="w-full px-6 py-4 bg-surface-container-low border border-outline-variant rounded-[24px] text-on-background placeholder-on-surface-variant/50 text-base focus:outline-none focus:bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary-container/30 transition-all resize-none"
                   />
                 </div>
+              </div>
 
-                <Input
-                  label="Password"
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  error={errors.password}
-                  placeholder="••••••••"
-                  helperText="Must be at least 8 characters"
-                  required
-                />
+              <div className="flex items-start gap-3 pt-2 mb-8">
+                <input type="checkbox" id="terms" required className="mt-1 w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer" />
+                <label htmlFor="terms" className="font-body-md text-on-surface-variant cursor-pointer leading-relaxed">
+                  I agree to the{' '}
+                  <Link href="/terms" className="text-primary hover:text-primary-container font-bold">Terms of Service</Link>
+                  {' '}and{' '}
+                  <Link href="/privacy" className="text-primary hover:text-primary-container font-bold">Privacy Policy</Link>
+                </label>
+              </div>
 
-                <Input
-                  label="Confirm Password"
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  error={errors.confirmPassword}
-                  placeholder="••••••••"
-                  required
-                />
-
-                <div className="flex items-start">
-                  <input
-                    type="checkbox"
-                    id="terms"
-                    required
-                    className="mt-1 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <label htmlFor="terms" className="ml-2 text-sm text-gray-600">
-                    I agree to the{' '}
-                    <Link href="/terms" className="text-primary hover:text-primary-700">
-                      Terms of Service
-                    </Link>{' '}
-                    and{' '}
-                    <Link href="/privacy" className="text-primary hover:text-primary-700">
-                      Privacy Policy
-                    </Link>
-                  </label>
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  loading={loading}
-                >
-                  Create Account
-                </Button>
-              </form>
-            </Card>
-
-            <p className="mt-6 text-center text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link
-                href="/login"
-                className="font-medium text-primary hover:text-primary-700 transition-colors"
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-lg text-[16px] py-4.5 rounded-full shadow-[0_10px_20px_rgba(40,108,0,0.2)] hover:-translate-y-1 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
               >
-                Sign in
-              </Link>
-            </p>
+                {loading ? (
+                  <>
+                    <span className="w-5 h-5 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  <>Create Account <span className="material-symbols-outlined">arrow_forward</span></>
+                )}
+              </button>
+            </form>
           </div>
         )}
       </div>

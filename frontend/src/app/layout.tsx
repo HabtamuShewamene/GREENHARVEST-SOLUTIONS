@@ -1,24 +1,22 @@
 import type { Metadata } from "next";
-import { Lora, Raleway } from "next/font/google";
+import { Plus_Jakarta_Sans, Anton } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 
-const lora = Lora({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-heading",
+  variable: "--font-jakarta",
   weight: ["400", "500", "600", "700"],
 });
 
-const raleway = Raleway({
+const anton = Anton({
   subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-anton",
+  weight: ["400"],
 });
 
 export const metadata: Metadata = {
-  title: "GreenHarvest Solutions - Fresh Farm Products Direct to You",
-  description: "Connect with local farmers and get fresh, sustainable agricultural products delivered to your door.",
+  title: "Farmhub - Agritech and E-Groceries",
+  description: "Agritech platform connecting farmers with customers.",
 };
 
 export default function RootLayout({
@@ -27,13 +25,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${lora.variable} ${raleway.variable}`}>
-      <body className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1">
-          {children}
-        </main>
-        <Footer />
+    <html lang="en" className={`${jakarta.variable} ${anton.variable}`}>
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+      </head>
+      <body className="bg-background text-on-surface font-body antialiased overflow-x-hidden selection:bg-primary-container selection:text-on-primary">
+        {children}
       </body>
     </html>
   );

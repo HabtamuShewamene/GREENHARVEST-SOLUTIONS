@@ -1,124 +1,95 @@
 @import "tailwindcss";
 
-/* Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Raleway:wght@300;400;500;600;700&display=swap');
-
-/* Design System - GreenHarvest Solutions */
 @theme inline {
-  /* Colors */
-  --color-primary: #7C3AED;
-  --color-primary-50: #F5F3FF;
-  --color-primary-100: #EDE9FE;
-  --color-primary-200: #DDD6FE;
-  --color-primary-300: #C4B5FD;
-  --color-primary-400: #A78BFA;
-  --color-primary-500: #7C3AED;
-  --color-primary-600: #6D28D9;
-  --color-primary-700: #5B21B6;
-  --color-primary-800: #4C1D95;
-  --color-primary-900: #3B0764;
-  
-  --color-secondary: #A78BFA;
-  --color-secondary-500: #A78BFA;
-  
-  --color-cta: #22C55E;
-  --color-cta-50: #F0FDF4;
-  --color-cta-100: #DCFCE7;
-  --color-cta-500: #22C55E;
-  --color-cta-600: #16A34A;
-  --color-cta-700: #15803D;
-  
-  --color-background: #FAF5FF;
-  --color-text: #4C1D95;
-  
-  /* Font Families */
-  --font-family-heading: 'Lora', serif;
-  --font-family-body: 'Raleway', sans-serif;
-  
-  /* Border Radius (Organic) */
-  --radius-organic: 16px;
-  --radius-organic-lg: 24px;
-  --radius-organic-xl: 32px;
-  
-  /* Shadows (Natural) */
-  --shadow-natural: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-natural-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  --shadow-natural-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+  --color-surface-tint: #286c00;
+  --color-on-background: #1c1b1b;
+  --color-on-secondary-container: #6f6300;
+  --color-on-secondary-fixed: #201c00;
+  --color-primary-fixed: #90fc5b;
+  --color-on-primary: #ffffff;
+  --color-on-tertiary-container: #6c1c00;
+  --color-tertiary-container: #ff7b51;
+  --color-error-container: #ffdad6;
+  --color-inverse-surface: #313030;
+  --color-on-secondary-fixed-variant: #504700;
+  --color-outline-variant: #becab3;
+  --color-on-error: #ffffff;
+  --color-tertiary-fixed: #ffdbd0;
+  --color-on-surface: #1c1b1b;
+  --color-primary: #286c00;
+  --color-surface-container-lowest: #ffffff;
+  --color-inverse-on-surface: #f3f0ef;
+  --color-on-surface-variant: #3f4a38;
+  --color-surface-variant: #e5e2e1;
+  --color-on-tertiary: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0eded;
+  --color-background: #fcf9f8;
+  --color-on-tertiary-fixed: #3a0b00;
+  --color-secondary: #6a5f00;
+  --color-tertiary: #ae3200;
+  --color-surface-container-highest: #e5e2e1;
+  --color-inverse-primary: #74df41;
+  --color-surface-container-high: #eae7e7;
+  --color-primary-fixed-dim: #74df41;
+  --color-secondary-fixed: #fde400;
+  --color-on-primary-container: #154200;
+  --color-surface-dim: #dcd9d9;
+  --color-on-secondary: #ffffff;
+  --color-error: #ba1a1a;
+  --color-outline: #6f7b66;
+  --color-on-primary-fixed: #072100;
+  --color-surface-bright: #fcf9f8;
+  --color-tertiary-fixed-dim: #ffb59e;
+  --color-on-primary-fixed-variant: #1c5200;
+  --color-secondary-container: #fae100;
+  --color-primary-container: #50b819;
+  --color-on-error-container: #93000a;
+  --color-surface: #fcf9f8;
+  --color-secondary-fixed-dim: #dec800;
+  --color-on-tertiary-fixed-variant: #852400;
+
+  --spacing-container-max: 1280px;
+  --spacing-gutter: 24px;
+  --spacing-base: 8px;
+  --spacing-section-gap: 120px;
+  --spacing-margin-mobile: 16px;
+
+  --font-label-md: var(--font-jakarta), sans-serif;
+  --font-headline-lg-mobile: var(--font-anton), sans-serif;
+  --font-headline-lg: var(--font-anton), sans-serif;
+  --font-body-lg: var(--font-jakarta), sans-serif;
+  --font-body-md: var(--font-jakarta), sans-serif;
+  --font-label-lg: var(--font-jakarta), sans-serif;
+  --font-headline-md: var(--font-anton), sans-serif;
+  --font-headline-xl: var(--font-anton), sans-serif;
+  --font-body: var(--font-jakarta), sans-serif;
 }
 
-/* Base Styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer utilities {
+  .text-label-md { font-size: 12px; line-height: 16px; font-weight: 600; }
+  .text-headline-lg-mobile { font-size: 40px; line-height: 48px; font-weight: 400; }
+  .text-headline-lg { font-size: 56px; line-height: 64px; font-weight: 400; }
+  .text-body-lg { font-size: 18px; line-height: 28px; font-weight: 500; }
+  .text-body-md { font-size: 16px; line-height: 24px; font-weight: 400; }
+  .text-label-lg { font-size: 14px; line-height: 20px; font-weight: 700; }
+  .text-headline-md { font-size: 32px; line-height: 40px; font-weight: 400; }
+  .text-headline-xl { font-size: 80px; line-height: 90px; letter-spacing: -0.02em; font-weight: 400; }
 }
 
-html {
-  scroll-behavior: smooth;
+.sparkle-icon {
+  color: var(--color-tertiary-container);
 }
 
-body {
-  font-family: var(--font-family-body);
-  color: var(--color-text);
-  background-color: var(--color-background);
-  line-height: 1.6;
+.organic-shape-1 {
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-family-heading);
-  font-weight: 600;
-  line-height: 1.2;
+.organic-shape-2 {
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
 }
 
-/* Accessibility - Reduced Motion */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* Custom Utilities */
-.btn-primary {
-  @apply bg-cta hover:bg-cta-600 text-white font-medium px-6 py-3 rounded-2xl transition-colors duration-200 cursor-pointer;
-}
-
-.btn-secondary {
-  @apply bg-primary hover:bg-primary-700 text-white font-medium px-6 py-3 rounded-2xl transition-colors duration-200 cursor-pointer;
-}
-
-.btn-outline {
-  @apply border-2 border-primary text-primary hover:bg-primary hover:text-white font-medium px-6 py-3 rounded-2xl transition-all duration-200 cursor-pointer;
-}
-
-.btn-ghost {
-  @apply text-primary hover:bg-primary-50 font-medium px-6 py-3 rounded-2xl transition-colors duration-200 cursor-pointer;
-}
-
-.card {
-  @apply bg-white rounded-3xl shadow-natural hover:shadow-natural-lg transition-shadow duration-200;
-}
-
-.input-field {
-  @apply w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all;
-}
-
-.badge-success {
-  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800;
-}
-
-.badge-warning {
-  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800;
-}
-
-.badge-error {
-  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800;
-}
-
-.badge-info {
-  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800;
+.bg-pattern {
+  background-image: radial-gradient(circle at 2px 2px, rgba(0,0,0,0.05) 1px, transparent 0);
+  background-size: 32px 32px;
 }

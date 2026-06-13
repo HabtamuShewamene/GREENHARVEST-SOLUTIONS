@@ -1,131 +1,57 @@
-/**
- * Footer Component
- * Site footer with links and information
- */
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
-import { Globe, X, Share2, Mail } from 'lucide-react';
 
 const Footer: React.FC = () => {
-  const currentYear = new Date().getFullYear();
-
   return (
-    <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* About */}
-          <div>
-            <h3 className="font-heading font-bold text-lg mb-4">GreenHarvest</h3>
-            <p className="text-gray-400 text-sm">
-              Connecting farmers directly with buyers for fresh, sustainable agricultural products.
-            </p>
-            <div className="flex space-x-4 mt-4">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors" aria-label="Facebook">
-                <Globe className="w-5 h-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors" aria-label="Twitter">
-                <X className="w-5 h-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors" aria-label="Instagram">
-                <Share2 className="w-5 h-5" />
-              </a>
-            </div>
+    <footer className="bg-on-background dark:bg-surface-container-lowest text-background dark:text-on-background rounded-t-2xl pt-16 pb-8">
+      <div className="max-w-container-max mx-auto px-gutter grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+        <div className="col-span-1 md:col-span-1">
+          <div className="flex items-center gap-2 mb-6">
+            <span className="material-symbols-outlined text-primary-container" style={{ fontVariationSettings: "'FILL' 1" }}>eco</span>
+            <span className="font-headline-md text-headline-md font-bold text-background dark:text-on-background">GreenHarvest</span>
           </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="font-heading font-semibold text-lg mb-4">Quick Links</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/about" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/products" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Products
-                </Link>
-              </li>
-              <li>
-                <Link href="/categories" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Categories
-                </Link>
-              </li>
-              <li>
-                <Link href="/farmers" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Our Farmers
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* For Sellers */}
-          <div>
-            <h3 className="font-heading font-semibold text-lg mb-4">For Sellers</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/sell" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Start Selling
-                </Link>
-              </li>
-              <li>
-                <Link href="/farmer-guide" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Farmer Guide
-                </Link>
-              </li>
-              <li>
-                <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Pricing
-                </Link>
-              </li>
-              <li>
-                <Link href="/support" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Support
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <h3 className="font-heading font-semibold text-lg mb-4">Newsletter</h3>
-            <p className="text-gray-400 text-sm mb-4">
-              Subscribe to get updates on fresh products and special offers.
-            </p>
-            <form className="flex flex-col space-y-2">
-              <input
-                type="email"
-                placeholder="Your email"
-                className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-              <button
-                type="submit"
-                className="bg-cta hover:bg-cta-600 text-white px-4 py-2 rounded-xl transition-colors"
-              >
-                Subscribe
-              </button>
-            </form>
+          <p className="font-body-md text-body-md text-surface-variant dark:text-on-surface-variant opacity-80 text-sm max-w-xs">GreenHarvest is an innovative platform connecting local farmers and customers in the agricultural sector.</p>
+        </div>
+        <div className="col-span-1">
+          <h5 className="font-label-lg text-label-lg font-bold mb-4">Service</h5>
+          <ul className="space-y-3">
+            <li><Link href="/products" className="font-label-md text-label-md text-surface-variant dark:text-on-surface-variant hover:text-tertiary-container transition-colors duration-200">Products</Link></li>
+            <li><Link href="/categories" className="font-label-md text-label-md text-surface-variant dark:text-on-surface-variant hover:text-tertiary-container transition-colors duration-200">Categories</Link></li>
+          </ul>
+        </div>
+        <div className="col-span-1">
+          <h5 className="font-label-lg text-label-lg font-bold mb-4">Company</h5>
+          <ul className="space-y-3">
+            <li><Link href="/login" className="font-label-md text-label-md text-surface-variant dark:text-on-surface-variant hover:text-tertiary-container transition-colors duration-200">Log In</Link></li>
+            <li><Link href="/register" className="font-label-md text-label-md text-surface-variant dark:text-on-surface-variant hover:text-tertiary-container transition-colors duration-200">Register</Link></li>
+          </ul>
+        </div>
+        <div className="col-span-1">
+          <h5 className="font-label-lg text-label-lg font-bold mb-4">Social Media</h5>
+          <div className="flex gap-4">
+            <a className="w-8 h-8 rounded-full bg-surface-variant/20 flex items-center justify-center hover:bg-tertiary-container transition-colors duration-200" href="#">
+              <span className="material-symbols-outlined text-sm">share</span>
+            </a>
+            <a className="w-8 h-8 rounded-full bg-surface-variant/20 flex items-center justify-center hover:bg-tertiary-container transition-colors duration-200" href="#">
+              <span className="material-symbols-outlined text-sm">flutter_dash</span>
+            </a>
+            <a className="w-8 h-8 rounded-full bg-surface-variant/20 flex items-center justify-center hover:bg-tertiary-container transition-colors duration-200" href="#">
+              <span className="material-symbols-outlined text-sm">work</span>
+            </a>
+            <a className="w-8 h-8 rounded-full bg-surface-variant/20 flex items-center justify-center hover:bg-tertiary-container transition-colors duration-200" href="#">
+              <span className="material-symbols-outlined text-sm">photo_camera</span>
+            </a>
           </div>
         </div>
-
-        {/* Bottom Bar */}
-        <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-400 text-sm">
-            © {currentYear} GreenHarvest Solutions. All rights reserved.
-          </p>
-          <div className="flex space-x-6 mt-4 md:mt-0">
-            <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors text-sm">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="text-gray-400 hover:text-white transition-colors text-sm">
-              Terms of Service
-            </Link>
-            <Link href="/contact" className="text-gray-400 hover:text-white transition-colors text-sm">
-              Contact
-            </Link>
-          </div>
+      </div>
+      <div className="max-w-container-max mx-auto px-gutter pt-8 border-t border-surface-variant/20 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex gap-6">
+          <a className="font-label-md text-label-md text-surface-variant dark:text-on-surface-variant hover:text-tertiary-container transition-colors duration-200" href="#">Privacy Policy</a>
+          <a className="font-label-md text-label-md text-surface-variant dark:text-on-surface-variant hover:text-tertiary-container transition-colors duration-200" href="#">Terms of Use</a>
         </div>
+        <p className="font-label-md text-label-md text-surface-variant dark:text-on-surface-variant opacity-60">Copyright {new Date().getFullYear()} GreenHarvest Solutions</p>
       </div>
     </footer>
   );

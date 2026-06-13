@@ -74,16 +74,24 @@ class APIClient {
 
   // Auth endpoints
   async login(email: string, password: string) {
-    const response = await this.request<{ accessToken: string; refreshToken: string; user: any }>({
+    const response = await this.request<{ access_token: string; refresh_token?: string; user: any }>({
       method: 'POST',
       url: '/auth/login',
       data: { email, password },
     });
-    this.setToken(response.accessToken);
-    if (response.refreshToken) {
-      localStorage.setItem('refreshToken', response.refreshToken);
+    // Backend returns snake_case: access_token
+    this.setToken(response.access_token);
+    if (response.refresh_token) {
+      localStorage.setItem('refreshToken', response.refresh_token);
     }
     return response;
+  }
+
+  async verifyEmail(token: string) {
+    return this.request({
+      method: 'GET',
+      url: `/auth/verify-email?token=${token}`,
+    });
   }
 
   async register(userData: any) {
