@@ -1,5 +1,6 @@
 const cartModel = require("../models/cartModel");
 const productModel = require("../models/productModel");
+const inventoryModel = require("../models/inventoryModel");
 const { isPositiveInteger } = require("../utils/validators");
 
 const createServiceError = (message, statusCode) => {
@@ -23,19 +24,26 @@ const addToCart = async ({ user_id, product_id, quantity }) => {
     throw createServiceError("Product not found", 404);
   }
 
+  const inventory = await inventoryModel.getInventoryByProductId(Number(product_id));
+  const availableStock = inventory ? Number(inventory.quantity) : 0;
+
+  if (availableStock < Number(quantity)) {
+    throw createServiceError(`Requested quantity exceeds available stock (A: avail=${availableStock}, qty=${quantity})`, 400);
+  }
+
   const existingItem = await cartModel.findCartItemByUserAndProduct(user_id, Number(product_id));
 
   if (existingItem) {
     const updatedQuantity = Number(existingItem.quantity) + Number(quantity);
 
     if (updatedQuantity > Number(product.stock)) {
-      throw createServiceError("Requested quantity exceeds available stock", 400);
+      throw createServiceError(`Requested quantity exceeds available stock (B: updated=${updatedQuantity}, stock=${product.stock})`, 400);
     }
 
     await cartModel.updateCartItemQuantityById(existingItem.id, updatedQuantity);
   } else {
     if (Number(quantity) > Number(product.stock)) {
-      throw createServiceError("Requested quantity exceeds available stock", 400);
+      throw createServiceError(`Requested quantity exceeds available stock (C: qty=${quantity}, stock=${product.stock})`, 400);
     }
 
     await cartModel.createCartItem({
