@@ -71,7 +71,13 @@ export default function BuyerDashboard() {
     } else {
       try {
         await api.updateCartItem(cartItemId.toString(), newQuantity);
-      } catch (error) {}
+      } catch (error: any) {
+        if (error.response?.data?.message) {
+          alert(error.response.data.message);
+        } else {
+          console.error("Update cart item failed", error);
+        }
+      }
     }
     try {
       const cartRes = await api.getCart();
