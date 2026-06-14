@@ -242,14 +242,14 @@ class APIClient {
   async getUserProfile() {
     return this.request<{ user: any }>({
       method: 'GET',
-      url: '/users/profile',
+      url: '/users/me',
     });
   }
 
   async updateUserProfile(userData: any) {
     return this.request({
       method: 'PUT',
-      url: '/users/profile',
+      url: '/users/me',
       data: userData,
     });
   }

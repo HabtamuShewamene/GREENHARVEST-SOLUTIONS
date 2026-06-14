@@ -40,7 +40,10 @@ export interface Product {
   image_url?: string;
   created_at: string;
   farmer?: User;
+  farmer_name?: string;
+  farmer_email?: string;
   category?: Category;
+  category_name?: string;
 }
 
 export interface CartItem {

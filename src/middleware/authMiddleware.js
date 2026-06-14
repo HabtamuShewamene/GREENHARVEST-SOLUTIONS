@@ -9,18 +9,16 @@ const resolveActorId = async (user_id, role) => {
   }
 
   if (role === "buyer") {
-    const result = await pool.query(
+    await pool.query(
       `
         INSERT INTO buyer_profiles (user_id)
         VALUES ($1)
-        ON CONFLICT (user_id)
-        DO UPDATE SET user_id = EXCLUDED.user_id
-        RETURNING buyer_id
+        ON CONFLICT (user_id) DO NOTHING
       `,
       [user_id]
     );
 
-    return result.rows[0].buyer_id;
+    return user_id;
   }
 
   if (role === "farmer") {
