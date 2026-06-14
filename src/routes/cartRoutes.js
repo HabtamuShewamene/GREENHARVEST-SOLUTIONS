@@ -19,6 +19,7 @@ router.use(requireRole("buyer"));
 router.get("/", getCart);
 router.post("/", addToCart);
 router.patch("/:id", updateCartItem);
+router.put("/:id", updateCartItem);
 router.delete("/:id", removeCartItem);
 
 module.exports = router;

@@ -18,7 +18,7 @@ const addToCart = async (req, res) => {
   try {
     const cartItems = await cartService.addToCart({
       user_id: req.user.id,
-      product_id: req.body && req.body.product_id,
+      product_id: req.body && (req.body.product_id || req.body.productId),
       quantity: req.body && req.body.quantity,
     });
 

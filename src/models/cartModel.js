@@ -51,7 +51,7 @@ const getUserCartItems = async (user_id) => {
 				ORDER BY image_id ASC
 				LIMIT 1
 			) pi ON TRUE
-			JOIN users u ON u.user_id = p.farmer_id
+			JOIN users u ON u.id = p.farmer_id
 			WHERE c.user_id = $1
 			ORDER BY ci.cart_item_id DESC
 		`,
