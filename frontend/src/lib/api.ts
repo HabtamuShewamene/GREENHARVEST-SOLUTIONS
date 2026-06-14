@@ -179,7 +179,7 @@ class APIClient {
 
   async updateCartItem(id: string, quantity: number) {
     return this.request({
-      method: 'PUT',
+      method: 'PATCH',
       url: `/cart/${id}`,
       data: { quantity },
     });
