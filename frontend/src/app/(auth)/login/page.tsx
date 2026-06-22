@@ -46,7 +46,6 @@ export default function LoginPage() {
         admin: '/admin/dashboard',
         farmer: '/farmer/dashboard',
         delivery_partner: '/delivery/dashboard',
-        field_agent: '/agent/dashboard',
       };
       router.push(redirectMap[role] ?? '/buyer/dashboard');
     } catch (error: unknown) {

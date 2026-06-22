@@ -284,6 +284,37 @@ class APIClient {
       url: `/notifications/${id}`,
     });
   }
+
+  // Farmer Dashboard endpoints
+  async getFarmerDashboard() {
+    return this.request<any>({
+      method: 'GET',
+      url: '/dashboard/farmer',
+    });
+  }
+
+  async getFarmerOrders(params?: { page?: number; limit?: number; status?: string; search?: string }) {
+    return this.request<{ orders: any[]; pagination: any }>({
+      method: 'GET',
+      url: '/dashboard/farmer/orders',
+      params,
+    });
+  }
+
+  async getFarmerProducts() {
+    return this.request<{ products: any[] }>({
+      method: 'GET',
+      url: '/dashboard/farmer/products',
+    });
+  }
+
+  async updateProductStock(id: string, stock: number) {
+    return this.request({
+      method: 'PATCH',
+      url: `/products/${id}/stock`,
+      data: { stock },
+    });
+  }
 }
 
 // Export singleton instance
