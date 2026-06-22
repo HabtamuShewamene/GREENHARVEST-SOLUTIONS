@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import type { Product, CartItem } from '@/types';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function BuyerDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -14,6 +15,7 @@ export default function BuyerDashboard() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -337,7 +339,7 @@ export default function BuyerDashboard() {
 
                   if (viewMode === 'list') {
                     return (
-                      <div key={product.id} className="group flex items-center gap-4 bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-md hover:border-[#d5edc4] transition-all cursor-pointer" onClick={() => handleAddToCart(product.id)}>
+                      <div key={product.id} className="group flex items-center gap-4 bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-md hover:border-[#d5edc4] transition-all cursor-pointer" onClick={() => router.push(`/buyer/product/${product.id}`)}>
                         <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
                           {product.image_url ? (
                             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -357,7 +359,7 @@ export default function BuyerDashboard() {
                           ) : (
                             <span className="text-[10px] text-gray-400">{product.stock} in stock</span>
                           )}
-                          <button className="text-xs font-bold text-white bg-[#286c00] px-3 py-1.5 rounded-lg hover:bg-[#1e5200] transition-colors">
+                          <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product.id); }} className="text-xs font-bold text-white bg-[#286c00] px-3 py-1.5 rounded-lg hover:bg-[#1e5200] transition-colors">
                             Add to Cart
                           </button>
                         </div>
@@ -366,7 +368,7 @@ export default function BuyerDashboard() {
                   }
 
                   return (
-                    <div key={product.id} className="group relative flex flex-col cursor-pointer" onClick={() => handleAddToCart(product.id)}>
+                    <div key={product.id} className="group relative flex flex-col cursor-pointer" onClick={() => router.push(`/buyer/product/${product.id}`)}>
                       {/* Image Container */}
                       <div className="w-full aspect-[3/4] bg-[#f8f9fa] rounded-2xl overflow-hidden relative mb-4 border border-gray-100/50">
                         <div className="absolute top-3 left-3 z-10">
