@@ -179,7 +179,7 @@ class APIClient {
 
   async updateCartItem(id: string, quantity: number) {
     return this.request({
-      method: 'PUT',
+      method: 'PATCH',
       url: `/cart/${id}`,
       data: { quantity },
     });
@@ -282,6 +282,37 @@ class APIClient {
     return this.request({
       method: 'PATCH',
       url: `/notifications/${id}`,
+    });
+  }
+
+  // Farmer Dashboard endpoints
+  async getFarmerDashboard() {
+    return this.request<any>({
+      method: 'GET',
+      url: '/dashboard/farmer',
+    });
+  }
+
+  async getFarmerOrders(params?: { page?: number; limit?: number; status?: string; search?: string }) {
+    return this.request<{ orders: any[]; pagination: any }>({
+      method: 'GET',
+      url: '/dashboard/farmer/orders',
+      params,
+    });
+  }
+
+  async getFarmerProducts() {
+    return this.request<{ products: any[] }>({
+      method: 'GET',
+      url: '/dashboard/farmer/products',
+    });
+  }
+
+  async updateProductStock(id: string, stock: number) {
+    return this.request({
+      method: 'PATCH',
+      url: `/products/${id}/stock`,
+      data: { stock },
     });
   }
 }

@@ -29,12 +29,6 @@ const roles = [
     description: 'Deliver products to customers',
     icon: 'local_shipping',
   },
-  {
-    value: 'field_agent' as UserRole,
-    title: 'Field Agent',
-    description: 'Help farmers list products',
-    icon: 'support_agent',
-  },
 ];
 
 export default function RegisterPage() {
