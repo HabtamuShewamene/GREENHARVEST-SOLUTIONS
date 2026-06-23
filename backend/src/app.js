@@ -28,6 +28,9 @@ const inventoryRoutes = require("./routes/inventoryRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const healthRoutes = require("./routes/healthRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
+const campaignRoutes = require("./routes/campaignRoutes");
+const storeLayoutRoutes = require("./routes/storeLayoutRoutes");
+const advisorRoutes = require("./routes/advisorRoutes");
 
 const app = express();
 
@@ -79,9 +82,13 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/campaigns", campaignRoutes);
+app.use("/api/store-layout", storeLayoutRoutes);
+app.use("/api/advisor", advisorRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/campaigns", campaignRoutes);
 
 app.get("/", async (req, res) => {
   res.status(200).send("Agricultural Ecommerce API Running");
