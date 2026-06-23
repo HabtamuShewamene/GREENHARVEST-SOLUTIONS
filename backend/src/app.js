@@ -88,7 +88,6 @@ app.use("/api/advisor", advisorRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/upload", uploadRoutes);
-app.use("/api/campaigns", campaignRoutes);
 
 app.get("/", async (req, res) => {
   res.status(200).send("Agricultural Ecommerce API Running");
