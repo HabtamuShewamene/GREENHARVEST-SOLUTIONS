@@ -159,7 +159,7 @@ export default function NewProductPage() {
   /* ------------------------------------------------------------------ */
 
   return (
-    <div className="flex h-screen w-full bg-[#fafafa] font-sans overflow-hidden">
+    <>
       {/* LEFT COLUMN – hero image */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gray-900">
         <img
@@ -553,6 +553,6 @@ export default function NewProductPage() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -153,14 +153,14 @@ export default function EditProductPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-full bg-[#fafafa] items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-[#f9fafb]">
         <div className="w-12 h-12 border-4 border-[#2d9a33] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#fafafa] font-sans overflow-hidden">
+    <>
       <div className="flex-1 overflow-y-auto w-full">
         <div className="flex justify-between items-center p-8 sticky top-0 bg-[#fafafa]/90 backdrop-blur-md z-10 border-b border-gray-100">
           <Link
@@ -390,6 +390,6 @@ export default function EditProductPage() {
 
         </div>
       </div>
-    </div>
+    </>
   );
 }
