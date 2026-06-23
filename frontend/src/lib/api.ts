@@ -315,6 +315,76 @@ class APIClient {
       data: { stock },
     });
   }
+
+  // Campaign endpoints
+  async getCampaigns() {
+    return this.request<{ campaigns: any[] }>({
+      method: 'GET',
+      url: '/campaigns',
+    });
+  }
+
+  async getCampaignStats() {
+    return this.request<{ stats: any }>({
+      method: 'GET',
+      url: '/campaigns/stats',
+    });
+  }
+
+  async createCampaign(campaignData: any) {
+    return this.request({
+      method: 'POST',
+      url: '/campaigns',
+      data: campaignData,
+    });
+  }
+
+  async updateCampaign(id: string, campaignData: any) {
+    return this.request({
+      method: 'PUT',
+      url: `/campaigns/${id}`,
+      data: campaignData,
+    });
+  }
+
+  async updateCampaignStatus(id: string, status: string) {
+    return this.request({
+      method: 'PATCH',
+      url: `/campaigns/${id}/status`,
+      data: { status },
+    });
+  }
+
+  async deleteCampaign(id: string) {
+    return this.request({
+      method: 'DELETE',
+      url: `/campaigns/${id}`,
+    });
+  }
+
+  // Store Decoration endpoints
+  async getStoreLayout() {
+    return this.request<{ layout: any }>({
+      method: 'GET',
+      url: '/store-layout',
+    });
+  }
+
+  async updateStoreLayout(layoutData: any) {
+    return this.request<{ message: string; layout: any }>({
+      method: 'PUT',
+      url: '/store-layout',
+      data: layoutData,
+    });
+  }
+
+  // Business Advisor
+  async getAdvisorDashboard() {
+    return this.request<any>({
+      method: 'GET',
+      url: '/advisor',
+    });
+  }
 }
 
 // Export singleton instance
