@@ -77,77 +77,9 @@ export default function FarmerDashboard() {
   const unreadMessages = notifications.filter(n => !n.is_read).length;
 
   return (
-    <div className="flex h-screen bg-[#f3f4f6] font-sans overflow-hidden">
+    <>
       
-      {/* LEFT SIDEBAR */}
-      <aside className="w-[240px] bg-white border-r border-gray-200 flex flex-col h-full flex-shrink-0 z-20">
-        <div className="h-16 bg-[#2d9a33] flex items-center px-4 text-white">
-          <span className="material-symbols-outlined mr-2">agriculture</span>
-          <span className="font-bold text-lg tracking-tight">Seller Center</span>
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar py-4">
-          <div className="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Core</div>
-          <Link href="/farmer/dashboard" className="flex items-center px-4 py-2.5 bg-green-50 text-[#2d9a33] border-r-4 border-[#2d9a33]">
-            <span className="material-symbols-outlined mr-3 text-[20px]">dashboard</span>
-            <span className="font-medium text-sm">Overview</span>
-          </Link>
-
-          <div className="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Products</div>
-          <Link href="/farmer/products" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined mr-3 text-[20px]">inventory_2</span>
-            <span className="text-sm">Manage Products</span>
-          </Link>
-          <Link href="/farmer/products/new" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined mr-3 text-[20px]">add_box</span>
-            <span className="text-sm">Add New Product</span>
-          </Link>
-
-          <div className="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Orders</div>
-          <Link href="/farmer/orders" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors justify-between">
-            <div className="flex items-center">
-              <span className="material-symbols-outlined mr-3 text-[20px]">receipt_long</span>
-              <span className="text-sm">All Orders</span>
-            </div>
-            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{dashboardData?.summary?.total_orders_received || 18}</span>
-          </Link>
-          <Link href="/farmer/shipping" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors justify-between">
-            <div className="flex items-center">
-              <span className="material-symbols-outlined mr-3 text-[20px]">local_shipping</span>
-              <span className="text-sm">Shipping</span>
-            </div>
-            {pendingShipments > 0 && <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{pendingShipments}</span>}
-          </Link>
-          <Link href="/farmer/returns" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined mr-3 text-[20px]">assignment_return</span>
-            <span className="text-sm">Returns & Refunds</span>
-          </Link>
-
-          <div className="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Marketing & Store</div>
-          <Link href="/farmer/campaigns" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined mr-3 text-[20px]">campaign</span>
-            <span className="text-sm">Campaigns</span>
-          </Link>
-          <Link href="/farmer/store" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined mr-3 text-[20px]">storefront</span>
-            <span className="text-sm">Store Decoration</span>
-          </Link>
-
-          <div className="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Data Intelligence</div>
-          <Link href="/farmer/advisor" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined mr-3 text-[20px]">bar_chart</span>
-            <span className="text-sm">Business Advisor</span>
-          </Link>
-          <Link href="/farmer/market" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined mr-3 text-[20px]">trending_up</span>
-            <span className="text-sm">Market Insights</span>
-          </Link>
-        </div>
-
-        <div className="p-4 border-t border-gray-200 text-xs text-gray-400">
-          GreenHarvest Seller © {new Date().getFullYear()}
-        </div>
-      </aside>
+      
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -644,6 +576,6 @@ export default function FarmerDashboard() {
           </div>
         </main>
       </div>
-    </div>
+    </>
   );
 }

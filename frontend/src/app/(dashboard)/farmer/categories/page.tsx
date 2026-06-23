@@ -33,33 +33,9 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="flex h-screen bg-[#f3f4f6] font-sans overflow-hidden">
+    <>
       
-      {/* LEFT SIDEBAR - preserved from dashboard */}
-      <aside className="w-[240px] bg-white border-r border-gray-200 flex flex-col h-full flex-shrink-0 z-20">
-        <div className="h-16 bg-[#2d9a33] flex items-center px-4 text-white">
-          <span className="material-symbols-outlined mr-2">agriculture</span>
-          <span className="font-bold text-lg tracking-tight">Seller Center</span>
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar py-4">
-          <div className="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Core</div>
-          <Link href="/farmer/dashboard" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined mr-3 text-[20px]">dashboard</span>
-            <span className="text-sm">Overview</span>
-          </Link>
-
-          <div className="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Products</div>
-          <Link href="/farmer/products" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined mr-3 text-[20px]">inventory_2</span>
-            <span className="text-sm">Manage Products</span>
-          </Link>
-          <Link href="/farmer/products/new" className="flex items-center px-4 py-2.5 text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined mr-3 text-[20px]">add_box</span>
-            <span className="text-sm">Add New Product</span>
-          </Link>
-        </div>
-      </aside>
+      
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#fafafa]">
@@ -97,6 +73,6 @@ export default function CategoriesPage() {
           </div>
         </main>
       </div>
-    </div>
+    </>
   );
 }
