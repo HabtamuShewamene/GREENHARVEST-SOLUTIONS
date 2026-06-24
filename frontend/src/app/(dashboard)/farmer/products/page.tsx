@@ -19,15 +19,51 @@ export default function ManageProductsPage() {
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
   useEffect(() => {
     loadData();
+  }, [page, activeTab]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.row-action-menu')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (searchOverride?: string, categoryOverride?: string, statusOverride?: string) => {
     try {
       setLoading(true);
+
+      const searchTerm = searchOverride !== undefined ? searchOverride : searchQuery;
+      const category = categoryOverride !== undefined ? categoryOverride : (categoryFilter === 'All Categories' ? undefined : categoryFilter);
+      let stockStatus = undefined;
+
+      const effectiveStatusFilter = statusOverride !== undefined ? statusOverride : statusFilter;
+
+      if (activeTab === 'On Sale' || effectiveStatusFilter === 'On Sale') {
+        stockStatus = 'in_stock';
+      } else if (activeTab === 'Sold Out' || effectiveStatusFilter === 'Sold Out') {
+        stockStatus = 'out_of_stock';
+      } else if (effectiveStatusFilter === 'Low Stock') {
+        stockStatus = 'low_stock';
+      }
+
       const [productsRes, categoriesRes, dashRes, userRes, notifRes] = await Promise.all([
-        api.getFarmerProducts(),
+        api.getFarmerProducts({
+          page,
+          limit: 10,
+          search: searchTerm || undefined,
+          category: category,
+          stock_status: stockStatus,
+        }),
         api.getCategories(),
         api.getFarmerDashboard().catch(() => ({})),
         api.getUserProfile().catch(() => ({ user: null })),
@@ -35,6 +71,8 @@ export default function ManageProductsPage() {
       ]);
 
       setProducts(productsRes.products || []);
+      setTotalPages(productsRes.pagination?.total_pages || 1);
+      setTotalProducts(productsRes.pagination?.total || 0);
       setCategories(categoriesRes.categories || []);
       setDashboardData(dashRes || null);
       setUser(userRes.user || null);
@@ -58,7 +96,7 @@ export default function ManageProductsPage() {
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedItems(new Set(filteredProducts.map(p => p.id.toString())));
+      setSelectedItems(new Set(products.map(p => p.id.toString())));
     } else {
       setSelectedItems(new Set());
     }
@@ -85,46 +123,60 @@ export default function ManageProductsPage() {
     }
   };
 
-  const handleDeleteBatch = async () => {
-    if (!window.confirm(`Are you sure you want to delete ${selectedItems.size} products?`)) return;
+  const handleDeactivate = async (id: string) => {
     try {
-      await Promise.all(Array.from(selectedItems).map(id => api.deleteProduct(id)));
-      setSelectedItems(new Set());
+      await api.batchUpdateProductStatus([id], 'deactivated');
       loadData();
     } catch (error) {
-      console.error('Failed to delete products', error);
-      alert('Failed to delete some products');
+      console.error('Failed to deactivate product', error);
+      alert('Failed to deactivate product');
     }
   };
 
-  // derived stats
-  const onSaleCount = products.filter(p => p.stock > 0).length;
-  const soldOutCount = products.filter(p => p.stock === 0).length;
-
-  // Filter products
-  const filteredProducts = products.filter(p => {
-    // Tab filter
-    if (activeTab === 'On Sale' && p.stock === 0) return false;
-    if (activeTab === 'Sold Out' && p.stock > 0) return false;
-    // Note: 'Under Review' and 'Drafts' might need specific status fields if added to backend
-    
-    // Search query
-    if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase()) && !p.id.toString().includes(searchQuery)) {
-      return false;
+  const handleBatchAction = async (action: 'delete' | 'deactivate' | 'reactivate') => {
+    if (!window.confirm(`Are you sure you want to ${action} ${selectedItems.size} products?`)) return;
+    try {
+      await api.batchUpdateProducts(Array.from(selectedItems), action);
+      setSelectedItems(new Set());
+      loadData();
+    } catch (error) {
+      console.error(`Failed to ${action} products`, error);
+      alert(`Failed to ${action} products`);
     }
-    
-    // Category filter
-    if (categoryFilter !== 'All Categories' && p.category_name !== categoryFilter) {
-      return false;
-    }
-    
-    // Status filter
-    if (statusFilter === 'On Sale' && p.stock === 0) return false;
-    if (statusFilter === 'Low Stock' && (p.stock === 0 || p.stock > 50)) return false; // assuming <=50 is low
-    if (statusFilter === 'Sold Out' && p.stock > 0) return false;
+  };
 
-    return true;
-  });
+  const handleExport = async () => {
+    try {
+      await api.exportFarmerProductsCSV();
+    } catch (error) {
+      console.error("Failed to export products", error);
+      alert("Failed to export products");
+    }
+  };
+
+  const handleSearch = () => {
+    setPage(1);
+    loadData();
+  };
+
+  const handleReset = () => {
+    setSearchQuery('');
+    setCategoryFilter('All Categories');
+    setStatusFilter('All Status');
+    setPage(1);
+    loadData('', 'All Categories', 'All Status');
+  };
+
+  // Status handling via tabs resets page
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setPage(1);
+  };
+
+  // For UI tabs
+  const onSaleCount = dashboardData?.summary?.total_products ? dashboardData.summary.total_products - dashboardData.summary.out_of_stock_products : 0;
+  const soldOutCount = dashboardData?.summary?.out_of_stock_products || 0;
+  const totalCount = dashboardData?.summary?.total_products || 0;
 
   if (loading) {
     return (
@@ -136,12 +188,12 @@ export default function ManageProductsPage() {
 
   return (
     <>
-      
-      
+
+
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#fafafa]">
-        
+
         {/* TOP HEADER */}
         <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 flex-shrink-0 z-10 sticky top-0">
           <div className="flex items-center">
@@ -151,10 +203,13 @@ export default function ManageProductsPage() {
           <div className="flex-1 max-w-xl mx-8 hidden md:block">
             <div className="flex items-center bg-gray-100/80 border border-gray-200 rounded-full px-4 py-2 w-full transition-all duration-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#2d9a33]/20 focus-within:border-[#2d9a33]">
               <span className="material-symbols-outlined text-gray-400 text-[20px] mr-2">search</span>
-              <input 
-                type="text" 
-                placeholder="Search products..." 
+              <input
+                type="text"
+                placeholder="Search products..."
                 className="w-full bg-transparent border-none focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
           </div>
@@ -168,7 +223,7 @@ export default function ManageProductsPage() {
                 </span>
               )}
             </button>
-            
+
             <div className="h-8 w-px bg-gray-200 mx-2"></div>
 
             {/* USER PROFILE */}
@@ -191,34 +246,34 @@ export default function ManageProductsPage() {
         {/* DASHBOARD CONTENT */}
         <main className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8">
           <div className="max-w-[1200px] mx-auto space-y-6">
-            
+
             {/* TABS */}
             <div className="bg-white rounded-xl border border-gray-200 px-2 flex space-x-6 text-sm font-medium">
-              <button 
-                onClick={() => setActiveTab('All')}
+              <button
+                onClick={() => handleTabChange('All')}
                 className={`py-4 px-2 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'All' ? 'border-[#2d9a33] text-[#2d9a33]' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
               >
-                All <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'All' ? 'bg-[#2d9a33] text-white' : 'bg-gray-100 text-gray-600'}`}>{products.length}</span>
+                All <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'All' ? 'bg-[#2d9a33] text-white' : 'bg-gray-100 text-gray-600'}`}>{totalCount}</span>
               </button>
-              <button 
-                onClick={() => setActiveTab('On Sale')}
+              <button
+                onClick={() => handleTabChange('On Sale')}
                 className={`py-4 px-2 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'On Sale' ? 'border-[#2d9a33] text-[#2d9a33]' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
               >
                 On Sale <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'On Sale' ? 'bg-[#2d9a33] text-white' : 'bg-gray-100 text-gray-600'}`}>{onSaleCount}</span>
               </button>
-              <button 
-                onClick={() => setActiveTab('Sold Out')}
+              <button
+                onClick={() => handleTabChange('Sold Out')}
                 className={`py-4 px-2 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'Sold Out' ? 'border-[#2d9a33] text-[#2d9a33]' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
               >
                 Sold Out <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'Sold Out' ? 'bg-[#2d9a33] text-white' : 'bg-gray-100 text-gray-600'}`}>{soldOutCount}</span>
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('Under Review')}
                 className={`py-4 px-2 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'Under Review' ? 'border-[#2d9a33] text-[#2d9a33]' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
               >
                 Under Review <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'Under Review' ? 'bg-[#2d9a33] text-white' : 'bg-gray-100 text-gray-600'}`}>0</span>
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('Drafts')}
                 className={`py-4 px-2 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'Drafts' ? 'border-[#2d9a33] text-[#2d9a33]' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
               >
@@ -230,18 +285,18 @@ export default function ManageProductsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-wrap gap-4 items-end">
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">Product Name / ID</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search products..." 
+                  placeholder="Search products..."
                   className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2d9a33]/20 focus:border-[#2d9a33] text-sm"
                 />
               </div>
               <div className="w-48">
                 <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">Category</label>
                 <div className="relative">
-                  <select 
+                  <select
                     value={categoryFilter}
                     onChange={(e) => setCategoryFilter(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2d9a33]/20 focus:border-[#2d9a33] text-sm appearance-none cursor-pointer"
@@ -257,7 +312,7 @@ export default function ManageProductsPage() {
               <div className="w-48">
                 <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">Stock Status</label>
                 <div className="relative">
-                  <select 
+                  <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2d9a33]/20 focus:border-[#2d9a33] text-sm appearance-none cursor-pointer"
@@ -271,11 +326,11 @@ export default function ManageProductsPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button className="px-6 py-2.5 bg-[#2d9a33] hover:bg-[#25822a] text-white rounded-lg text-sm font-bold transition-colors">
+                <button onClick={handleSearch} className="px-6 py-2.5 bg-[#2d9a33] hover:bg-[#25822a] text-white rounded-lg text-sm font-bold transition-colors">
                   Search
                 </button>
-                <button 
-                  onClick={() => { setSearchQuery(''); setCategoryFilter('All Categories'); setStatusFilter('All Status'); }}
+                <button
+                  onClick={handleReset}
                   className="px-6 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg text-sm font-bold transition-colors"
                 >
                   Reset
@@ -286,22 +341,36 @@ export default function ManageProductsPage() {
             {/* ACTION BAR */}
             <div className="flex justify-between items-center">
               <div className="flex gap-2">
-                <button 
+                <button
                   disabled={selectedItems.size === 0}
-                  onClick={handleDeleteBatch}
+                  onClick={() => handleBatchAction('delete')}
                   className={`px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${selectedItems.size > 0 ? 'text-red-600 hover:bg-red-50 border-red-200' : 'text-gray-400 cursor-not-allowed'}`}
                 >
                   <span className="material-symbols-outlined text-[18px]">delete</span>
                   Delete
                 </button>
-                <button 
+                <button
                   disabled={selectedItems.size === 0}
-                  className={`px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${selectedItems.size > 0 ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'}`}
+                  onClick={async () => {
+                    if (!window.confirm(`Are you sure you want to deactivate ${selectedItems.size} products?`)) return;
+                    try {
+                      await api.batchUpdateProductStatus(Array.from(selectedItems), 'deactivated');
+                      setSelectedItems(new Set());
+                      loadData();
+                    } catch (error) {
+                      console.error('Failed to deactivate products', error);
+                      alert('Failed to deactivate products');
+                    }
+                  }}
+                  className={`px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${selectedItems.size > 0 ? 'text-orange-600 hover:bg-orange-50 border-orange-200' : 'text-gray-400 cursor-not-allowed'}`}
                 >
-                  <span className="material-symbols-outlined text-[18px]">edit</span>
-                  Batch Edit
+                  <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
+                  Deactivate
                 </button>
-                <button className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg text-sm font-bold text-gray-700 transition-colors flex items-center gap-2">
+                <button
+                  onClick={handleExport}
+                  className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg text-sm font-bold text-gray-700 transition-colors flex items-center gap-2"
+                >
                   <span className="material-symbols-outlined text-[18px]">download</span>
                   Export
                 </button>
@@ -318,11 +387,11 @@ export default function ManageProductsPage() {
                   <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
                       <th className="p-4 w-12">
-                        <input 
-                          type="checkbox" 
-                          checked={selectedItems.size === filteredProducts.length && filteredProducts.length > 0}
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.size === products.length && products.length > 0}
                           onChange={handleSelectAll}
-                          className="rounded border-gray-300 text-[#2d9a33] focus:ring-[#2d9a33] cursor-pointer" 
+                          className="rounded border-gray-300 text-[#2d9a33] focus:ring-[#2d9a33] cursor-pointer"
                         />
                       </th>
                       <th className="p-4 min-w-[250px]">Product Info</th>
@@ -336,7 +405,7 @@ export default function ManageProductsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-sm">
-                    {filteredProducts.length === 0 ? (
+                    {products.length === 0 ? (
                       <tr>
                         <td colSpan={9} className="p-12 text-center text-gray-500">
                           <div className="flex flex-col items-center justify-center">
@@ -349,17 +418,17 @@ export default function ManageProductsPage() {
                           </div>
                         </td>
                       </tr>
-                    ) : filteredProducts.map((product) => {
+                    ) : products.map((product) => {
                       const isLowStock = product.stock > 0 && product.stock <= 50; // heuristic
-                      
+
                       return (
                         <tr key={product.id} className="hover:bg-gray-50/80 transition-colors">
                           <td className="p-4">
-                            <input 
-                              type="checkbox" 
+                            <input
+                              type="checkbox"
                               checked={selectedItems.has(product.id.toString())}
                               onChange={() => handleSelectItem(product.id.toString())}
-                              className="rounded border-gray-300 text-[#2d9a33] focus:ring-[#2d9a33] cursor-pointer" 
+                              className="rounded border-gray-300 text-[#2d9a33] focus:ring-[#2d9a33] cursor-pointer"
                             />
                           </td>
                           <td className="p-4">
@@ -386,20 +455,25 @@ export default function ManageProductsPage() {
                           </td>
                           <td className="p-4 text-center font-medium text-gray-600">{product.units_sold || 0}</td>
                           <td className="p-4">
-                            {product.stock === 0 ? (
+                            {product.status === 'deactivated' ? (
+                              <span className="inline-flex bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">
+                                Inactive
+                              </span>
+                            ) : product.status === 'draft' ? (
+                              <span className="inline-flex bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">
+                                Draft
+                              </span>
+                            ) : product.stock === 0 ? (
                               <span className="inline-flex flex-col bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider leading-tight text-center">
-                                <span>Sold</span>
-                                <span>Out</span>
+                                <span>Sold</span><span>Out</span>
                               </span>
                             ) : isLowStock ? (
                               <span className="inline-flex flex-col bg-[#fff200] text-gray-900 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider leading-tight text-center">
-                                <span>Low</span>
-                                <span>Stock</span>
+                                <span>Low</span><span>Stock</span>
                               </span>
                             ) : (
                               <span className="inline-flex flex-col bg-[#4caf50] text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider leading-tight text-center">
-                                <span>On</span>
-                                <span>Sale</span>
+                                <span>On</span><span>Sale</span>
                               </span>
                             )}
                           </td>
@@ -408,12 +482,39 @@ export default function ManageProductsPage() {
                               <Link href={`/farmer/products/edit/${product.id}`} className="text-sm font-bold text-[#2d9a33] hover:underline">
                                 Edit
                               </Link>
-                              <button onClick={() => handleDelete(product.id)} className="text-sm font-bold text-gray-600 hover:text-red-600 transition-colors">
+                              <button onClick={() => handleDeactivate(product.id.toString())} className="text-sm font-bold text-gray-600 hover:text-red-600 transition-colors">
                                 Deactivate
                               </button>
-                              <button className="text-gray-400 hover:text-gray-600 flex items-center">
-                                <span className="material-symbols-outlined text-[20px]">more_horiz</span>
-                              </button>
+                              <div className="relative row-action-menu">
+                                <button
+                                  onClick={() => setOpenMenuId(openMenuId === product.id.toString() ? null : product.id.toString())}
+                                  className="text-gray-400 hover:text-gray-600 flex items-center"
+                                >
+                                  <span className="material-symbols-outlined text-[20px]">more_horiz</span>
+                                </button>
+                                {openMenuId === product.id.toString() && (
+                                  <div className="absolute right-0 top-8 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                                    <button
+                                      onClick={() => { router.push(`/farmer/products/edit/${product.id}`); setOpenMenuId(null); }}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">edit</span> Edit
+                                    </button>
+                                    <button
+                                      onClick={() => { handleDeactivate(product.id.toString()); setOpenMenuId(null); }}
+                                      className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">power_settings_new</span> Deactivate
+                                    </button>
+                                    <button
+                                      onClick={() => { handleDelete(product.id.toString()); setOpenMenuId(null); }}
+                                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">delete</span> Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -422,20 +523,33 @@ export default function ManageProductsPage() {
                   </tbody>
                 </table>
               </div>
-              
-              {/* PAGINATION */}
+
               <div className="p-4 border-t border-gray-200 flex justify-between items-center text-sm">
-                <span className="text-gray-500 font-medium">Showing {filteredProducts.length > 0 ? 1 : 0} to {filteredProducts.length} of {products.length} entries</span>
+                <span className="text-gray-500 font-medium">Showing {products.length > 0 ? (page - 1) * 10 + 1 : 0} to {Math.min(page * 10, totalProducts)} of {totalProducts.toLocaleString()} entries</span>
                 <div className="flex items-center gap-1">
-                  <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                  <button
+                    onClick={() => setPage(Math.max(1, page - 1))}
+                    disabled={page === 1}
+                    className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
                     <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                   </button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded bg-[#2d9a33] text-white font-bold">1</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold">2</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold">3</button>
-                  <span className="px-2 text-gray-400">...</span>
-                  <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold">14</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-gray-50">
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-[#2d9a33] text-white font-bold">{page}</button>
+                  {page < totalPages && (
+                    <button onClick={() => setPage(page + 1)} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold">{page + 1}</button>
+                  )}
+                  {page + 1 < totalPages && (
+                    <button onClick={() => setPage(page + 2)} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold">{page + 2}</button>
+                  )}
+                  {page + 2 < totalPages && <span className="px-2 text-gray-400">...</span>}
+                  {page + 2 < totalPages && (
+                    <button onClick={() => setPage(totalPages)} className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold">{totalPages}</button>
+                  )}
+                  <button
+                    onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    disabled={page >= totalPages}
+                    className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
                     <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                   </button>
                 </div>

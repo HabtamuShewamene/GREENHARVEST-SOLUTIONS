@@ -11,6 +11,7 @@ const {
   getAllProducts,
   getProductById,
   updateProductStock,
+  batchUpdateProductStatus,
 } = require("../controllers/productController");
 
 const router = express.Router();
@@ -20,6 +21,7 @@ router.get("/:id", getProductById);
 router.post("/", authMiddleware, requireRole("farmer"), createProduct);
 router.put("/:id", authMiddleware, requireRole("farmer"), updateProduct);
 router.delete("/:id", authMiddleware, requireRole("farmer"), deleteProduct);
+router.patch("/batch", authMiddleware, requireRole("farmer"), batchUpdateProductStatus);
 router.patch("/:id/stock", authMiddleware, updateProductStock);
 
 module.exports = router;

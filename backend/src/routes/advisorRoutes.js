@@ -2,10 +2,10 @@ const express = require("express");
 const router = express.Router();
 const advisorController = require("../controllers/advisorController");
 const authMiddleware = require("../middleware/authMiddleware");
+const { requireRole } = require("../middleware/roleMiddleware");
 
 // All routes require authentication and farmer role
-router.use(authMiddleware.verifyToken);
-router.use(authMiddleware.isFarmer);
+router.use(authMiddleware, requireRole("farmer"));
 
 router.get("/", advisorController.getAdvisorDashboard);
 

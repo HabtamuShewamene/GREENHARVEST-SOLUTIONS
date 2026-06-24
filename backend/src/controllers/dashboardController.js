@@ -1,6 +1,7 @@
 // Moved from controllers/dashboardController.js during the structure refactor.
 // Import path updated to use src/config/db.js.
 const { pool } = require("../config/db");
+const { Parser } = require("json2csv");
 
 const getFarmerDashboard = async (req, res) => {
   try {
@@ -243,7 +244,12 @@ const getFarmerOrders = async (req, res) => {
     const values = [farmerId];
     let paramIdx = 2;
 
-    if (status && status !== "all") {
+    const validOrderStatuses = [
+      'pending', 'confirmed', 'collected', 'in_transit', 'delivered',
+      'return_requested', 'return_processing', 'refunded', 'cancelled'
+    ];
+
+    if (status && status !== "all" && validOrderStatuses.includes(status)) {
       statusFilter = ` AND o.order_status = $${paramIdx}`;
       values.push(status);
       paramIdx++;
@@ -317,13 +323,190 @@ const getFarmerOrders = async (req, res) => {
   }
 };
 
-// Farmer products endpoint
+// Farmer products endpoint with server-side pagination
 const getFarmerProducts = async (req, res) => {
   try {
     if (req.user.role !== "farmer") {
       return res.status(403).json({
         message: "Only farmers can access their products",
       });
+    }
+
+    const farmerId = req.user.id;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const offset = (page - 1) * limit;
+    const search = req.query.search || null;
+    const category = req.query.category || null;
+    const stockStatus = req.query.stock_status || null; // 'in_stock', 'low_stock', 'out_of_stock'
+
+    const values = [farmerId];
+    let paramIdx = 2;
+    let searchFilter = "";
+    let categoryFilter = "";
+    let stockFilter = "";
+
+    if (search) {
+      searchFilter = ` AND (p.name ILIKE $${paramIdx} OR CAST(p.id AS TEXT) LIKE $${paramIdx})`;
+      values.push(`%${search}%`);
+      paramIdx++;
+    }
+
+    if (category) {
+      categoryFilter = ` AND c.name ILIKE $${paramIdx}`;
+      values.push(`%${category}%`);
+      paramIdx++;
+    }
+
+    if (stockStatus === 'out_of_stock') {
+      stockFilter = ` AND COALESCE(i.quantity, 0) = 0`;
+    } else if (stockStatus === 'low_stock') {
+      stockFilter = ` AND COALESCE(i.quantity, 0) > 0 AND COALESCE(i.quantity, 0) <= 50`;
+    } else if (stockStatus === 'in_stock') {
+      stockFilter = ` AND COALESCE(i.quantity, 0) > 50`;
+    }
+
+    const countResult = await pool.query(
+      `
+        SELECT COUNT(DISTINCT p.id)::int AS total
+        FROM products p
+        LEFT JOIN inventory i ON i.product_id = p.id
+        LEFT JOIN categories c ON c.id = p.category_id
+        WHERE p.farmer_id = $1${searchFilter}${categoryFilter}${stockFilter}
+      `,
+      values
+    );
+
+    const total = countResult.rows[0].total;
+
+    values.push(limit, offset);
+
+    const result = await pool.query(
+      `
+        SELECT
+          p.id,
+          p.name,
+          p.description,
+          p.price,
+          p.status,
+          COALESCE(i.quantity, 0)::int AS stock,
+          p.image_url,
+          p.created_at,
+          c.name AS category_name,
+          c.id AS category_id,
+          COALESCE(SUM(oi.quantity), 0)::int AS units_sold,
+          COALESCE(SUM(oi.quantity * oi.price), 0)::numeric(10,2) AS revenue
+        FROM products p
+        LEFT JOIN inventory i ON i.product_id = p.id
+        LEFT JOIN categories c ON c.id = p.category_id
+        LEFT JOIN order_items oi ON oi.product_id = p.id
+        WHERE p.farmer_id = $1${searchFilter}${categoryFilter}${stockFilter}
+        GROUP BY p.id, p.status, i.quantity, c.name, c.id
+        ORDER BY p.created_at DESC
+        LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
+      `,
+      values
+    );
+
+    return res.status(200).json({
+      products: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        total_pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Fetch farmer products failed:", error.message);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+// Export farmer orders as CSV
+const exportFarmerOrdersCSV = async (req, res) => {
+  try {
+    if (req.user.role !== "farmer") {
+      return res.status(403).json({ message: "Only farmers can export their orders" });
+    }
+
+    const farmerId = req.user.id;
+    const status = req.query.status || null;
+    const search = req.query.search || null;
+
+    const values = [farmerId];
+    let paramIdx = 2;
+    let statusFilter = "";
+    let searchFilter = "";
+
+    const validStatuses = [
+      'pending', 'confirmed', 'collected', 'in_transit', 'delivered',
+      'return_requested', 'return_processing', 'refunded', 'cancelled'
+    ];
+
+    if (status && status !== "all" && validStatuses.includes(status)) {
+      statusFilter = ` AND o.order_status = $${paramIdx}`;
+      values.push(status);
+      paramIdx++;
+    }
+
+    if (search) {
+      searchFilter = ` AND (CAST(o.id AS TEXT) LIKE $${paramIdx} OR u.name ILIKE $${paramIdx + 1})`;
+      values.push(`%${search}%`, `%${search}%`);
+      paramIdx += 2;
+    }
+
+    const ordersResult = await pool.query(
+      `
+        SELECT
+          o.id AS order_id,
+          o.order_status,
+          o.total_amount,
+          o.created_at,
+          u.name AS buyer_name,
+          u.email AS buyer_email,
+          STRING_AGG(p.name || ' x' || oi.quantity, ', ') AS items_summary
+        FROM orders o
+        JOIN users u ON u.id = o.buyer_id
+        JOIN order_items oi ON oi.order_id = o.id
+        JOIN products p ON p.id = oi.product_id
+        WHERE p.farmer_id = $1${statusFilter}${searchFilter}
+        GROUP BY o.id, u.id
+        ORDER BY o.created_at DESC
+        LIMIT 5000
+      `,
+      values
+    );
+
+    const fields = [
+      { label: 'Order ID', value: 'order_id' },
+      { label: 'Status', value: 'order_status' },
+      { label: 'Total Amount (ETB)', value: 'total_amount' },
+      { label: 'Buyer Name', value: 'buyer_name' },
+      { label: 'Buyer Email', value: 'buyer_email' },
+      { label: 'Items', value: 'items_summary' },
+      { label: 'Date', value: 'created_at' },
+    ];
+
+    const parser = new Parser({ fields });
+    const csv = parser.parse(ordersResult.rows);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="orders-export-${Date.now()}.csv"`);
+    return res.status(200).send(csv);
+  } catch (error) {
+    console.error("Export farmer orders CSV failed:", error.message);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Export farmer products as CSV
+const exportFarmerProductsCSV = async (req, res) => {
+  try {
+    if (req.user.role !== "farmer") {
+      return res.status(403).json({ message: "Only farmers can export their products" });
     }
 
     const farmerId = req.user.id;
@@ -336,12 +519,10 @@ const getFarmerProducts = async (req, res) => {
           p.description,
           p.price,
           COALESCE(i.quantity, 0)::int AS stock,
-          p.image_url,
-          p.created_at,
           c.name AS category_name,
-          c.id AS category_id,
           COALESCE(SUM(oi.quantity), 0)::int AS units_sold,
-          COALESCE(SUM(oi.quantity * oi.price), 0)::numeric(10,2) AS revenue
+          COALESCE(SUM(oi.quantity * oi.price), 0)::numeric(10,2) AS revenue,
+          p.created_at
         FROM products p
         LEFT JOIN inventory i ON i.product_id = p.id
         LEFT JOIN categories c ON c.id = p.category_id
@@ -349,18 +530,186 @@ const getFarmerProducts = async (req, res) => {
         WHERE p.farmer_id = $1
         GROUP BY p.id, i.quantity, c.name, c.id
         ORDER BY p.created_at DESC
+        LIMIT 5000
       `,
       [farmerId]
     );
 
+    const fields = [
+      { label: 'Product ID', value: 'id' },
+      { label: 'Product Name', value: 'name' },
+      { label: 'Description', value: 'description' },
+      { label: 'Price (ETB)', value: 'price' },
+      { label: 'Stock (kg)', value: 'stock' },
+      { label: 'Category', value: 'category_name' },
+      { label: 'Units Sold', value: 'units_sold' },
+      { label: 'Revenue (ETB)', value: 'revenue' },
+      { label: 'Created At', value: 'created_at' },
+    ];
+
+    const parser = new Parser({ fields });
+    const csv = parser.parse(result.rows);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="products-export-${Date.now()}.csv"`);
+    return res.status(200).send(csv);
+  } catch (error) {
+    console.error("Export farmer products CSV failed:", error.message);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Batch update product status (bulk deactivate/reactivate via stock)
+const batchUpdateProductStatus = async (req, res) => {
+  try {
+    if (req.user.role !== "farmer") {
+      return res.status(403).json({ message: "Only farmers can update their products" });
+    }
+
+    const farmerId = req.user.id;
+    const { product_ids, action } = req.body;
+
+    if (!Array.isArray(product_ids) || product_ids.length === 0) {
+      return res.status(400).json({ message: "product_ids must be a non-empty array" });
+    }
+
+    if (!['delete', 'deactivate', 'reactivate'].includes(action)) {
+      return res.status(400).json({ message: "action must be one of: delete, deactivate, reactivate" });
+    }
+
+    // Validate ownership — only process products that belong to this farmer
+    const ownershipCheck = await pool.query(
+      `SELECT id FROM products WHERE id = ANY($1::int[]) AND farmer_id = $2`,
+      [product_ids.map(Number), farmerId]
+    );
+
+    const ownedIds = ownershipCheck.rows.map(r => r.id);
+
+    if (ownedIds.length === 0) {
+      return res.status(403).json({ message: "No products found or not authorized" });
+    }
+
+    let message;
+
+    if (action === 'delete') {
+      await pool.query(`DELETE FROM products WHERE id = ANY($1::int[]) AND farmer_id = $2`, [ownedIds, farmerId]);
+      message = `${ownedIds.length} product(s) deleted successfully`;
+    } else if (action === 'deactivate') {
+      // Deactivate = set stock to 0 in inventory
+      await pool.query(
+        `UPDATE inventory SET quantity = 0, last_updated = NOW() WHERE product_id = ANY($1::int[])`,
+        [ownedIds]
+      );
+      message = `${ownedIds.length} product(s) deactivated (stock set to 0)`;
+    } else if (action === 'reactivate') {
+      // Reactivate — signal by restoring minimum stock of 1 where stock is 0
+      await pool.query(
+        `
+          INSERT INTO inventory (product_id, farmer_id, quantity)
+          SELECT p.id, p.farmer_id, 1
+          FROM products p
+          WHERE p.id = ANY($1::int[])
+          ON CONFLICT (product_id) DO UPDATE
+            SET quantity = CASE WHEN inventory.quantity = 0 THEN 1 ELSE inventory.quantity END,
+                last_updated = NOW()
+        `,
+        [ownedIds]
+      );
+      message = `${ownedIds.length} product(s) reactivated`;
+    }
+
+    return res.status(200).json({ message, affected: ownedIds.length, product_ids: ownedIds });
+  } catch (error) {
+    console.error("Batch update products failed:", error.message);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Handle return request approval / rejection / refund
+const updateReturnStatus = async (req, res) => {
+  try {
+    if (req.user.role !== "farmer") {
+      return res.status(403).json({ message: "Only farmers can process returns" });
+    }
+
+    const farmerId = req.user.id;
+    const orderId = parseInt(req.params.orderId);
+    const { action, rejection_reason } = req.body;
+
+    if (!orderId || isNaN(orderId)) {
+      return res.status(400).json({ message: "Invalid order ID" });
+    }
+
+    if (!['approve', 'reject', 'refund'].includes(action)) {
+      return res.status(400).json({ message: "action must be one of: approve, reject, refund" });
+    }
+
+    // Verify the order belongs to this farmer and is in the right state
+    const orderCheck = await pool.query(
+      `
+        SELECT o.id, o.order_status, o.buyer_id, o.total_amount
+        FROM orders o
+        JOIN order_items oi ON oi.order_id = o.id
+        JOIN products p ON p.id = oi.product_id
+        WHERE o.id = $1 AND p.farmer_id = $2
+        LIMIT 1
+      `,
+      [orderId, farmerId]
+    );
+
+    if (orderCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Order not found or not authorized" });
+    }
+
+    const order = orderCheck.rows[0];
+    const currentStatus = order.order_status;
+
+    // State machine validation
+    const validTransitions = {
+      approve: ['return_requested'],
+      reject: ['return_requested'],
+      refund: ['return_processing'],
+    };
+
+    if (!validTransitions[action].includes(currentStatus)) {
+      return res.status(400).json({
+        message: `Cannot ${action} a return in status '${currentStatus}'`,
+      });
+    }
+
+    let newStatus;
+    if (action === 'approve') {
+      newStatus = 'return_processing';
+    } else if (action === 'reject') {
+      newStatus = 'delivered'; // Rejected return → order stays delivered
+    } else if (action === 'refund') {
+      newStatus = 'refunded';
+    }
+
+    await pool.query(`UPDATE orders SET order_status = $1 WHERE id = $2`, [newStatus, orderId]);
+
+    // If refunded, restore inventory stock
+    if (action === 'refund') {
+      const itemsResult = await pool.query(
+        `SELECT product_id, quantity FROM order_items WHERE order_id = $1`,
+        [orderId]
+      );
+      for (const item of itemsResult.rows) {
+        await pool.query(
+          `UPDATE inventory SET quantity = quantity + $1, last_updated = NOW() WHERE product_id = $2`,
+          [item.quantity, item.product_id]
+        );
+      }
+    }
+
     return res.status(200).json({
-      products: result.rows,
+      message: `Return ${action}d successfully`,
+      order_id: orderId,
+      new_status: newStatus,
     });
   } catch (error) {
-    console.error("Fetch farmer products failed:", error.message);
-    return res.status(500).json({
-      message: "Internal server error",
-    });
+    console.error("Update return status failed:", error.message);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -436,4 +785,8 @@ module.exports = {
   getFarmerOrders,
   getFarmerProducts,
   getAdminDashboard,
+  exportFarmerOrdersCSV,
+  exportFarmerProductsCSV,
+  batchUpdateProductStatus,
+  updateReturnStatus,
 };

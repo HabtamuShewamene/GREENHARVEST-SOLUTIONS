@@ -198,7 +198,22 @@ export default function ManageOrdersPage() {
           <div className="max-w-[1440px] mx-auto space-y-6">
             
             <div className="flex justify-end gap-3 mb-2">
-              <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    let exportStatus: string | undefined;
+                    if (activeTab === 'pending shipment') exportStatus = 'pending';
+                    else if (activeTab === 'in transit') exportStatus = 'in_transit';
+                    else if (activeTab === 'returns/refunds') exportStatus = 'returned';
+                    else if (activeTab === 'canceled') exportStatus = 'cancelled';
+                    else if (activeTab !== 'all') exportStatus = activeTab;
+                    await api.exportFarmerOrdersCSV({ status: exportStatus });
+                  } catch {
+                    alert('Failed to export orders');
+                  }
+                }}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+              >
                 <span className="material-symbols-outlined text-[18px]">download</span>
                 Export CSV
               </button>
@@ -333,6 +348,8 @@ export default function ManageOrdersPage() {
                           statusBadge = <span className="bg-[#4caf50] text-white px-3 py-1 rounded-full text-xs font-bold">Completed</span>;
                         } else if (order.order_status === 'cancelled') {
                           statusBadge = <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold">Cancelled</span>;
+                        } else if (order.order_status === 'returned') {
+                          statusBadge = <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold">Returned</span>;
                         } else {
                           statusBadge = <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold">{order.order_status}</span>;
                         }

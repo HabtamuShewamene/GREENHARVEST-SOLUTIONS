@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const campaignController = require("../controllers/campaignController");
-const { verifyToken, isFarmer } = require("../middleware/authMiddleware");
+const authMiddleware = require("../middleware/authMiddleware");
+const { requireRole } = require("../middleware/roleMiddleware");
 
 // All campaign routes require farmer authentication
-router.use(verifyToken, isFarmer);
+router.use(authMiddleware, requireRole("farmer"));
 
 router.get("/stats", campaignController.getCampaignStats);
 router.post("/", campaignController.createCampaign);
