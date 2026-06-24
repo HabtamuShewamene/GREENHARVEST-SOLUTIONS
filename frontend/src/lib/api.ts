@@ -301,10 +301,96 @@ class APIClient {
     });
   }
 
-  async getFarmerProducts() {
-    return this.request<{ products: any[] }>({
+  async getFarmerProducts(params?: { page?: number; limit?: number; search?: string; category?: string; stock_status?: string }) {
+    return this.request<{ products: any[]; pagination: any }>({
       method: 'GET',
       url: '/dashboard/farmer/products',
+      params,
+    });
+  }
+
+  async exportFarmerOrdersCSV(params?: { status?: string; search?: string }) {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.set('status', params.status);
+    if (params?.search) queryParams.set('search', params.search);
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/dashboard/farmer/orders/export-csv?${queryParams.toString()}`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Export failed');
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `orders-export-${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  async exportFarmerProductsCSV() {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/dashboard/farmer/products/export-csv`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Export failed');
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `products-export-${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  async batchUpdateProducts(product_ids: string[], action: 'delete' | 'deactivate' | 'reactivate') {
+    return this.request<{ message: string; affected: number; product_ids: number[] }>({
+      method: 'POST',
+      url: '/dashboard/farmer/products/batch',
+      data: { product_ids: product_ids.map(Number), action },
+    });
+  }
+
+  async updateReturnStatus(orderId: string, action: 'approve' | 'reject' | 'refund', rejection_reason?: string) {
+    return this.request<{ message: string; order_id: number; new_status: string }>({
+      method: 'PATCH',
+      url: `/dashboard/farmer/orders/${orderId}/return`,
+      data: { action, rejection_reason },
+    });
+  }
+
+  // Task 5.1 — Returns endpoints
+  async getReturns(params?: { page?: number; limit?: number }) {
+    return this.request<{ returns: any[]; pagination: any }>({
+      method: 'GET',
+      url: '/returns',
+      params,
+    });
+  }
+
+  // Task 5.2 — Create return
+  async createReturn(data: { order_id: number; reason: string; restock_quantity?: number }) {
+    return this.request<{ return: any }>({
+      method: 'POST',
+      url: '/returns',
+      data,
+    });
+  }
+
+  // Task 5.3 — Update return (accept/reject)
+  async updateReturn(id: string | number, action: 'accept' | 'reject') {
+    return this.request<{ return: any }>({
+      method: 'PATCH',
+      url: `/returns/${id}`,
+      data: { action },
+    });
+  }
+
+  // Task 5.4 — Batch update product status
+  async batchUpdateProductStatus(product_ids: string[], status: 'active' | 'draft' | 'deactivated') {
+    return this.request<{ message: string; affected: number; product_ids: number[] }>({
+      method: 'PATCH',
+      url: '/products/batch',
+      data: { product_ids: product_ids.map(Number), status },
     });
   }
 

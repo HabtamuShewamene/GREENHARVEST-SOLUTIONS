@@ -7,13 +7,14 @@ import { api } from '@/lib/api';
 
 export default function ReturnsManagementPage() {
   const router = useRouter();
-  const [orders, setOrders] = useState<any[]>([]);
+  const [returns, setReturns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Pagination & Filtering state
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalOrders, setTotalOrders] = useState(0);
+  const [totalReturns, setTotalReturns] = useState(0);
   const [activeTab, setActiveTab] = useState('all');
   
   // Search inputs
@@ -32,7 +33,7 @@ export default function ReturnsManagementPage() {
   }, []);
 
   useEffect(() => {
-    loadOrders();
+    loadReturns();
   }, [page, activeTab]);
 
   const loadSidebarData = async () => {
@@ -50,33 +51,17 @@ export default function ReturnsManagementPage() {
     }
   };
 
-  const loadOrders = async (searchOverride?: string) => {
+  const loadReturns = async () => {
     try {
       setLoading(true);
-      
-      const searchTerm = searchOverride !== undefined 
-        ? searchOverride 
-        : (orderIdSearch || buyerSearch) ? `${orderIdSearch} ${buyerSearch}`.trim() : undefined;
-
-      // Map local tabs to backend statuses. For refunds/returns, we focus on cancelled or returned.
-      let mappedStatus = activeTab;
-      if (mappedStatus === 'pending approval') mappedStatus = 'return_requested';
-      if (mappedStatus === 'processing') mappedStatus = 'return_processing';
-      if (mappedStatus === 'resolved') mappedStatus = 'returned';
-      if (mappedStatus === 'all') mappedStatus = 'returned'; // Defaulting to returned for this view since backend only has basic statuses
-
-      const res = await api.getFarmerOrders({
-        page,
-        limit: 10,
-        status: mappedStatus === 'all' ? 'returned' : mappedStatus, // Fallback filtering
-        search: searchTerm || undefined
-      });
-
-      setOrders(res.orders || []);
+      setError(null);
+      const res = await api.getReturns({ page, limit: 10 });
+      setReturns(res.returns || []);
       setTotalPages(res.pagination?.total_pages || 1);
-      setTotalOrders(res.pagination?.total || 0);
-    } catch (error) {
-      console.error("Failed to load returns data", error);
+      setTotalReturns(res.pagination?.total || 0);
+    } catch (err: any) {
+      setError('Failed to load returns. Please try again.');
+      setReturns([]);
     } finally {
       setLoading(false);
     }
@@ -84,7 +69,7 @@ export default function ReturnsManagementPage() {
 
   const handleSearch = () => {
     setPage(1);
-    loadOrders();
+    loadReturns();
   };
 
   const handleReset = () => {
@@ -93,17 +78,16 @@ export default function ReturnsManagementPage() {
     setBuyerSearch('');
     setDateRange('');
     setPage(1);
-    loadOrders('');
+    loadReturns();
   };
 
-  const handleUpdateStatus = async (orderId: string, nextStatus: string) => {
+  const handleReturnAction = async (returnId: string | number, action: 'accept' | 'reject') => {
     try {
-      await api.updateOrderStatus(orderId, nextStatus);
-      loadOrders();
-      loadSidebarData();
-    } catch (error) {
-      console.error("Failed to update return status", error);
-      alert("Failed to update status. Please try again.");
+      await api.updateReturn(returnId, action);
+      loadReturns();
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || `Failed to ${action} return`;
+      alert(msg);
     }
   };
 
@@ -111,7 +95,7 @@ export default function ReturnsManagementPage() {
   const unreadMessages = notifications.filter(n => !n.is_read).length;
 
   const tabs = [
-    { id: 'all', label: 'All Returns', count: totalOrders },
+    { id: 'all', label: 'All Returns', count: totalReturns },
     { id: 'pending approval', label: 'Pending Approval', count: 0 },
     { id: 'processing', label: 'Processing Refund', count: 0 },
     { id: 'resolved', label: 'Resolved', count: 0 },
@@ -261,6 +245,13 @@ export default function ReturnsManagementPage() {
               </div>
             </div>
 
+            {/* ERROR BANNER */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm font-medium">
+                {error}
+              </div>
+            )}
+
             {/* RETURNS TABLE */}
             {loading ? (
               <div className="flex justify-center p-12">
@@ -276,13 +267,13 @@ export default function ReturnsManagementPage() {
                         <th className="p-4">RETURN INFO</th>
                         <th className="p-4">REASON</th>
                         <th className="p-4">BUYER</th>
-                        <th className="p-4">REFUND AMOUNT</th>
+                        <th className="p-4">REFUND STATUS</th>
                         <th className="p-4">STATUS</th>
                         <th className="p-4 text-right">ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-sm">
-                      {orders.length === 0 ? (
+                      {returns.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="p-12 text-center text-gray-500">
                             <div className="flex flex-col items-center justify-center">
@@ -292,65 +283,69 @@ export default function ReturnsManagementPage() {
                             </div>
                           </td>
                         </tr>
-                      ) : orders.map((order) => {
-                        const item = order.items && order.items[0] ? order.items[0] : null;
-                        const dateObj = new Date(order.created_at);
-                        const dateStr = dateObj.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
-                        
-                        let statusBadge = null;
-                        if (order.order_status === 'return_requested' || order.order_status === 'returned') {
-                          statusBadge = <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">Return Requested</span>;
-                        } else if (order.order_status === 'return_processing') {
-                          statusBadge = <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold">Processing</span>;
-                        } else if (order.order_status === 'refunded') {
-                          statusBadge = <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-bold">Resolved</span>;
-                        } else {
-                          statusBadge = <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold">{order.order_status}</span>;
-                        }
+                      ) : returns.map((ret) => {
+                        const dateObj = new Date(ret.created_at);
+                        const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                         
                         return (
-                          <tr key={order.order_id} className="hover:bg-gray-50/80 transition-colors">
+                          <tr key={ret.id} className="hover:bg-gray-50/80 transition-colors">
                             <td className="p-4">
                               <input type="checkbox" className="rounded border-gray-300 text-[#2d9a33] focus:ring-[#2d9a33] cursor-pointer" />
                             </td>
                             <td className="p-4">
-                              <p className="font-bold text-gray-900 line-clamp-1">{item?.product_name}</p>
-                              <p className="text-xs text-gray-500 font-medium mt-0.5">Order ID: GH-2023-{order.order_id.toString().padStart(5, '0')}</p>
+                              <p className="font-bold text-gray-900 line-clamp-1">Return #{ret.id}</p>
+                              <p className="text-xs text-gray-500 font-medium mt-0.5">Order ID: GH-2023-{ret.order_id?.toString().padStart(5, '0')}</p>
                               <p className="text-xs text-gray-500 font-medium mt-0.5">Requested: {dateStr}</p>
                             </td>
                             <td className="p-4">
-                              <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-red-500 text-[16px]">report_problem</span>
-                                <p className="text-sm text-gray-800">Defective / Damaged</p>
+                              <div className="flex items-start gap-2">
+                                <span className="material-symbols-outlined text-red-500 text-[16px] mt-0.5">report_problem</span>
+                                <p className="text-sm text-gray-800">{ret.reason}</p>
                               </div>
                             </td>
                             <td className="p-4">
-                              <p className="font-bold text-gray-900">{order.buyer_name}</p>
-                              <p className="text-xs text-gray-500 font-medium">{order.buyer_email || 'No email'}</p>
-                            </td>
-                            <td className="p-4 font-bold text-gray-900">
-                              ETB {Number(order.total_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                              <p className="font-bold text-gray-900">{ret.buyer_name}</p>
+                              <p className="text-xs text-gray-500 font-medium">{ret.buyer_email || 'No email'}</p>
                             </td>
                             <td className="p-4">
-                              {statusBadge}
+                              {ret.refund_status === 'none' ? (
+                                <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold">None</span>
+                              ) : ret.refund_status === 'pending' ? (
+                                <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold">Pending</span>
+                              ) : (
+                                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">Issued</span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              {ret.status === 'pending' ? (
+                                <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold">Pending</span>
+                              ) : ret.status === 'accepted' ? (
+                                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">Accepted</span>
+                              ) : (
+                                <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">Rejected</span>
+                              )}
                             </td>
                             <td className="p-4">
                               <div className="flex items-center justify-end gap-3">
-                                {order.order_status === 'returned' || order.order_status === 'return_requested' ? (
+                                {ret.status === 'pending' ? (
                                   <>
-                                    <button onClick={() => handleUpdateStatus(order.order_id, 'return_processing')} className="text-sm font-bold text-[#2d9a33] hover:underline">
-                                      Approve
+                                    <button
+                                      onClick={() => handleReturnAction(ret.id, 'accept')}
+                                      className="text-sm font-bold text-[#2d9a33] hover:underline"
+                                    >
+                                      Accept
                                     </button>
-                                    <button className="text-sm font-bold text-red-500 hover:underline">
+                                    <button
+                                      onClick={() => handleReturnAction(ret.id, 'reject')}
+                                      className="text-sm font-bold text-red-500 hover:underline"
+                                    >
                                       Reject
                                     </button>
                                   </>
-                                ) : order.order_status === 'return_processing' ? (
-                                  <button onClick={() => handleUpdateStatus(order.order_id, 'refunded')} className="text-sm font-bold text-[#2d9a33] hover:underline">
-                                    Issue Refund
-                                  </button>
                                 ) : (
-                                  <button className="text-sm font-bold text-gray-500 hover:text-gray-700">View Details</button>
+                                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${ret.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {ret.status === 'accepted' ? 'Accepted' : 'Rejected'}
+                                  </span>
                                 )}
                               </div>
                             </td>
@@ -363,7 +358,7 @@ export default function ReturnsManagementPage() {
                 
                 {/* PAGINATION */}
                 <div className="p-4 border-t border-gray-200 flex justify-between items-center text-sm">
-                  <span className="text-gray-500 font-medium">Showing {orders.length > 0 ? (page - 1) * 10 + 1 : 0} to {Math.min(page * 10, totalOrders)} of {totalOrders.toLocaleString()} returns</span>
+                  <span className="text-gray-500 font-medium">Showing {returns.length > 0 ? (page - 1) * 10 + 1 : 0} to {Math.min(page * 10, totalReturns)} of {totalReturns.toLocaleString()} returns</span>
                   <div className="flex items-center gap-1">
                     <button 
                       onClick={() => setPage(Math.max(1, page - 1))}
