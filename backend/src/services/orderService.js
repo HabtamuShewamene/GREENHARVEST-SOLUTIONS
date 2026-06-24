@@ -6,7 +6,7 @@ const orderModel = require("../models/orderModel");
 const { normalizeRole } = require("../utils/roles");
 const { isPositiveInteger } = require("../utils/validators");
 
-const allowedOrderStatuses = ["pending", "confirmed", "collected", "in_transit", "delivered"];
+const allowedOrderStatuses = ["pending", "confirmed", "collected", "in_transit", "delivered", "returned"];
 const allowedPaymentStatuses = ["pending", "paid", "failed", "refunded"];
 const allowedDeliveryStatuses = [
 	"pending",
@@ -56,12 +56,14 @@ const orderStatusTransitions = {
 	confirmed: ["collected"],
 	collected: ["in_transit"],
 	in_transit: ["delivered"],
-	delivered: [],
+	delivered: ["returned"],
+	returned: [],
 };
 
 const roleAllowedStatuses = {
 	field_agent: ["confirmed", "collected"],
 	delivery_partner: ["in_transit", "delivered"],
+	farmer: ["confirmed", "collected", "in_transit", "delivered", "returned"],
 };
 
 const validateOrderStatusUpdate = ({ actor, order, nextStatus }) => {
@@ -92,6 +94,10 @@ const validateOrderStatusUpdate = ({ actor, order, nextStatus }) => {
 		Number(actor.id) !== Number(order.delivery_partner_id)
 	) {
 		throw createServiceError("You are not assigned to this order as delivery partner", 403);
+	}
+
+	if (actorRole === 'farmer' && Number(actor.id) !== Number(order.farmer_id)) {
+		throw createServiceError('You are not authorized to update this order', 403);
 	}
 
 	const currentStatus = order.order_status;

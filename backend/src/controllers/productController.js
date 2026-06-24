@@ -144,11 +144,10 @@ const deleteProduct = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    const products = await productService.getAllProducts();
+    const { page, limit } = req.query;
+    const result = await productService.getAllProducts({ page, limit });
 
-    return res.status(200).json({
-      products,
-    });
+    return res.status(200).json(result);
   } catch (error) {
     return handleControllerError(res, "Fetch products failed", error);
   }
@@ -195,6 +194,73 @@ const updateProductStock = async (req, res) => {
   }
 };
 
+const batchUpdateProductStatus = async (req, res) => {
+  try {
+    const { pool } = require("../config/db");
+
+    if (!req.user || normalizeRole(req.user.role) !== "farmer") {
+      return res
+        .status(403)
+        .json({ message: "Only farmers can batch update products" });
+    }
+
+    const { product_ids, status } = req.body || {};
+
+    if (!Array.isArray(product_ids) || product_ids.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "product_ids must be a non-empty array" });
+    }
+
+    const validStatuses = ["active", "draft", "deactivated"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "status must be one of: active, draft, deactivated",
+      });
+    }
+
+    const farmerId = req.user.id;
+    const ids = product_ids
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n > 0);
+
+    if (ids.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "product_ids must contain valid integers" });
+    }
+
+    const result = await pool.query(
+      `UPDATE products SET status = $1 WHERE id = ANY($2::int[]) AND farmer_id = $3 RETURNING id`,
+      [status, ids, farmerId]
+    );
+
+    const updatedIds = result.rows.map((r) => r.id);
+
+    if (updatedIds.length === 0) {
+      return res
+        .status(403)
+        .json({ message: "No products found or not authorized" });
+    }
+
+    return res.status(200).json({
+      message: `${updatedIds.length} product(s) updated to status "${status}"`,
+      affected: updatedIds.length,
+      product_ids: updatedIds,
+    });
+  } catch (error) {
+    return handleControllerError(
+      res,
+      "Batch update product status failed",
+      error,
+      {
+        userId: req.user && req.user.id,
+        body: req.body,
+      }
+    );
+  }
+};
+
 module.exports = {
   createProduct,
   updateProduct,
@@ -202,4 +268,5 @@ module.exports = {
   getAllProducts,
   getProductById,
   updateProductStock,
+  batchUpdateProductStatus,
 };

@@ -12,6 +12,7 @@ const productSelect = `
 		p.created_at,
 		p.category_id,
 		p.farmer_id,
+		p.status,
 		u.name AS farmer_name,
 		u.email AS farmer_email,
 		c.name AS category_name
@@ -191,7 +192,26 @@ const findProductStockForUpdateById = async (client, productId) => {
 	return result.rows[0] || null;
 };
 
-const findAllProducts = async () => {
+const findAllProducts = async ({ limit, offset } = {}) => {
+	if (limit !== undefined && offset !== undefined) {
+		const [countResult, dataResult] = await Promise.all([
+			pool.query(`SELECT COUNT(*)::int AS total FROM products p`),
+			pool.query(
+				`
+					${productSelect}
+					ORDER BY p.created_at DESC
+					LIMIT $1 OFFSET $2
+				`,
+				[limit, offset]
+			),
+		]);
+
+		return {
+			rows: dataResult.rows,
+			total: countResult.rows[0].total,
+		};
+	}
+
 	const result = await pool.query(
 		`
 			${productSelect}

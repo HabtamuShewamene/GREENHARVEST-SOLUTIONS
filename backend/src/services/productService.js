@@ -273,8 +273,25 @@ const deleteProduct = async ({ user, productId }) => {
 	return { deleted: true };
 };
 
-const getAllProducts = async () => {
-	return productModel.findAllProducts();
+const getAllProducts = async ({ page, limit } = {}) => {
+	const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+	const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+	const offset = (parsedPage - 1) * parsedLimit;
+
+	const result = await productModel.findAllProducts({ limit: parsedLimit, offset });
+
+	const total = result.total;
+	const total_pages = Math.ceil(total / parsedLimit);
+
+	return {
+		products: result.rows,
+		pagination: {
+			page: parsedPage,
+			limit: parsedLimit,
+			total,
+			total_pages,
+		},
+	};
 };
 
 const getProductById = async (productId) => {
