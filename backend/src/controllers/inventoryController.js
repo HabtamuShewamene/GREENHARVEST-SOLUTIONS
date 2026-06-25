@@ -35,7 +35,7 @@ const updateInventory = async (req, res) => {
 
 const getInventoryByProduct = async (req, res) => {
 	try {
-		const inventory = await inventoryService.getInventoryByProductId(req.params.productId);
+		const inventory = await inventoryService.getInventoryByProductId(req.params.productId, req.user);
 
 		return res.status(200).json({
 			inventory,

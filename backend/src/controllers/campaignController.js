@@ -6,7 +6,7 @@ const createCampaign = async (req, res) => {
     const campaign = await campaignService.createCampaign(farmer_id, req.body);
     res.status(201).json({ message: "Campaign created successfully", campaign });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(error.statusCode || 400).json({ error: error.message });
   }
 };
 

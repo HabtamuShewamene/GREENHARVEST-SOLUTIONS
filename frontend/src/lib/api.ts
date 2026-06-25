@@ -465,10 +465,40 @@ class APIClient {
   }
 
   // Business Advisor
-  async getAdvisorDashboard() {
+  async getAdvisorDashboard(region?: string) {
     return this.request<any>({
       method: 'GET',
       url: '/advisor',
+      params: region ? { region } : undefined,
+    });
+  }
+
+  // Market Insights
+  async getMarketInsights(months = 6) {
+    return this.request<{ data: any }>({
+      method: 'GET',
+      url: '/market-insights',
+      params: { months },
+    });
+  }
+
+  // Image upload (Cloudinary via backend)
+  async uploadImage(file: File) {
+    const body = new FormData();
+    body.append('image', file);
+    const response = await this.client.post<{ url: string; public_id: string }>(
+      '/upload/product-image',
+      body,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return response.data;
+  }
+
+  async deleteImage(publicId: string) {
+    return this.request<{ message: string }>({
+      method: 'DELETE',
+      url: '/upload/product-image',
+      data: { public_id: publicId },
     });
   }
 }

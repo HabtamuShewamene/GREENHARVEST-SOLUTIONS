@@ -4,11 +4,14 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { validateProductStep, validateProductForm } from '@/lib/validations/product';
+import { useToast } from '@/contexts/ToastContext';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function NewProductPage() {
   const router = useRouter();
+  const { showError } = useToast();
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,6 +105,12 @@ export default function NewProductPage() {
 
   const submitProduct = async () => {
     setSubmitError('');
+    const validationError = validateProductForm(formData);
+    if (validationError) {
+      setSubmitError(validationError);
+      showError(validationError);
+      return;
+    }
     setIsSubmitting(true);
     try {
       await axios.post(
@@ -131,6 +140,12 @@ export default function NewProductPage() {
 
   const handleNext = () => {
     setSubmitError('');
+    const stepError = validateProductStep(step, formData);
+    if (stepError) {
+      setSubmitError(stepError);
+      showError(stepError);
+      return;
+    }
     if (step < 4) setStep(step + 1);
     else submitProduct();
   };

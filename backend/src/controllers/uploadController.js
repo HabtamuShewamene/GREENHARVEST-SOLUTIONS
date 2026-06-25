@@ -31,12 +31,19 @@ const uploadProductImage = [
  * DELETE /api/upload/product-image
  * Deletes an image from Cloudinary by public_id.
  */
+const ALLOWED_UPLOAD_PREFIX = 'greenharvest/products/';
+
 const deleteProductImage = async (req, res) => {
   try {
     const { public_id } = req.body;
     if (!public_id) {
       return res.status(400).json({ message: 'public_id is required' });
     }
+
+    if (!public_id.startsWith(ALLOWED_UPLOAD_PREFIX)) {
+      return res.status(403).json({ message: 'Cannot delete images outside your upload folder' });
+    }
+
     await cloudinary.uploader.destroy(public_id);
     return res.status(200).json({ message: 'Image deleted successfully' });
   } catch (error) {

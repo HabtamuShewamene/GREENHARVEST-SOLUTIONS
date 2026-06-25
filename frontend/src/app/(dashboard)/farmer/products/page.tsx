@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function ManageProductsPage() {
   const router = useRouter();
+  const { showError } = useToast();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
@@ -119,7 +121,7 @@ export default function ManageProductsPage() {
       loadData();
     } catch (error) {
       console.error('Failed to delete product', error);
-      alert('Failed to delete product');
+      showError('Failed to delete product');
     }
   };
 
@@ -129,7 +131,7 @@ export default function ManageProductsPage() {
       loadData();
     } catch (error) {
       console.error('Failed to deactivate product', error);
-      alert('Failed to deactivate product');
+      showError('Failed to deactivate product');
     }
   };
 
@@ -141,7 +143,7 @@ export default function ManageProductsPage() {
       loadData();
     } catch (error) {
       console.error(`Failed to ${action} products`, error);
-      alert(`Failed to ${action} products`);
+      showError(`Failed to ${action} products`);
     }
   };
 
@@ -150,7 +152,7 @@ export default function ManageProductsPage() {
       await api.exportFarmerProductsCSV();
     } catch (error) {
       console.error("Failed to export products", error);
-      alert("Failed to export products");
+      showError('Failed to export products');
     }
   };
 
@@ -359,7 +361,7 @@ export default function ManageProductsPage() {
                       loadData();
                     } catch (error) {
                       console.error('Failed to deactivate products', error);
-                      alert('Failed to deactivate products');
+                      showError('Failed to deactivate products');
                     }
                   }}
                   className={`px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${selectedItems.size > 0 ? 'text-orange-600 hover:bg-orange-50 border-orange-200' : 'text-gray-400 cursor-not-allowed'}`}

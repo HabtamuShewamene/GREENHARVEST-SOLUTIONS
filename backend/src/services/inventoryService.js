@@ -56,9 +56,27 @@ const updateInventory = async ({ actor, payload }) => {
 	});
 };
 
-const getInventoryByProductId = async (product_id) => {
+const getInventoryByProductId = async (product_id, actor) => {
 	if (!isPositiveInteger(product_id)) {
 		throw createServiceError("Invalid product id", 400);
+	}
+
+	const ownership = await productModel.findProductOwnershipById(Number(product_id));
+
+	if (!ownership) {
+		throw createServiceError("Product not found", 404);
+	}
+
+	const role = normalizeRole(actor?.role);
+	if (role !== "admin") {
+		const isAuthorized = await canManageFarmerInventory({
+			actor,
+			farmer_id: ownership.farmer_id,
+		});
+
+		if (!isAuthorized) {
+			throw createServiceError("Forbidden: insufficient permissions", 403);
+		}
 	}
 
 	const inventory = await inventoryModel.getInventoryByProductId(Number(product_id));

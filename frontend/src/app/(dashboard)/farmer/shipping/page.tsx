@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function ShippingManagementPage() {
   const router = useRouter();
+  const { showError } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -102,7 +104,7 @@ export default function ShippingManagementPage() {
       loadSidebarData(); // refresh sidebar counts
     } catch (error) {
       console.error("Failed to update status", error);
-      alert("Failed to update status. Please try again.");
+      showError('Failed to update status. Please try again.');
     }
   };
 
