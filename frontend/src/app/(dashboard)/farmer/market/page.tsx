@@ -1,261 +1,329 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
+import {
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell,
+} from 'recharts';
+
+const REGION_COLORS = ['#166534', '#22c55e', '#4ade80', '#86efac', '#bbf7d0'];
 
 export default function MarketInsightsPage() {
+  const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [marketData, setMarketData] = useState<any[]>([]);
+  const [trending, setTrending] = useState<any[]>([]);
+  const [regionalDemand, setRegionalDemand] = useState<any[]>([]);
+  const [supplyForecast, setSupplyForecast] = useState<any[]>([]);
+  const [myProducts, setMyProducts] = useState<any[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [commodityKeys, setCommodityKeys] = useState<string[]>([]);
+  const [months, setMonths] = useState(6);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [dashRes, userRes] = await Promise.all([
-        api.getFarmerDashboard().catch(() => null),
-        api.getUserProfile().catch(() => ({ user: null }))
-      ]);
-      setDashboardData(dashRes || null);
-      setUser(userRes.user || null);
-    } catch (error) {
-      console.error("Failed to load data", error);
+      setError(null);
+      const marketRes = await api.getMarketInsights(months);
+      const raw = marketRes.data || {};
+      const priceTrends = raw.price_trends || {};
+
+      setTrending(raw.trending || []);
+      setRegionalDemand(raw.regional_demand || []);
+      setSupplyForecast(raw.supply_forecast || []);
+      setMyProducts(raw.my_products_vs_market || []);
+      setLastUpdated(raw.last_updated || null);
+
+      const keys = Object.keys(priceTrends);
+      setCommodityKeys(keys);
+
+      const formattedData: Record<string, any> = {};
+      keys.forEach((commodity) => {
+        (priceTrends[commodity] || []).forEach((entry: any) => {
+          const dateObj = new Date(entry.date);
+          const dateStr = dateObj.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+          if (!formattedData[dateStr]) {
+            formattedData[dateStr] = { date: dateStr, sortTime: dateObj.getTime() };
+          }
+          formattedData[dateStr][commodity] = entry.price;
+        });
+      });
+
+      const sortedData = Object.values(formattedData).sort(
+        (a: any, b: any) => a.sortTime - b.sortTime
+      );
+      setMarketData(sortedData);
+    } catch (err) {
+      setError('Failed to load market insights. Please try again.');
+      console.error('Failed to load market data', err);
     } finally {
       setLoading(false);
     }
+  }, [months]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleExport = () => {
+    if (trending.length === 0 && myProducts.length === 0) {
+      showError('No data available to export.');
+      return;
+    }
+
+    const lines = [
+      'GreenHarvest Market Insights Report',
+      `Generated: ${new Date().toLocaleString()}`,
+      `Period: Last ${months} months`,
+      '',
+      '--- Trending Commodities ---',
+      'Commodity,Change %,Direction',
+      ...trending.map((t) => `${t.name},${t.change_pct}%,${t.up ? 'Up' : 'Down'}`),
+      '',
+      '--- Regional Demand ---',
+      'Region,Demand Index,Avg Price (ETB)',
+      ...regionalDemand.map((r) => `${r.region},${r.demand_index},${r.avg_price}`),
+      '',
+      '--- Your Products vs Market ---',
+      'Product,Your Price,Market Price,Diff %',
+      ...myProducts.map((p) =>
+        `${p.product_name},${p.farmer_price},${p.market_price || 'N/A'},${p.price_diff_pct ?? 'N/A'}`
+      ),
+    ];
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `market-insights-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showSuccess('Report exported successfully.');
   };
 
-  const pendingShipments = dashboardData?.pending_shipments?.length || 0;
+  const formattedLastUpdated = lastUpdated
+    ? new Date(lastUpdated).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      })
+    : '—';
 
-  if (loading && !dashboardData) {
+  const areaColors = ['#16a34a', '#86efac', '#f59e0b', '#3b82f6'];
+
+  if (loading && marketData.length === 0) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#f9fafb]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2d9a33]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2d9a33]" />
       </div>
     );
   }
 
   return (
-    <>
-      {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-[#f8f9fc]">
-        
-        {/* TOP HEADER */}
-        <header className="px-8 py-6 flex flex-col gap-1 sticky top-0 bg-[#f8f9fc] z-10 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Market Insights Dashboard</h1>
-            <div className="flex gap-4">
-              <button className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm">Export Report</button>
-            </div>
-          </div>
-          <p className="text-sm text-gray-500 font-medium tracking-wide">Ethiopia Commodity Overview | Last Updated: Oct 26, 2026, 11:30 AM</p>
-        </header>
-
-        <div className="p-8 max-w-7xl mx-auto w-full space-y-6">
-          
-          {/* PRICE TRENDS CHART */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 relative overflow-hidden">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-gray-900">Price Trends</h2>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                  <div className="w-3 h-3 rounded-full bg-[#16a34a]"></div> Teff (Grade A)
-                </div>
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                  <div className="w-3 h-3 rounded-full bg-[#86efac]"></div> Coffee (Arabica)
-                </div>
-                <select className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500">
-                  <option>6 months</option>
-                  <option>1 year</option>
-                  <option>YTD</option>
-                </select>
-              </div>
-            </div>
-            
-            {/* Visual mock of a chart */}
-            <div className="h-[280px] w-full border-b border-l border-gray-200 relative flex items-end">
-              {/* Y Axis labels */}
-              <div className="absolute -left-2 bottom-0 w-full h-full flex flex-col justify-between text-xs text-gray-400 -translate-x-full pr-2 text-right">
-                <span>2,800</span>
-                <span>2,600</span>
-                <span>1,400</span>
-                <span>1,200</span>
-                <span>1,000</span>
-                <span>800</span>
-              </div>
-              <div className="absolute -left-12 top-1/2 -translate-y-1/2 -rotate-90 text-xs font-bold text-gray-500 tracking-widest">
-                ETB/Quintal
-              </div>
-              
-              {/* X Axis labels */}
-              <div className="absolute -bottom-8 w-full flex justify-between text-xs text-gray-500 font-medium px-4">
-                <span>May '26</span>
-                <span>Jun '26</span>
-                <span>Jul '26</span>
-                <span>Aug '26</span>
-                <span>Sep '26</span>
-                <span>Oct '26</span>
-              </div>
-
-              {/* Grid lines */}
-              <div className="absolute inset-0 flex flex-col justify-between opacity-50 pointer-events-none">
-                <div className="border-t border-gray-200 w-full"></div>
-                <div className="border-t border-gray-200 w-full"></div>
-                <div className="border-t border-gray-200 w-full"></div>
-                <div className="border-t border-gray-200 w-full"></div>
-                <div className="border-t border-gray-200 w-full"></div>
-                <div className="border-t border-gray-200 w-full"></div>
-              </div>
-
-              {/* Mock SVG Line Chart */}
-              <svg className="w-full h-full overflow-visible z-10" preserveAspectRatio="none" viewBox="0 0 100 100">
-                {/* Coffee Area */}
-                <path d="M0,80 Q10,70 20,80 T40,65 T60,50 T80,40 T100,20 L100,100 L0,100 Z" fill="#86efac" fillOpacity="0.2" />
-                <path d="M0,80 Q10,70 20,80 T40,65 T60,50 T80,40 T100,20" fill="none" stroke="#86efac" strokeWidth="2" />
-                
-                {/* Teff Area */}
-                <path d="M0,60 Q15,40 25,50 T45,20 T65,30 T85,25 T100,10 L100,100 L0,100 Z" fill="#16a34a" fillOpacity="0.1" />
-                <path d="M0,60 Q15,40 25,50 T45,20 T65,30 T85,25 T100,10" fill="none" stroke="#16a34a" strokeWidth="2.5" />
-                
-                {/* Tooltip dot */}
-                <circle cx="65" cy="30" r="1.5" fill="white" stroke="#16a34a" strokeWidth="0.5" className="animate-pulse" />
-              </svg>
-              
-              {/* Tooltip */}
-              <div className="absolute left-[65%] top-[20%] -translate-x-1/2 bg-white p-3 rounded-lg shadow-xl border border-gray-100 z-20 w-48">
-                <p className="text-xs font-bold text-gray-500 mb-2">Oct '26</p>
-                <div className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-1">
-                  <div className="w-2 h-2 rounded-full bg-[#16a34a]"></div> Teff (Grade A): 1,323
-                </div>
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                  <div className="w-2 h-2 rounded-full bg-[#86efac]"></div> Coffee (Arabica): 788
-                </div>
-              </div>
-            </div>
-            <div className="h-8"></div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* REGIONAL DEMAND HEATMAP */}
-            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl shadow-sm p-6 relative overflow-hidden">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-gray-900">Regional Demand Heatmap</h2>
-                <button className="text-gray-400 hover:text-gray-600"><span className="material-symbols-outlined">more_horiz</span></button>
-              </div>
-              
-              <div className="bg-[#e5f0ea] rounded-xl h-[300px] w-full flex items-center justify-center relative border border-[#cbe1d4]">
-                {/* Mock map visualization */}
-                <div className="text-center">
-                  <span className="material-symbols-outlined text-[64px] text-[#16a34a] opacity-30 mb-2">map</span>
-                  <p className="text-sm font-bold text-[#1e6b22]">Ethiopia Hub Regions Map</p>
-                  <p className="text-xs text-green-700">Addis Ababa, Dire Dawa, Bahir Dar, Hawassa</p>
-                </div>
-                
-                {/* Mock heatmap legend */}
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-32 bg-gradient-to-b from-[#166534] via-[#22c55e] to-[#bbf7d0] rounded-full shadow-inner border border-white/50"></div>
-              </div>
-            </div>
-
-            {/* TOP TRENDING COMMODITIES */}
-            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-gray-900">Top Trending Commodities</h2>
-                <button className="text-gray-400 hover:text-gray-600"><span className="material-symbols-outlined">more_horiz</span></button>
-              </div>
-              
-              <div className="space-y-5">
-                {[
-                  { name: 'Teff', icon: 'grass', change: '+12.5%', up: true },
-                  { name: 'Coffee', icon: 'coffee', change: '+5.1%', up: true },
-                  { name: 'Wheat', icon: 'local_florist', change: '-3.2%', up: false },
-                  { name: 'Maize', icon: 'spa', change: '+8.7%', up: true },
-                ].map((item, i) => (
-                  <div key={i} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${item.up ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                        <span className="material-symbols-outlined">{item.icon}</span>
-                      </div>
-                      <span className="font-bold text-gray-900 text-sm">{item.name}</span>
-                    </div>
-                    <div className={`flex items-center gap-1 font-bold text-sm ${item.up ? 'text-[#16a34a]' : 'text-red-600'}`}>
-                      <span className="material-symbols-outlined text-[16px]">{item.up ? 'arrow_drop_up' : 'arrow_drop_down'}</span>
-                      {item.change}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* WEATHER IMPACT & SUPPLY FORECAST */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-gray-900">Weather Impact & Supply Forecast</h2>
-              <button className="text-gray-400 hover:text-gray-600"><span className="material-symbols-outlined">more_horiz</span></button>
-            </div>
-            
-            <div className="flex flex-col md:flex-row gap-8">
-              {/* Weather Widget */}
-              <div className="bg-[#f8f9fc] border border-gray-200 rounded-xl p-5 w-full md:w-auto">
-                <h3 className="text-sm font-bold text-gray-900 mb-4">5-Day Weather</h3>
-                <div className="flex gap-4 mb-4">
-                  {[
-                    { day: 'Mon', icon: 'sunny', temp: '24°' },
-                    { day: 'Tue', icon: 'rainy', temp: '19°', active: true },
-                    { day: 'Wed', icon: 'water_drop', temp: '18°' },
-                    { day: 'Thu', icon: 'partly_cloudy_day', temp: '22°' },
-                    { day: 'Fri', icon: 'sunny', temp: '25°' },
-                  ].map((w, i) => (
-                    <div key={i} className={`flex flex-col items-center p-2 rounded-lg ${w.active ? 'bg-white shadow-sm border border-gray-200 text-blue-500' : 'text-gray-500'}`}>
-                      <span className="text-xs font-bold mb-2">{w.day}</span>
-                      <span className={`material-symbols-outlined text-[24px] ${w.icon === 'sunny' ? 'text-yellow-400' : ''}`}>{w.icon}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-[#dcfce7] text-[#166534] text-sm font-bold px-4 py-2 rounded-lg inline-block">
-                  Expected Harvest: <span className="font-black">High</span>
-                </div>
-              </div>
-
-              {/* Supply Forecast Bar Chart */}
-              <div className="flex-1">
-                <h3 className="text-sm font-bold text-gray-900 mb-6">Upcoming crop yields for next quarter</h3>
-                <div className="flex items-end h-[120px] gap-8 relative border-b border-l border-gray-200 pl-4 pb-2">
-                  <div className="absolute -left-6 top-0 bottom-0 flex flex-col justify-between text-[10px] text-gray-400 font-bold">
-                    <span>100</span>
-                    <span>50</span>
-                    <span>0</span>
-                  </div>
-                  
-                  {[
-                    { label: 'Teff', val1: 85, val2: 95, status: 'High' },
-                    { label: 'Coffee', val1: 45, val2: 50, status: 'Moderate' },
-                    { label: 'Wheat', val1: 70, val2: 65, status: 'Moderate' },
-                    { label: 'Maize', val1: 60, val2: 75, status: 'Moderate' },
-                    { label: 'Teff', val1: 80, val2: 90, status: 'High' },
-                  ].map((bar, i) => (
-                    <div key={i} className="flex flex-col items-center gap-2 group flex-1">
-                      <span className="text-[10px] font-bold text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity absolute -top-6 whitespace-nowrap">{bar.status}</span>
-                      <div className="flex items-end gap-1 w-full justify-center h-full">
-                        <div className="w-full max-w-[20px] bg-[#22c55e] rounded-t-sm hover:opacity-80 transition-opacity" style={{ height: `${bar.val1}%` }}></div>
-                        <div className="w-full max-w-[20px] bg-[#166534] rounded-t-sm hover:opacity-80 transition-opacity" style={{ height: `${bar.val2}%` }}></div>
-                      </div>
-                      <span className="text-[10px] font-bold text-gray-500 absolute -bottom-6">{bar.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="h-8"></div>
+    <main className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-[#f8f9fc]">
+      <header className="px-8 py-6 flex flex-col gap-1 sticky top-0 bg-[#f8f9fc] z-10 border-b border-gray-200">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Market Insights Dashboard</h1>
+          <button
+            onClick={handleExport}
+            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm"
+          >
+            Export Report
+          </button>
         </div>
-      </main>
-    </>
+        <p className="text-sm text-gray-500 font-medium tracking-wide">
+          Ethiopia Commodity Overview | Last Updated: {formattedLastUpdated}
+        </p>
+      </header>
+
+      <div className="p-8 max-w-7xl mx-auto w-full space-y-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={loadData} className="font-bold hover:underline">Retry</button>
+          </div>
+        )}
+        {/* YOUR PRODUCTS VS MARKET */}
+        {myProducts.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Your Products vs Market</h2>
+            <p className="text-sm text-gray-500 mb-6">How your listed prices compare to commodity market averages</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-xs font-bold text-gray-500 uppercase">
+                    <th className="pb-3 pr-4">Product</th>
+                    <th className="pb-3 pr-4">Your Price</th>
+                    <th className="pb-3 pr-4">Market Price</th>
+                    <th className="pb-3 pr-4">Commodity</th>
+                    <th className="pb-3">Difference</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {myProducts.map((p, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="py-3 pr-4 font-bold text-gray-900">{p.product_name}</td>
+                      <td className="py-3 pr-4">ETB {p.farmer_price?.toLocaleString()}</td>
+                      <td className="py-3 pr-4">{p.market_price ? `ETB ${p.market_price.toLocaleString()}` : '—'}</td>
+                      <td className="py-3 pr-4 text-gray-500">{p.commodity_name || '—'}</td>
+                      <td className="py-3">
+                        {p.price_diff_pct != null ? (
+                          <span className={`font-bold ${p.price_diff_pct > 0 ? 'text-orange-600' : p.price_diff_pct < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                            {p.price_diff_pct > 0 ? '+' : ''}{p.price_diff_pct}%
+                          </span>
+                        ) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Link href="/farmer/products" className="inline-block mt-4 text-sm font-bold text-[#2d9a33] hover:underline">
+              Adjust product pricing →
+            </Link>
+          </div>
+        )}
+
+        {/* PRICE TRENDS */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-bold text-gray-900">Price Trends</h2>
+            <select
+              value={months}
+              onChange={(e) => setMonths(parseInt(e.target.value, 10))}
+              className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value={6}>6 months</option>
+              <option value={12}>1 year</option>
+              <option value={3}>3 months</option>
+            </select>
+          </div>
+
+          <div className="h-[300px] w-full">
+            {marketData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={marketData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    {commodityKeys.map((key, i) => (
+                      <linearGradient key={key} id={`color-${i}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={areaColors[i % areaColors.length]} stopOpacity={0.8} />
+                        <stop offset="95%" stopColor={areaColors[i % areaColors.length]} stopOpacity={0} />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dx={-10} />
+                  <RechartsTooltip
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    labelStyle={{ fontWeight: 'bold', color: '#374151', marginBottom: '4px' }}
+                    formatter={(value) => [`ETB ${Number(value).toLocaleString()}`, '']}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                  {commodityKeys.map((key, i) => (
+                    <Area
+                      key={key}
+                      type="monotone"
+                      dataKey={key}
+                      stroke={areaColors[i % areaColors.length]}
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill={`url(#color-${i})`}
+                    />
+                  ))}
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-gray-400">
+                No price data available. Run the commodity price migration to populate data.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-6">Regional Demand Index</h2>
+            <div className="h-[280px] w-full">
+              {regionalDemand.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={regionalDemand} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="region" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                    <RechartsTooltip
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value, _name, props: any) => [
+                        `Index: ${value} | Avg: ETB ${props.payload?.avg_price?.toLocaleString()} | ${props.payload?.status}`,
+                        'Demand',
+                      ]}
+                    />
+                    <Bar dataKey="demand_index" radius={[6, 6, 0, 0]}>
+                      {regionalDemand.map((_entry, i) => (
+                        <Cell key={i} fill={REGION_COLORS[i % REGION_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-gray-400">No regional data available.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-6">Top Trending Commodities</h2>
+            <div className="space-y-3">
+              {trending.length > 0 ? trending.map((item, i) => (
+                <div key={i} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-xl transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${item.up ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                      <span className="material-symbols-outlined">{item.icon}</span>
+                    </div>
+                    <span className="font-bold text-gray-900 text-sm">{item.name}</span>
+                  </div>
+                  <div className={`flex items-center gap-1 font-bold text-sm ${item.up ? 'text-[#16a34a]' : 'text-red-600'}`}>
+                    <span className="material-symbols-outlined text-[16px]">{item.up ? 'arrow_drop_up' : 'arrow_drop_down'}</span>
+                    {item.up ? '+' : ''}{item.change_pct}%
+                  </div>
+                </div>
+              )) : (
+                <p className="text-sm text-gray-400 text-center py-8">No trending data yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* SUPPLY FORECAST */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-2">Supply Forecast</h2>
+          <p className="text-sm text-gray-500 mb-6">Yield projections derived from commodity price momentum</p>
+          <div className="h-[260px] w-full">
+            {supplyForecast.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={supplyForecast} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="commodity" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                  <RechartsTooltip
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value, name) => [`${value}%`, name === 'current_yield' ? 'Current' : 'Forecast']}
+                  />
+                  <Legend iconType="circle" />
+                  <Bar dataKey="current_yield" name="Current Yield" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="forecast_yield" name="Forecast Yield" fill="#166534" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-gray-400">No supply forecast data available.</div>
+            )}
+          </div>
+        </div>
+
+        <div className="h-8" />
+      </div>
+    </main>
   );
 }

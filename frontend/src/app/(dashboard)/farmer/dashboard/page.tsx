@@ -1,12 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
+import { api } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function FarmerDashboard() {
   const router = useRouter();
+  const { showError } = useToast();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -20,13 +23,18 @@ export default function FarmerDashboard() {
   const loadDashboard = async () => {
     try {
       setLoading(true);
-      const [dashRes, userRes, notifRes] = await Promise.all([
+      const [dashRes, userRes, notifRes, marketRes] = await Promise.all([
         api.getFarmerDashboard().catch(() => ({})),
         api.getUserProfile().catch(() => ({ user: null })),
-        api.getNotifications().catch(() => ({ notifications: [] }))
+        api.getNotifications().catch(() => ({ notifications: [] })),
+        api.getMarketInsights(3).catch(() => ({ data: {} })),
       ]);
       
-      setDashboardData(dashRes || null);
+      setDashboardData({
+        ...(dashRes || {}),
+        commodity_trending: marketRes?.data?.trending || [],
+        my_products_vs_market: marketRes?.data?.my_products_vs_market || [],
+      });
       setUser(userRes.user || null);
       setNotifications(notifRes.notifications || []);
     } catch (error) {
@@ -43,7 +51,7 @@ export default function FarmerDashboard() {
       loadDashboard();
     } catch (error) {
       console.error("Failed to update order status", error);
-      alert("Failed to update order status. Please try again.");
+      showError('Failed to update order status. Please try again.');
     }
   };
 
@@ -230,63 +238,58 @@ export default function FarmerDashboard() {
                     const sales = dashboardData?.weekly_sales || [];
                     if (sales.length === 0) return <div className="text-gray-400 text-sm mt-8">No data available</div>;
                     
-                    const dataPoints = sales.map((s: any) => Number(s[chartMetric]) || 0);
-                    const maxValue = Math.max(...dataPoints, chartMetric === 'revenue' ? 100 : 10);
-                    
-                    // Simple path generation
-                    let d = "";
-                    let dArea = "";
-                    
-                    if (sales.length === 1) {
-                      d = `M 0 130 L 400 130`;
-                      dArea = `M 0 130 L 400 130 L 400 150 L 0 150 Z`;
-                    } else {
-                      const points = sales.map((s: any, i: number) => {
-                        const x = (i / (sales.length - 1)) * 400;
-                        const y = 130 - (dataPoints[i] / maxValue) * 110; // 20 to 130
-                        return { x, y };
-                      });
-                      
-                      d = `M ${points[0].x} ${points[0].y} ` + points.slice(1).map((p: any) => `L ${p.x} ${p.y}`).join(" ");
-                      dArea = d + ` L 400 150 L 0 150 Z`;
-                    }
-                    
                     return (
-                      <svg className="w-full h-full mt-6" viewBox="0 0 400 150" preserveAspectRatio="none">
-                        <path d={d} fill="none" stroke="#8bc34a" strokeWidth="4" strokeLinejoin="round" />
-                        <path d={dArea} fill="url(#grad1)" opacity="0.2" />
-                        <defs>
-                          <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" style={{stopColor: '#8bc34a', stopOpacity: 1}} />
-                            <stop offset="100%" style={{stopColor: '#ffffff', stopOpacity: 0}} />
-                          </linearGradient>
-                        </defs>
-                      </svg>
+                      <div className="w-full h-full pt-8 pb-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={sales.map((s: any, i: number) => ({ name: `D${i+1}`, value: Number(s[chartMetric]) || 0 }))}>
+                            <defs>
+                              <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style={{stopColor: '#8bc34a', stopOpacity: 0.2}} />
+                                <stop offset="100%" style={{stopColor: '#ffffff', stopOpacity: 0}} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} dy={10} />
+                            <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} dx={-10} />
+                            <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                            <Line type="monotone" dataKey="value" stroke="#8bc34a" strokeWidth={3} dot={{ r: 3, fill: '#8bc34a', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
                     );
                   })()}
                 </div>
 
                 {/* Bar Chart Area (Top Selling Categories) */}
-                  <div className="w-full md:w-1/3 bg-[#fcfdfd] border border-gray-100 rounded-lg p-5 relative flex flex-col items-center">
-                   <span className="text-sm text-gray-400 font-medium mb-auto text-center w-full">Top Selling<br/>Categories</span>
+                  <div className="w-full md:w-1/3 bg-[#fcfdfd] border border-gray-100 rounded-lg p-5 relative flex flex-col">
+                   <span className="text-sm text-gray-400 font-medium mb-2 text-center w-full">Top Selling<br/>Categories</span>
                    
-                   <div className="flex items-end justify-center gap-2 sm:gap-4 h-40 w-full mt-4">
+                   <div className="flex-1 min-h-[160px] w-full">
                      {(() => {
                         const cats = dashboardData?.category_breakdown || [];
-                        if (cats.length === 0) return <div className="text-gray-400 text-sm mb-16">No sales yet</div>;
+                        if (cats.length === 0) return <div className="flex h-full items-center justify-center text-gray-400 text-sm">No sales yet</div>;
                         
-                        const maxUnits = Math.max(...cats.map((c: any) => Number(c.units_sold) || 0), 10);
-                        const colors = ['#4caf50', '#81c784', '#aed581', '#dcedc8', '#e8f5e9'];
+                        const chartData = cats.slice(0, 4).map((c: any) => ({
+                          name: (c.category_name || 'Other').slice(0, 8),
+                          units: Number(c.units_sold) || 0,
+                        }));
+                        const colors = ['#4caf50', '#81c784', '#aed581', '#dcedc8'];
                         
-                        return cats.slice(0, 4).map((c: any, i: number) => {
-                          const heightPct = Math.max(((Number(c.units_sold) || 0) / maxUnits) * 100, 5);
-                          return (
-                           <div key={i} className="flex flex-col items-center w-full max-w-[48px]">
-                             <div className="w-full rounded-t-sm" style={{height: `${heightPct}%`, backgroundColor: colors[i % colors.length]}}></div>
-                             <span className="text-[10px] sm:text-xs text-gray-500 mt-2 truncate w-full text-center" title={c.category_name}>{c.category_name || 'Other'}</span>
-                           </div>
-                          );
-                        });
+                        return (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                              <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                              <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                              <Bar dataKey="units" radius={[4, 4, 0, 0]}>
+                                {chartData.map((_entry: any, i: number) => (
+                                  <Cell key={i} fill={colors[i % colors.length]} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        );
                      })()}
                    </div>
                 </div>
@@ -473,20 +476,28 @@ export default function FarmerDashboard() {
 
               {/* MARKET INSIGHTS */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center">
-                <span className="material-symbols-outlined text-[#f27421] mr-2">lightbulb</span>
-                <h3 className="font-bold text-gray-800">Market Insights</h3>
+              <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="material-symbols-outlined text-[#f27421] mr-2">lightbulb</span>
+                  <h3 className="font-bold text-gray-800">Market Insights</h3>
+                </div>
+                <Link href="/farmer/market" className="text-xs font-bold text-[#2d9a33] hover:underline">View All</Link>
               </div>
               
               <div className="p-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Trending Keywords</p>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Commodity Trends</p>
                 <div className="flex flex-wrap gap-2 mb-6">
                   {(() => {
-                    const trends = dashboardData?.market_insights?.trending_keywords || [];
+                    const commodityTrends = dashboardData?.commodity_trending || [];
+                    const platformTrends = dashboardData?.market_insights?.trending_keywords || [];
+                    const trends = commodityTrends.length > 0 ? commodityTrends : platformTrends;
                     if (trends.length === 0) return <span className="text-xs text-gray-500">Not enough market data yet.</span>;
                     return trends.map((t: any, i: number) => (
                       <span key={i} className="inline-flex items-center px-2.5 py-1 rounded border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700">
-                        {t.name} <span className="material-symbols-outlined text-green-500 text-[14px] ml-1">trending_up</span>
+                        {t.name}{t.change_pct != null ? ` ${t.up ? '+' : ''}${t.change_pct}%` : ''}
+                        <span className={`material-symbols-outlined text-[14px] ml-1 ${t.up === false ? 'text-red-500' : 'text-green-500'}`}>
+                          {t.up === false ? 'trending_down' : 'trending_up'}
+                        </span>
                       </span>
                     ));
                   })()}
@@ -495,7 +506,17 @@ export default function FarmerDashboard() {
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Price Benchmark</p>
                 {(() => {
                   const pb = dashboardData?.market_insights?.price_benchmark;
-                  if (!pb) {
+                  const marketCompare = dashboardData?.my_products_vs_market?.[0];
+                  const compareProduct = marketCompare?.market_price
+                    ? {
+                        product_name: marketCompare.product_name,
+                        my_price: marketCompare.farmer_price,
+                        avg_category_price: marketCompare.market_price,
+                        category_name: marketCompare.commodity_name || 'Market',
+                      }
+                    : pb;
+
+                  if (!compareProduct) {
                     return (
                       <div className="bg-gray-50 border border-gray-100 rounded-md p-3 text-sm text-gray-500">
                         Add more products to see price benchmarks against the market average.
@@ -503,8 +524,8 @@ export default function FarmerDashboard() {
                     );
                   }
 
-                  const myPrice = Number(pb.my_price) || 0;
-                  const avgPrice = Number(pb.avg_category_price) || 0;
+                  const myPrice = Number(compareProduct.my_price) || 0;
+                  const avgPrice = Number(compareProduct.avg_category_price) || 0;
                   const diff = myPrice - avgPrice;
                   const diffPct = avgPrice > 0 ? Math.round((Math.abs(diff) / avgPrice) * 100) : 0;
                   
@@ -515,17 +536,17 @@ export default function FarmerDashboard() {
                   let actionText = "Adjust Price";
 
                   if (diff > 0) {
-                    message = `Your ${pb.product_name} price is ${diffPct}% higher`;
-                    subtext = `Consider a small discount to stay competitive in the ${pb.category_name} category.`;
+                    message = `Your ${compareProduct.product_name} price is ${diffPct}% higher`;
+                    subtext = `Consider a small discount to stay competitive in the ${compareProduct.category_name} category.`;
                   } else if (diff < 0) {
-                    message = `Your ${pb.product_name} price is ${diffPct}% lower`;
-                    subtext = `You're offering a highly competitive price for the ${pb.category_name} category!`;
+                    message = `Your ${compareProduct.product_name} price is ${diffPct}% lower`;
+                    subtext = `You're offering a highly competitive price for the ${compareProduct.category_name} category!`;
                     iconColor = "text-green-500";
                     bgClass = "bg-green-50 border-green-100";
                     actionText = "View Market";
                   } else {
-                    message = `Your ${pb.product_name} price matches the average`;
-                    subtext = `Your pricing is perfectly aligned with the ${pb.category_name} category market.`;
+                    message = `Your ${compareProduct.product_name} price matches the average`;
+                    subtext = `Your pricing is aligned with the ${compareProduct.category_name} market.`;
                     iconColor = "text-blue-500";
                     bgClass = "bg-blue-50 border-blue-100";
                     actionText = "View Market";
@@ -537,7 +558,7 @@ export default function FarmerDashboard() {
                       <div className="pl-7">
                         <p className="text-sm font-semibold text-gray-800">{message}</p>
                         <p className="text-xs text-gray-600 mt-1">{subtext}</p>
-                        <Link href="/farmer/products" className={`mt-2 inline-block text-xs font-bold ${iconColor} hover:underline uppercase`}>
+                        <Link href={actionText === 'View Market' ? '/farmer/market' : '/farmer/products'} className={`mt-2 inline-block text-xs font-bold ${iconColor} hover:underline uppercase`}>
                           {actionText}
                         </Link>
                       </div>

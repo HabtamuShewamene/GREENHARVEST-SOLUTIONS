@@ -4,9 +4,12 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
+import { validateCampaignForm } from '@/lib/validations/campaign';
 
 export default function CampaignManagementPage() {
   const router = useRouter();
+  const { showSuccess, showError, showInfo } = useToast();
   const [loading, setLoading] = useState(true);
   
   // Dashboard info for the sidebar
@@ -72,13 +75,18 @@ export default function CampaignManagementPage() {
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
+    const validationError = validateCampaignForm(newCampaign);
+    if (validationError) {
+      showError(validationError);
+      return;
+    }
     try {
       if (editMode && currentCampaignId) {
         await api.updateCampaign(currentCampaignId, newCampaign);
-        alert("Campaign updated successfully.");
+        showSuccess('Campaign updated successfully.');
       } else {
         await api.createCampaign(newCampaign);
-        alert("Campaign created successfully.");
+        showSuccess('Campaign created successfully.');
       }
       setIsModalOpen(false);
       loadData(); // Reload stats and campaigns
@@ -89,7 +97,7 @@ export default function CampaignManagementPage() {
       setCurrentCampaignId(null);
     } catch (err) {
       console.error("Error saving campaign", err);
-      alert("Failed to save campaign.");
+      showError('Failed to save campaign.');
     }
   };
 
@@ -110,7 +118,7 @@ export default function CampaignManagementPage() {
 
   const handleExportReport = () => {
     if (campaigns.length === 0) {
-      alert("No campaigns to export.");
+      showError('No campaigns to export.');
       return;
     }
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -126,7 +134,7 @@ export default function CampaignManagementPage() {
   };
 
   const handleExtendCampaign = () => {
-    alert("Campaign 'Summer Kale Blowout' extended by 3 days successfully!");
+    showSuccess("Campaign 'Summer Kale Blowout' extended by 3 days successfully!");
     setShowInsight(false);
   };
 
@@ -137,7 +145,7 @@ export default function CampaignManagementPage() {
         loadData();
       } catch (err) {
         console.error("Error deleting campaign", err);
-        alert("Failed to delete campaign.");
+        showError('Failed to delete campaign.');
       }
     }
   };
@@ -148,7 +156,7 @@ export default function CampaignManagementPage() {
       loadData();
     } catch (err) {
       console.error("Error updating campaign status", err);
-      alert("Failed to update status.");
+      showError('Failed to update status.');
     }
   };
 
@@ -306,7 +314,7 @@ export default function CampaignManagementPage() {
                   <h2 className="text-lg font-bold text-gray-900 mr-2">Promotion Tools</h2>
                   <span className="material-symbols-outlined text-[#2d9a33] text-[20px]">auto_awesome</span>
                 </div>
-                <button onClick={() => alert("Showing all tools")} className="text-sm font-semibold text-[#2d9a33] hover:underline">View All Tools</button>
+                <button onClick={() => showInfo('All marketing tools are displayed below.')} className="text-sm font-semibold text-[#2d9a33] hover:underline">View All Tools</button>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -378,7 +386,7 @@ export default function CampaignManagementPage() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <button onClick={() => alert("Advanced filtering options coming soon")} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors">
+                  <button onClick={() => showInfo('Advanced filtering options coming soon.')} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors">
                     <span className="material-symbols-outlined text-[20px]">filter_list</span>
                   </button>
                 </div>
@@ -485,7 +493,7 @@ export default function CampaignManagementPage() {
                           </td>
                           <td className="py-4 px-6 text-right">
                             <div className="flex justify-end gap-2 text-gray-400">
-                              <button onClick={() => alert(`Showing stats for ${campaign.name}`)} className="hover:text-[#2d9a33] transition-colors p-1" title="View Stats"><span className="material-symbols-outlined text-[20px]">bar_chart</span></button>
+                              <button onClick={() => showInfo(`Stats for "${campaign.name}" — detailed analytics coming soon.`)} className="hover:text-[#2d9a33] transition-colors p-1" title="View Stats"><span className="material-symbols-outlined text-[20px]">bar_chart</span></button>
                               <button onClick={() => handleEditClick(campaign)} className="hover:text-blue-500 transition-colors p-1" title="Edit Campaign"><span className="material-symbols-outlined text-[20px]">edit</span></button>
                               <button onClick={() => handleDeleteCampaign(campaign.id)} className="hover:text-red-500 transition-colors p-1" title="Delete Campaign"><span className="material-symbols-outlined text-[20px]">delete</span></button>
                             </div>

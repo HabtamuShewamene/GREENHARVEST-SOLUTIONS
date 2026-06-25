@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function ManageOrdersPage() {
   const router = useRouter();
+  const { showError } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -103,7 +105,7 @@ export default function ManageOrdersPage() {
       loadOrders();
     } catch (error) {
       console.error("Failed to update order status", error);
-      alert("Failed to update order status. Please try again.");
+      showError('Failed to update order status. Please try again.');
     }
   };
 
@@ -209,7 +211,7 @@ export default function ManageOrdersPage() {
                     else if (activeTab !== 'all') exportStatus = activeTab;
                     await api.exportFarmerOrdersCSV({ status: exportStatus });
                   } catch {
-                    alert('Failed to export orders');
+                    showError('Failed to export orders');
                   }
                 }}
                 className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"

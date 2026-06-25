@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function StoreDecorationPage() {
   const router = useRouter();
+  const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -29,6 +31,10 @@ export default function StoreDecorationPage() {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [deviceView, setDeviceView] = useState<'desktop' | 'mobile'>('desktop');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const bannerFileRef = useRef<HTMLInputElement>(null);
+  const carouselFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
@@ -77,10 +83,10 @@ export default function StoreDecorationPage() {
       };
       await api.updateStoreLayout(dataToSave);
       setLayout(dataToSave);
-      alert(publish ? "Store Published Successfully!" : "Draft Saved Successfully!");
+      showSuccess(publish ? 'Store published successfully!' : 'Draft saved successfully!');
     } catch (err) {
       console.error("Failed to save layout", err);
-      alert("Failed to save layout.");
+      showError('Failed to save layout.');
     } finally {
       setSaving(false);
     }
@@ -144,6 +150,42 @@ export default function StoreDecorationPage() {
       ...layout,
       theme_settings: { ...layout.theme_settings, [key]: value }
     });
+  };
+
+  const handleImageUpload = async (file: File, field: string, isArray = false) => {
+    setUploadError('');
+    setIsUploading(true);
+    try {
+      const { url } = await api.uploadImage(file);
+      if (isArray) {
+        const current = selectedModule?.content?.images || [];
+        updateSelectedModule('content', 'images', [...current, url]);
+      } else {
+        updateSelectedModule('content', field, url);
+      }
+    } catch {
+      setUploadError('Image upload failed. Please try again.');
+      showError('Image upload failed. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file, 'imageUrl');
+    e.target.value = '';
+  };
+
+  const handleCarouselFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file, 'images', true);
+    e.target.value = '';
+  };
+
+  const removeCarouselImage = (index: number) => {
+    const current = selectedModule?.content?.images || [];
+    updateSelectedModule('content', 'images', current.filter((_: string, i: number) => i !== index));
   };
 
   const getInitialContentForType = (type: string) => {
@@ -384,12 +426,20 @@ export default function StoreDecorationPage() {
                       {['carousel', 'video', 'coupon_slider', 'flash_sale'].includes(module.type) && (
                         <div className="px-8 w-full text-center">
                           <h3 className="text-sm font-bold tracking-widest text-gray-900 mb-4">{module.content.title?.toUpperCase() || module.type.toUpperCase()}</h3>
-                          <div className="p-12 bg-gray-50 border border-dashed border-gray-300 rounded-lg flex items-center justify-center gap-3">
-                            <span className="material-symbols-outlined text-[32px] text-gray-400">
-                              {module.type === 'video' ? 'play_circle' : module.type === 'carousel' ? 'view_carousel' : 'local_activity'}
-                            </span>
-                            <p className="text-gray-500 font-bold uppercase">{module.type.replace('_', ' ')} CONTENT PLACEHOLDER</p>
-                          </div>
+                          {module.type === 'carousel' && module.content.images?.length > 0 ? (
+                            <div className="flex gap-3 overflow-x-auto pb-2">
+                              {module.content.images.map((img: string, i: number) => (
+                                <img key={i} src={img} alt={`Slide ${i + 1}`} className="h-40 w-64 object-cover rounded-lg flex-shrink-0" />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-12 bg-gray-50 border border-dashed border-gray-300 rounded-lg flex items-center justify-center gap-3">
+                              <span className="material-symbols-outlined text-[32px] text-gray-400">
+                                {module.type === 'video' ? 'play_circle' : module.type === 'carousel' ? 'view_carousel' : 'local_activity'}
+                              </span>
+                              <p className="text-gray-500 font-bold uppercase">{module.type.replace('_', ' ')} CONTENT PLACEHOLDER</p>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -428,10 +478,32 @@ export default function StoreDecorationPage() {
                       <div className="space-y-4">
                         <div>
                           <label className="block text-xs font-bold text-gray-700 mb-2">Banner Image</label>
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center text-gray-400 hover:border-[#2d9a33] hover:text-[#2d9a33] hover:bg-green-50 transition-colors cursor-pointer bg-gray-50">
-                            <span className="material-symbols-outlined text-[24px] mb-2">upload_file</span>
-                            <span className="text-xs font-medium">Click to replace image</span>
+                          <input
+                            ref={bannerFileRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={handleBannerFileChange}
+                          />
+                          <div
+                            onClick={() => !isUploading && bannerFileRef.current?.click()}
+                            className="border-2 border-dashed border-gray-300 rounded-lg overflow-hidden flex flex-col items-center justify-center text-gray-400 hover:border-[#2d9a33] hover:text-[#2d9a33] hover:bg-green-50 transition-colors cursor-pointer bg-gray-50 relative min-h-[120px]"
+                          >
+                            {selectedModule.content.imageUrl ? (
+                              <img src={selectedModule.content.imageUrl} alt="Banner preview" className="w-full h-32 object-cover" />
+                            ) : (
+                              <>
+                                <span className="material-symbols-outlined text-[24px] mb-2 mt-4">upload_file</span>
+                                <span className="text-xs font-medium mb-4">Click to upload image</span>
+                              </>
+                            )}
+                            {isUploading && (
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+                              </div>
+                            )}
                           </div>
+                          {uploadError && <p className="text-xs text-red-600 mt-1">{uploadError}</p>}
                           <input 
                             type="text" 
                             className="w-full mt-2 text-xs border border-gray-200 p-2 rounded focus:outline-none focus:border-[#2d9a33]" 
@@ -492,8 +564,61 @@ export default function StoreDecorationPage() {
                       </div>
                     )}
 
+                    {/* Carousel specific */}
+                    {selectedModule.type === 'carousel' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">Section Title</label>
+                          <input 
+                            type="text" 
+                            className="w-full text-sm border border-gray-300 p-2.5 rounded-md focus:outline-none focus:ring-1 focus:ring-[#2d9a33]"
+                            value={selectedModule.content.title || ''}
+                            onChange={(e) => updateSelectedModule('content', 'title', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-2">Carousel Images</label>
+                          <input
+                            ref={carouselFileRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={handleCarouselFileChange}
+                          />
+                          <div className="grid grid-cols-2 gap-2 mb-2">
+                            {(selectedModule.content.images || []).map((img: string, i: number) => (
+                              <div key={i} className="relative group rounded-lg overflow-hidden border border-gray-200">
+                                <img src={img} alt={`Slide ${i + 1}`} className="w-full h-20 object-cover" />
+                                <button
+                                  onClick={() => removeCarouselImage(i)}
+                                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">close</span>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => !isUploading && carouselFileRef.current?.click()}
+                            disabled={isUploading}
+                            className="w-full border-2 border-dashed border-gray-300 rounded-lg p-3 flex items-center justify-center gap-2 text-gray-400 hover:border-[#2d9a33] hover:text-[#2d9a33] hover:bg-green-50 transition-colors text-xs font-medium disabled:opacity-50"
+                          >
+                            {isUploading ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2d9a33]" />
+                            ) : (
+                              <>
+                                <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span>
+                                Add Image
+                              </>
+                            )}
+                          </button>
+                          {uploadError && <p className="text-xs text-red-600 mt-1">{uploadError}</p>}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Generic Title for other modules */}
-                    {['categories', 'products', 'carousel', 'video', 'coupon_slider', 'flash_sale'].includes(selectedModule.type) && (
+                    {['categories', 'products', 'video', 'coupon_slider', 'flash_sale'].includes(selectedModule.type) && (
                       <div className="space-y-4">
                         <div>
                           <label className="block text-xs font-bold text-gray-700 mb-1">Section Title</label>

@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function ReturnsManagementPage() {
   const router = useRouter();
+  const { showError } = useToast();
   const [returns, setReturns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +89,7 @@ export default function ReturnsManagementPage() {
       loadReturns();
     } catch (error: any) {
       const msg = error?.response?.data?.message || `Failed to ${action} return`;
-      alert(msg);
+      showError(msg);
     }
   };
 
