@@ -9,9 +9,6 @@ const formatOrderRows = (rows) => {
 				id: row.order_id,
 				buyer_id: row.buyer_id,
 				address_id: row.address_id,
-				farmer_id: row.order_farmer_id,
-				field_agent_id: row.field_agent_id,
-				delivery_partner_id: row.delivery_partner_id,
 				total_price: row.total_price,
 				total_amount: row.total_amount,
 				order_status: row.order_status,
@@ -41,51 +38,45 @@ const formatOrderRows = (rows) => {
 
 const getOrdersForBuyer = async (buyer_id, order_id = null) => {
 	const values = [buyer_id];
-	let filter = "o.buyer_id = $1";
+	let filter = "o.id IS NOT NULL AND o.buyer_id = $1";
 
 	if (order_id !== null) {
 		values.push(order_id);
-		filter += " AND o.order_id = $2";
+		filter += " AND o.id = $2";
 	}
 
 	const result = await pool.query(
 		`
 			SELECT
-				o.order_id,
+				o.id AS order_id,
 				o.buyer_id,
 				o.address_id,
-				o.farmer_id AS order_farmer_id,
-				o.field_agent_id,
-				o.delivery_partner_id,
-				o.total_amount AS total_price,
+				o.total_price,
 				o.total_amount,
 				o.order_status,
-				COALESCE(pay.payment_status, 'pending') AS payment_status,
-				COALESCE(d.delivery_status, 'pending') AS delivery_status,
-				o.address_id,
+				o.payment_status,
+				o.delivery_status,
 				o.created_at,
-				oi.order_item_id,
+				oi.id AS order_item_id,
 				oi.product_id,
 				oi.quantity,
 				oi.price,
 				p.name AS product_name,
-				pi.image_url,
-				NULL::text AS farm_location,
+				COALESCE(p.image_url, pi.image_url) AS image_url,
+				p.farm_location,
 				p.farmer_id
 			FROM orders o
-			LEFT JOIN order_items oi ON oi.order_id = o.order_id
-			LEFT JOIN products p ON p.product_id = oi.product_id
-			LEFT JOIN payments pay ON pay.order_id = o.order_id
-			LEFT JOIN deliveries d ON d.order_id = o.order_id
+			LEFT JOIN order_items oi ON oi.order_id = o.id
+			LEFT JOIN products p ON p.id = oi.product_id
 			LEFT JOIN LATERAL (
 				SELECT image_url
 				FROM product_images
-				WHERE product_id = p.product_id
+				WHERE product_id = p.id
 				ORDER BY image_id ASC
 				LIMIT 1
 			) pi ON TRUE
 			WHERE ${filter}
-			ORDER BY o.created_at DESC, oi.order_item_id ASC
+			ORDER BY o.created_at DESC, oi.id ASC
 		`,
 		values
 	);
@@ -97,12 +88,12 @@ const findProductSupplyChainById = async (client, product_id) => {
 	const result = await client.query(
 		`
 			SELECT
-				p.product_id AS product_id,
+				p.id AS product_id,
 				p.farmer_id,
 				af.agent_id AS field_agent_id
 			FROM products p
 			LEFT JOIN agent_farmers af ON af.farmer_id = p.farmer_id
-			WHERE p.product_id = $1
+			WHERE p.id = $1
 			ORDER BY af.id DESC NULLS LAST
 			LIMIT 1
 		`,
@@ -114,35 +105,32 @@ const findProductSupplyChainById = async (client, product_id) => {
 
 const createOrderRecord = async (
 	client,
-	{ buyer_id, farmer_id, field_agent_id, delivery_partner_id = null, total_amount, address_id = null }
+	{ buyer_id, total_amount, address_id = null }
 ) => {
 	const result = await client.query(
 		`
 			INSERT INTO orders (
 				buyer_id,
-				farmer_id,
-				field_agent_id,
-				delivery_partner_id,
 				address_id,
 				total_amount,
-				order_status
+				total_price,
+				order_status,
+				payment_status,
+				delivery_status
 			)
-			VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+			VALUES ($1, $2, $3, $3, 'pending', 'pending', 'pending')
 			RETURNING
-				order_id AS id,
+				id,
 				buyer_id,
-				farmer_id,
-				field_agent_id,
-				delivery_partner_id,
 				address_id,
-				total_amount AS total_price,
+				total_price,
 				total_amount,
 				order_status,
-				'pending'::varchar AS payment_status,
-				'pending'::varchar AS delivery_status,
+				payment_status,
+				delivery_status,
 				created_at
 		`,
-		[buyer_id, farmer_id, field_agent_id, delivery_partner_id, address_id, total_amount]
+		[buyer_id, address_id, total_amount]
 	);
 
 	return result.rows[0];
@@ -153,7 +141,7 @@ const createOrderItemRecord = async (client, { order_id, product_id, quantity, p
 		`
 			INSERT INTO order_items (order_id, product_id, quantity, price)
 			VALUES ($1, $2, $3, $4)
-			RETURNING order_item_id AS id, order_id, product_id, quantity, price
+			RETURNING id, order_id, product_id, quantity, price
 		`,
 		[order_id, product_id, quantity, price]
 	);
@@ -165,18 +153,17 @@ const findOrderById = async (order_id, client = pool) => {
 	const result = await client.query(
 		`
 			SELECT
-				order_id AS id,
+				id,
 				buyer_id,
-				farmer_id,
-				field_agent_id,
-				delivery_partner_id,
 				address_id,
-				total_amount AS total_price,
+				total_price,
 				total_amount,
 				order_status,
+				payment_status,
+				delivery_status,
 				created_at
 			FROM orders
-			WHERE order_id = $1
+			WHERE id = $1
 		`,
 		[order_id]
 	);
@@ -188,21 +175,20 @@ const assignDeliveryPartnerById = async (order_id, delivery_partner_id, client =
 	const result = await client.query(
 		`
 			UPDATE orders
-			SET delivery_partner_id = $1
-			WHERE order_id = $2
+			SET delivery_status = 'assigned'
+			WHERE id = $1
 			RETURNING
-				order_id AS id,
+				id,
 				buyer_id,
-				farmer_id,
-				field_agent_id,
-				delivery_partner_id,
 				address_id,
-				total_amount AS total_price,
+				total_price,
 				total_amount,
 				order_status,
+				payment_status,
+				delivery_status,
 				created_at
 		`,
-		[delivery_partner_id, order_id]
+		[order_id]
 	);
 
 	return result.rows[0] || null;
@@ -213,17 +199,16 @@ const updateOrderStatusById = async (order_id, order_status, client = pool) => {
 		`
 			UPDATE orders
 			SET order_status = $1
-			WHERE order_id = $2
+			WHERE id = $2
 			RETURNING
-				order_id AS id,
+				id,
 				buyer_id,
-				farmer_id,
-				field_agent_id,
-				delivery_partner_id,
 				address_id,
-				total_amount AS total_price,
+				total_price,
 				total_amount,
 				order_status,
+				payment_status,
+				delivery_status,
 				created_at
 		`,
 		[order_status, order_id]
@@ -233,7 +218,8 @@ const updateOrderStatusById = async (order_id, order_status, client = pool) => {
 };
 
 const decrementProductStock = async (client, product_id, quantity) => {
-	const result = await client.query(
+	// First try updating inventory table
+	const invResult = await client.query(
 		`
 			UPDATE inventory
 			SET quantity = quantity - $1,
@@ -244,7 +230,22 @@ const decrementProductStock = async (client, product_id, quantity) => {
 		[quantity, product_id]
 	);
 
-	return result.rows[0] || null;
+	if (invResult.rows[0]) {
+		return invResult.rows[0];
+	}
+
+	// Fallback: decrement stock directly on products table
+	const prodResult = await client.query(
+		`
+			UPDATE products
+			SET stock = stock - $1
+			WHERE id = $2
+			RETURNING id, stock
+		`,
+		[quantity, product_id]
+	);
+
+	return prodResult.rows[0] || null;
 };
 
 const updateOrderStatusesById = async (
@@ -253,7 +254,7 @@ const updateOrderStatusesById = async (
 ) => {
 	if (order_status !== null) {
 		await pool.query(
-			`UPDATE orders SET order_status = $1 WHERE order_id = $2`,
+			`UPDATE orders SET order_status = $1 WHERE id = $2`,
 			[order_status, order_id]
 		);
 	}
@@ -275,18 +276,16 @@ const updateOrderStatusesById = async (
 	const result = await pool.query(
 		`
 			SELECT
-				o.order_id AS id,
+				o.id,
 				o.buyer_id,
-				o.total_amount AS total_price,
+				o.total_price,
 				o.total_amount,
 				o.order_status,
-				COALESCE(p.payment_status, 'pending') AS payment_status,
-				COALESCE(d.delivery_status, 'pending') AS delivery_status,
+				o.payment_status,
+				o.delivery_status,
 				o.created_at
 			FROM orders o
-			LEFT JOIN payments p ON p.order_id = o.order_id
-			LEFT JOIN deliveries d ON d.order_id = o.order_id
-			WHERE o.order_id = $1
+			WHERE o.id = $1
 		`,
 		[order_id]
 	);
