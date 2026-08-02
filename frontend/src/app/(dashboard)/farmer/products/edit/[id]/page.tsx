@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import axios from 'axios';
 import { api } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -12,6 +13,7 @@ export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
   const productId = params.id as string;
+  const { showError, showSuccess } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
@@ -28,6 +30,7 @@ export default function EditProductPage() {
     price: '',
     unit: 'kg',
     stock: '',
+    discount_price: '',
     imageUrl: '',
     imagePublicId: '',
     imagePreview: '',
@@ -56,6 +59,7 @@ export default function EditProductPage() {
         price: product.price?.toString() || '',
         unit: 'kg', // default
         stock: product.stock?.toString() || '',
+        discount_price: product.discount_price?.toString() || '',
         imageUrl: product.image_url || '',
         imagePublicId: '', // Would need to parse from URL if possible, but leaving empty is fine for edit unless deleting
         imagePreview: product.image_url || '',
@@ -138,14 +142,17 @@ export default function EditProductPage() {
         name: formData.name,
         description: formData.description || undefined,
         price: Number(formData.price),
+        discount_price: formData.discount_price ? Number(formData.discount_price) : null,
         stock: Number(formData.stock),
         category_id: formData.category_id ? Number(formData.category_id) : undefined,
         image_url: formData.imageUrl || undefined,
       });
+      showSuccess('Product updated successfully!');
       router.push('/farmer/products');
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to update product. Please try again.';
       setSubmitError(msg);
+      showError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -307,6 +314,31 @@ export default function EditProductPage() {
                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d9a33]/20 focus:border-[#2d9a33] transition-all font-medium text-gray-900"
                   />
                 </div>
+
+                {/* Discount Price */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    Discount Price (ETB) <span className="text-gray-400 font-normal text-xs">Optional</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      name="discount_price"
+                      value={formData.discount_price}
+                      onChange={handleChange}
+                      placeholder="Leave blank for no discount"
+                      min="0.01"
+                      step="0.01"
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d9a33]/20 focus:border-[#2d9a33] transition-all font-medium text-gray-900"
+                    />
+                    {formData.discount_price && formData.price && Number(formData.discount_price) < Number(formData.price) && (
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                        {Math.round((1 - Number(formData.discount_price) / Number(formData.price)) * 100)}% OFF
+                      </span>
+                    )}
+                  </div>
+                </div>
+
               </div>
             </div>
 

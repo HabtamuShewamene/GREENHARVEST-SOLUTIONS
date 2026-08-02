@@ -11,7 +11,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function NewProductPage() {
   const router = useRouter();
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,6 +26,7 @@ export default function NewProductPage() {
     price: '',
     unit: 'kg',
     stock: '',
+    discount_price: '',
     imageUrl: '',        // Cloudinary URL returned after upload
     imagePublicId: '',   // Cloudinary public_id (for deletion)
     imagePreview: '',    // Local object URL just for preview
@@ -119,13 +120,15 @@ export default function NewProductPage() {
           name: formData.name,
           description: formData.description || undefined,
           price: Number(formData.price),
+          discount_price: formData.discount_price ? Number(formData.discount_price) : undefined,
           stock: Number(formData.stock),
           category_id: formData.category_id ? Number(formData.category_id) : undefined,
           image_url: formData.imageUrl || undefined,
         },
         { headers: getAuthHeaders() }
       );
-      router.push('/farmer/dashboard');
+      showSuccess('Product added successfully!');
+      router.push('/farmer/products');
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to create product. Please try again.';
       setSubmitError(msg);
@@ -349,6 +352,28 @@ export default function NewProductPage() {
                       min="1"
                       className="w-full px-4 py-4 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2a6810]/20 focus:border-[#2a6810] transition-all text-gray-900 font-medium placeholder-gray-400"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-2">
+                      Discount Price (ETB) <span className="text-gray-400 font-normal text-xs">Optional – leave blank for no discount</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="discount_price"
+                        value={formData.discount_price}
+                        onChange={handleChange}
+                        placeholder="e.g. 80.00"
+                        min="0.01"
+                        step="0.01"
+                        className="w-full px-4 py-4 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2a6810]/20 focus:border-[#2a6810] transition-all text-gray-900 font-medium placeholder-gray-400"
+                      />
+                      {formData.discount_price && formData.price && Number(formData.discount_price) < Number(formData.price) && (
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                          {Math.round((1 - Number(formData.discount_price) / Number(formData.price)) * 100)}% OFF
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </form>
               </div>

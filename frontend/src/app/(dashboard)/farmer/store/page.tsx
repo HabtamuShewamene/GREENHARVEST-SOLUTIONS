@@ -6,6 +6,53 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 
+const CountdownTimer = ({ endTime }: { endTime: string }) => {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    const target = new Date(endTime).getTime();
+    if (isNaN(target)) return;
+
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = target - now;
+
+      if (distance < 0) {
+        clearInterval(interval);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((distance % (1000 * 60)) / 1000)
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [endTime]);
+
+  return (
+    <div className="flex justify-center gap-4 my-6">
+      {[
+        { label: 'Days', value: timeLeft.days },
+        { label: 'Hours', value: timeLeft.hours },
+        { label: 'Mins', value: timeLeft.minutes },
+        { label: 'Secs', value: timeLeft.seconds }
+      ].map((item, i) => (
+        <div key={i} className="flex flex-col items-center">
+          <div className="w-16 h-16 bg-red-500 text-white rounded-lg flex items-center justify-center text-2xl font-black shadow-md">
+            {item.value.toString().padStart(2, '0')}
+          </div>
+          <span className="text-xs font-bold text-gray-500 mt-2 uppercase tracking-wider">{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function StoreDecorationPage() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
@@ -16,6 +63,8 @@ export default function StoreDecorationPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
 
   // Store layout state
   const [layout, setLayout] = useState<{
@@ -43,15 +92,19 @@ export default function StoreDecorationPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [dashRes, userRes, notifRes, layoutRes] = await Promise.all([
+      const [dashRes, userRes, notifRes, layoutRes, productsRes, categoriesRes] = await Promise.all([
         api.getFarmerDashboard().catch(() => ({})),
         api.getUserProfile().catch(() => ({ user: null })),
         api.getNotifications().catch(() => ({ notifications: [] })),
-        api.getStoreLayout().catch(() => ({ layout: null }))
+        api.getStoreLayout().catch(() => ({ layout: null })),
+        api.getProducts().catch(() => ({ products: [] })),
+        api.getCategories().catch(() => ({ categories: [] }))
       ]);
       setDashboardData(dashRes || null);
       setUser(userRes.user || null);
       setNotifications(notifRes.notifications || []);
+      setProducts(productsRes.products || []);
+      setCategories(categoriesRes.categories || []);
       
       if (layoutRes.layout) {
         setLayout({
@@ -190,14 +243,14 @@ export default function StoreDecorationPage() {
 
   const getInitialContentForType = (type: string) => {
     switch (type) {
-      case 'banner': return { title: 'New Banner', subtitle: 'Subtitle goes here', buttonLink: '#', imageUrl: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80' };
-      case 'text': return { title: 'Heading', text: 'Some informative text about your farm.' };
-      case 'categories': return { title: 'SHOP BY CATEGORY' };
-      case 'products': return { title: 'TOP SELLING PRODUCTS' };
-      case 'carousel': return { title: 'Featured Collection', images: ['https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80', 'https://images.unsplash.com/photo-1595841696677-6489ff3f8cd1?auto=format&fit=crop&q=80'] };
-      case 'video': return { title: 'Farm Tour', videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4' };
-      case 'coupon_slider': return { title: 'Special Offers' };
-      case 'flash_sale': return { title: 'Flash Sale - Ends Soon!' };
+      case 'banner': return { title: '', subtitle: '', buttonLink: '', imageUrl: '' };
+      case 'text': return { title: '', text: '' };
+      case 'categories': return { title: '' };
+      case 'products': return { title: '' };
+      case 'carousel': return { title: '', images: [] };
+      case 'video': return { title: '', videoUrl: '' };
+      case 'coupon_slider': return { title: '', coupons: [] };
+      case 'flash_sale': return { title: '', endTime: new Date(Date.now() + 86400000).toISOString() };
       default: return {};
     }
   };
@@ -361,7 +414,14 @@ export default function StoreDecorationPage() {
                       {/* RENDER BANNER */}
                       {module.type === 'banner' && (
                         <div className="relative w-full aspect-[21/9] bg-gray-100 overflow-hidden flex items-center justify-center" style={{ minHeight: '300px' }}>
-                          <img src={module.content.imageUrl || 'https://via.placeholder.com/1200x500'} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+                          {module.content.imageUrl ? (
+                            <img src={module.content.imageUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+                          ) : (
+                            <div className="absolute inset-0 w-full h-full bg-gray-200 flex flex-col items-center justify-center text-gray-400">
+                              <span className="material-symbols-outlined text-[48px] mb-2">image</span>
+                              <p className="text-sm font-bold">No Banner Image</p>
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-black" style={{ opacity: (module.styles.overlayOpacity || 30) / 100 }}></div>
                           <div className="relative z-10 text-center p-8 max-w-3xl">
                             <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tight" style={{ color: module.styles.textColor || '#fff', fontFamily: 'Impact, Arial Black, sans-serif' }}>
@@ -382,14 +442,21 @@ export default function StoreDecorationPage() {
                             <a href="#" className="text-sm font-bold text-[#2d9a33] hover:underline">Edit List</a>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                            {['Vegetables', 'Pantry', 'Fruits', 'Grains'].map((cat, i) => (
+                            {categories.slice(0, 8).map((cat, i) => (
                               <div key={i} className="flex flex-col items-center group">
-                                <div className="w-32 h-32 rounded-full overflow-hidden mb-3 border-4 border-white shadow-lg group-hover:border-[#2d9a33] transition-colors">
-                                  <img src={`https://source.unsplash.com/random/200x200/?${cat.toLowerCase()},farm`} alt={cat} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                <div className="w-32 h-32 rounded-full overflow-hidden mb-3 border-4 border-white shadow-lg group-hover:border-[#2d9a33] transition-colors bg-gray-100 flex items-center justify-center">
+                                  {cat.image_url ? (
+                                    <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                  ) : (
+                                    <span className="material-symbols-outlined text-[48px] text-gray-400">category</span>
+                                  )}
                                 </div>
-                                <span className="text-xs font-bold text-gray-800 uppercase">{cat}</span>
+                                <span className="text-xs font-bold text-gray-800 uppercase">{cat.name}</span>
                               </div>
                             ))}
+                            {categories.length === 0 && (
+                              <div className="col-span-full py-8 text-gray-400 text-sm">No categories found.</div>
+                            )}
                           </div>
                         </div>
                       )}
@@ -401,15 +468,24 @@ export default function StoreDecorationPage() {
                             <h3 className="text-sm font-bold tracking-widest text-gray-900">{module.content.title?.toUpperCase() || 'TOP SELLING PRODUCTS'}</h3>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                            {[1, 2, 3].map((item) => (
-                              <div key={item} className="bg-white border border-gray-200 p-4 transition-shadow hover:shadow-lg">
-                                <div className="aspect-square bg-gray-100 mb-4 overflow-hidden relative">
-                                  <img src={`https://source.unsplash.com/random/400x400/?vegetable,fresh,${item}`} alt="Product" className="w-full h-full object-cover" />
+                            {products.slice(0, 6).map((item) => (
+                              <div key={item.id} className="bg-white border border-gray-200 p-4 transition-shadow hover:shadow-lg rounded-lg">
+                                <div className="aspect-square bg-gray-100 mb-4 overflow-hidden relative rounded-md">
+                                  {item.image_url ? (
+                                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <span className="material-symbols-outlined text-[48px] text-gray-300">image</span>
+                                    </div>
+                                  )}
                                 </div>
-                                <h4 className="font-bold text-gray-900 text-sm mb-1">Fresh Farm Product</h4>
-                                <p className="text-[#2d9a33] font-bold">$12.99</p>
+                                <h4 className="font-bold text-gray-900 text-sm mb-1 line-clamp-1">{item.name}</h4>
+                                <p className="text-[#2d9a33] font-bold">${item.price}</p>
                               </div>
                             ))}
+                            {products.length === 0 && (
+                              <div className="col-span-full py-8 text-gray-400 text-sm text-center">No products found in your inventory.</div>
+                            )}
                           </div>
                         </div>
                       )}
@@ -422,11 +498,101 @@ export default function StoreDecorationPage() {
                         </div>
                       )}
 
+                      {module.type === 'video' && (
+                        <div className="px-8 w-full">
+                          <h3 className="text-sm font-bold tracking-widest text-gray-900 mb-4 text-center">{module.content.title?.toUpperCase() || 'FARM TOUR'}</h3>
+                          <div className="w-full aspect-video bg-gray-100 rounded-xl overflow-hidden shadow-md">
+                            {module.content.videoUrl ? (
+                              module.content.videoUrl.includes('youtube.com') || module.content.videoUrl.includes('youtu.be') ? (
+                                <iframe 
+                                  className="w-full h-full" 
+                                  src={module.content.videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} 
+                                  title="Video player" 
+                                  frameBorder="0" 
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                  allowFullScreen 
+                                />
+                              ) : (
+                                <video className="w-full h-full object-cover" controls src={module.content.videoUrl} />
+                              )
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                                <span className="material-symbols-outlined text-[48px] mb-2">play_circle</span>
+                                <p className="text-sm font-bold">No Video URL Provided</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {module.type === 'coupon_slider' && (
+                        <div className="px-8 w-full">
+                          <h3 className="text-sm font-bold tracking-widest text-gray-900 mb-4 text-center">{module.content.title?.toUpperCase() || 'SPECIAL OFFERS'}</h3>
+                          <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x">
+                            {(module.content.coupons || []).map((coupon: any, i: number) => (
+                              <div key={i} className="flex-shrink-0 w-64 bg-gradient-to-r from-[#2d9a33] to-[#25822a] rounded-xl p-4 text-white shadow-lg relative overflow-hidden snap-center">
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-white opacity-10 rounded-full -mr-8 -mt-8"></div>
+                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
+                                <div className="relative z-10">
+                                  <span className="text-3xl font-black">{coupon.discount}</span>
+                                  <span className="text-sm ml-1 opacity-90">OFF</span>
+                                  <p className="text-sm mt-1 mb-3 opacity-90 leading-tight h-10">{coupon.description}</p>
+                                  <div className="bg-white/20 border border-white/40 rounded px-3 py-1.5 flex justify-between items-center backdrop-blur-sm">
+                                    <span className="font-mono text-sm tracking-widest font-bold">{coupon.code}</span>
+                                    <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                            {(!module.content.coupons || module.content.coupons.length === 0) && (
+                              <div className="w-full p-8 text-center border border-dashed border-gray-300 rounded-lg text-gray-400">
+                                No coupons added yet.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {module.type === 'flash_sale' && (
+                        <div className="px-8 w-full bg-red-50/50 py-8 border-y border-red-100">
+                          <div className="text-center mb-6">
+                            <h3 className="text-2xl font-black text-red-600 mb-2 flex items-center justify-center gap-2">
+                              <span className="material-symbols-outlined text-[28px]">flash_on</span>
+                              {module.content.title?.toUpperCase() || 'FLASH SALE'}
+                            </h3>
+                            <CountdownTimer endTime={module.content.endTime} />
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {products.slice(0, 4).map((item) => (
+                              <div key={item.id} className="bg-white border border-red-200 p-3 rounded-lg relative">
+                                <div className="absolute -top-3 -right-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10 shadow-sm border-2 border-white">
+                                  SALE
+                                </div>
+                                <div className="aspect-square bg-gray-100 mb-3 overflow-hidden rounded-md relative">
+                                  {item.image_url ? (
+                                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <span className="material-symbols-outlined text-[32px] text-gray-300">image</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <h4 className="font-bold text-gray-900 text-xs mb-1 line-clamp-1">{item.name}</h4>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-red-600 font-black text-sm">${(item.price * 0.8).toFixed(2)}</p>
+                                  <p className="text-gray-400 line-through text-[10px]">${item.price}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* OTHER MODULES MOCK RENDERERS */}
-                      {['carousel', 'video', 'coupon_slider', 'flash_sale'].includes(module.type) && (
+                      {['carousel'].includes(module.type) && (
                         <div className="px-8 w-full text-center">
                           <h3 className="text-sm font-bold tracking-widest text-gray-900 mb-4">{module.content.title?.toUpperCase() || module.type.toUpperCase()}</h3>
-                          {module.type === 'carousel' && module.content.images?.length > 0 ? (
+                          {module.content.images?.length > 0 ? (
                             <div className="flex gap-3 overflow-x-auto pb-2">
                               {module.content.images.map((img: string, i: number) => (
                                 <img key={i} src={img} alt={`Slide ${i + 1}`} className="h-40 w-64 object-cover rounded-lg flex-shrink-0" />
@@ -435,9 +601,9 @@ export default function StoreDecorationPage() {
                           ) : (
                             <div className="p-12 bg-gray-50 border border-dashed border-gray-300 rounded-lg flex items-center justify-center gap-3">
                               <span className="material-symbols-outlined text-[32px] text-gray-400">
-                                {module.type === 'video' ? 'play_circle' : module.type === 'carousel' ? 'view_carousel' : 'local_activity'}
+                                view_carousel
                               </span>
-                              <p className="text-gray-500 font-bold uppercase">{module.type.replace('_', ' ')} CONTENT PLACEHOLDER</p>
+                              <p className="text-gray-500 font-bold uppercase">CAROUSEL CONTENT PLACEHOLDER</p>
                             </div>
                           )}
                         </div>
@@ -617,8 +783,97 @@ export default function StoreDecorationPage() {
                       </div>
                     )}
 
-                    {/* Generic Title for other modules */}
-                    {['categories', 'products', 'video', 'coupon_slider', 'flash_sale'].includes(selectedModule.type) && (
+                    {/* Specific properties for video, coupon_slider, flash_sale */}
+                    {selectedModule.type === 'video' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">Video URL (YouTube, Vimeo, MP4)</label>
+                          <input 
+                            type="text" 
+                            className="w-full text-sm border border-gray-300 p-2.5 rounded-md focus:outline-none focus:ring-1 focus:ring-[#2d9a33]"
+                            value={selectedModule.content.videoUrl || ''}
+                            onChange={(e) => updateSelectedModule('content', 'videoUrl', e.target.value)}
+                            placeholder="https://www.youtube.com/watch?v=..."
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedModule.type === 'coupon_slider' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-2">Coupons</label>
+                          <div className="space-y-3 mb-3">
+                            {(selectedModule.content.coupons || []).map((coupon: any, i: number) => (
+                              <div key={i} className="p-3 border border-gray-200 rounded-md bg-gray-50 relative">
+                                <button 
+                                  onClick={() => {
+                                    const newCoupons = [...(selectedModule.content.coupons || [])];
+                                    newCoupons.splice(i, 1);
+                                    updateSelectedModule('content', 'coupons', newCoupons);
+                                  }}
+                                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                                </button>
+                                <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
+                                  <div>
+                                    <label className="block text-[10px] text-gray-500 font-bold mb-1">Code</label>
+                                    <input type="text" className="w-full text-xs p-1.5 border border-gray-300 rounded" value={coupon.code} onChange={(e) => {
+                                      const newCoupons = [...(selectedModule.content.coupons || [])];
+                                      newCoupons[i].code = e.target.value;
+                                      updateSelectedModule('content', 'coupons', newCoupons);
+                                    }} />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-gray-500 font-bold mb-1">Discount</label>
+                                    <input type="text" className="w-full text-xs p-1.5 border border-gray-300 rounded" placeholder="e.g. 10%" value={coupon.discount} onChange={(e) => {
+                                      const newCoupons = [...(selectedModule.content.coupons || [])];
+                                      newCoupons[i].discount = e.target.value;
+                                      updateSelectedModule('content', 'coupons', newCoupons);
+                                    }} />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] text-gray-500 font-bold mb-1">Description</label>
+                                  <input type="text" className="w-full text-xs p-1.5 border border-gray-300 rounded" value={coupon.description} onChange={(e) => {
+                                    const newCoupons = [...(selectedModule.content.coupons || [])];
+                                    newCoupons[i].description = e.target.value;
+                                    updateSelectedModule('content', 'coupons', newCoupons);
+                                  }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const newCoupons = [...(selectedModule.content.coupons || []), { code: '', discount: '', description: '' }];
+                              updateSelectedModule('content', 'coupons', newCoupons);
+                            }}
+                            className="w-full py-2 border border-dashed border-[#2d9a33] text-[#2d9a33] rounded-md text-xs font-bold hover:bg-green-50 transition-colors flex items-center justify-center gap-1"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">add</span> Add Coupon
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedModule.type === 'flash_sale' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">End Time</label>
+                          <input 
+                            type="datetime-local" 
+                            className="w-full text-sm border border-gray-300 p-2.5 rounded-md focus:outline-none focus:ring-1 focus:ring-[#2d9a33]"
+                            value={selectedModule.content.endTime ? new Date(new Date(selectedModule.content.endTime).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
+                            onChange={(e) => updateSelectedModule('content', 'endTime', new Date(e.target.value).toISOString())}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Generic Title for all these modules */}
+                    {['categories', 'products', 'video', 'coupon_slider', 'flash_sale', 'carousel'].includes(selectedModule.type) && (
                       <div className="space-y-4">
                         <div>
                           <label className="block text-xs font-bold text-gray-700 mb-1">Section Title</label>
@@ -629,6 +884,22 @@ export default function StoreDecorationPage() {
                             onChange={(e) => updateSelectedModule('content', 'title', e.target.value)}
                           />
                         </div>
+                        {['categories', 'products'].includes(selectedModule.type) && (
+                          <div className="p-3 bg-blue-50 border border-blue-100 rounded-md">
+                            <p className="text-xs text-blue-700 flex items-start gap-2">
+                              <span className="material-symbols-outlined text-[16px]">info</span>
+                              This module automatically displays data from your inventory.
+                            </p>
+                          </div>
+                        )}
+                        {['flash_sale'].includes(selectedModule.type) && (
+                          <div className="p-3 bg-red-50 border border-red-100 rounded-md">
+                            <p className="text-xs text-red-700 flex items-start gap-2">
+                              <span className="material-symbols-outlined text-[16px]">info</span>
+                              Flash Sale automatically features your first 4 products with a 20% discount visually applied.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -754,7 +1025,13 @@ export default function StoreDecorationPage() {
                   <div key={module.id} style={{ paddingTop: `${module.styles?.paddingTop || 0}px`, paddingBottom: `${module.styles?.paddingBottom || 0}px` }}>
                     {module.type === 'banner' && (
                       <div className="relative w-full aspect-[21/9] bg-gray-100 overflow-hidden flex items-center justify-center" style={{ minHeight: '300px' }}>
-                        <img src={module.content.imageUrl || 'https://via.placeholder.com/1200x500'} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+                        {module.content.imageUrl ? (
+                          <img src={module.content.imageUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 w-full h-full bg-gray-200 flex flex-col items-center justify-center text-gray-400">
+                            <span className="material-symbols-outlined text-[48px] mb-2">image</span>
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-black" style={{ opacity: (module.styles.overlayOpacity || 30) / 100 }}></div>
                         <div className="relative z-10 text-center p-8 max-w-3xl">
                           <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tight" style={{ color: module.styles.textColor || '#fff', fontFamily: 'Impact, Arial Black, sans-serif' }}>
@@ -772,8 +1049,90 @@ export default function StoreDecorationPage() {
                         <p className="text-gray-600 leading-relaxed">{module.content.text}</p>
                       </div>
                     )}
-                    {/* Simplified renderers for preview */}
-                    {['categories', 'products', 'carousel', 'video', 'coupon_slider', 'flash_sale'].includes(module.type) && (
+                    {/* Advanced renderers for preview */}
+                    {module.type === 'video' && (
+                      <div className="px-8 w-full">
+                        <h3 className="text-sm font-bold tracking-widest text-gray-900 mb-4 text-center">{module.content.title?.toUpperCase() || 'FARM TOUR'}</h3>
+                        <div className="w-full aspect-video bg-gray-100 rounded-xl overflow-hidden shadow-md">
+                          {module.content.videoUrl ? (
+                            module.content.videoUrl.includes('youtube.com') || module.content.videoUrl.includes('youtu.be') ? (
+                              <iframe 
+                                className="w-full h-full" 
+                                src={module.content.videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} 
+                                title="Video player" 
+                                frameBorder="0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowFullScreen 
+                              />
+                            ) : (
+                              <video className="w-full h-full object-cover" controls src={module.content.videoUrl} />
+                            )
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                              <span className="material-symbols-outlined text-[48px] mb-2">play_circle</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {module.type === 'coupon_slider' && (
+                      <div className="px-8 w-full">
+                        <h3 className="text-sm font-bold tracking-widest text-gray-900 mb-4 text-center">{module.content.title?.toUpperCase() || 'SPECIAL OFFERS'}</h3>
+                        <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x">
+                          {(module.content.coupons || []).map((coupon: any, i: number) => (
+                            <div key={i} className="flex-shrink-0 w-64 bg-gradient-to-r from-[#2d9a33] to-[#25822a] rounded-xl p-4 text-white shadow-lg relative overflow-hidden snap-center">
+                              <div className="absolute top-0 right-0 w-16 h-16 bg-white opacity-10 rounded-full -mr-8 -mt-8"></div>
+                              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
+                              <div className="relative z-10">
+                                <span className="text-3xl font-black">{coupon.discount}</span>
+                                <span className="text-sm ml-1 opacity-90">OFF</span>
+                                <p className="text-sm mt-1 mb-3 opacity-90 leading-tight h-10">{coupon.description}</p>
+                                <div className="bg-white/20 border border-white/40 rounded px-3 py-1.5 flex justify-between items-center backdrop-blur-sm">
+                                  <span className="font-mono text-sm tracking-widest font-bold">{coupon.code}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {module.type === 'flash_sale' && (
+                      <div className="px-8 w-full bg-red-50/50 py-8 border-y border-red-100">
+                        <div className="text-center mb-6">
+                          <h3 className="text-2xl font-black text-red-600 mb-2 flex items-center justify-center gap-2">
+                            <span className="material-symbols-outlined text-[28px]">flash_on</span>
+                            {module.content.title?.toUpperCase() || 'FLASH SALE'}
+                          </h3>
+                          <CountdownTimer endTime={module.content.endTime} />
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {products.slice(0, 4).map((item) => (
+                            <div key={item.id} className="bg-white border border-red-200 p-3 rounded-lg relative">
+                              <div className="absolute -top-3 -right-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10 shadow-sm border-2 border-white">SALE</div>
+                              <div className="aspect-square bg-gray-100 mb-3 overflow-hidden rounded-md relative">
+                                {item.image_url ? (
+                                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-[32px] text-gray-300">image</span>
+                                  </div>
+                                )}
+                              </div>
+                              <h4 className="font-bold text-gray-900 text-xs mb-1 line-clamp-1">{item.name}</h4>
+                              <div className="flex items-center gap-2">
+                                <p className="text-red-600 font-black text-sm">${(item.price * 0.8).toFixed(2)}</p>
+                                <p className="text-gray-400 line-through text-[10px]">${item.price}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Simplified renderers for other preview modules */}
+                    {['categories', 'products', 'carousel'].includes(module.type) && (
                       <div className="px-8 w-full text-center">
                         <h3 className="text-sm font-bold tracking-widest text-gray-900 mb-4">{module.content.title?.toUpperCase() || module.type.toUpperCase()}</h3>
                         <div className="p-12 bg-gray-50 border border-dashed border-gray-300 rounded-lg">
