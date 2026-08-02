@@ -192,6 +192,13 @@ class APIClient {
     });
   }
 
+  async clearCart() {
+    return this.request({
+      method: 'DELETE',
+      url: '/cart/clear',
+    });
+  }
+
   // Order endpoints
   async getOrders() {
     return this.request<{ orders: any[] }>({
@@ -223,6 +230,23 @@ class APIClient {
     });
   }
 
+  // Payment endpoints (Chapa)
+  async initializeChapaPayment(order_id: string, return_url: string) {
+    return this.request<{ checkout_url: string; tx_ref: string; message: string }>({
+      method: 'POST',
+      url: '/payments/chapa/initialize',
+      data: { order_id, return_url },
+    });
+  }
+
+  async verifyChapaPayment(tx_ref: string, order_id: string) {
+    return this.request<{ status: string; message: string }>({
+      method: 'POST',
+      url: '/payments/chapa/verify',
+      data: { tx_ref, order_id },
+    });
+  }
+
   // Category endpoints
   async getCategories() {
     return this.request<{ categories: any[] }>({
@@ -251,6 +275,20 @@ class APIClient {
       method: 'PUT',
       url: '/users/me',
       data: userData,
+    });
+  }
+
+  async getFarmerProfile(farmerId: string) {
+    return this.request<{ user: any }>({
+      method: 'GET',
+      url: `/users/farmer/${farmerId}`,
+    });
+  }
+
+  async getStoreLayoutByFarmerId(farmerId: string) {
+    return this.request<{ layout: any }>({
+      method: 'GET',
+      url: `/store-layout/${farmerId}`,
     });
   }
 

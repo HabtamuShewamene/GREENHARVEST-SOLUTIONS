@@ -6,6 +6,8 @@ const authMiddleware = require("../middleware/authMiddleware");
 const {
   processPayment,
   getPaymentHistory,
+  initializeChapaPayment,
+  verifyChapaPayment
 } = require("../controllers/paymentController");
 
 const router = express.Router();
@@ -14,6 +16,8 @@ router.use(authMiddleware);
 
 router.post("/process", processPayment);
 router.get("/history", getPaymentHistory);
+router.post("/chapa/initialize", initializeChapaPayment);
+router.post("/chapa/verify", verifyChapaPayment);
 
 router.post("/", processPayment);
 router.get("/", getPaymentHistory);
