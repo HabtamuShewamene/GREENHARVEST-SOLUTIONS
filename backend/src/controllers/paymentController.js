@@ -131,28 +131,43 @@ const verifyChapaPayment = async (req, res) => {
         }
 
         const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY;
-        
+        if (!CHAPA_SECRET_KEY) {
+            return res.status(500).json({ message: "Chapa secret key is not configured on the server" });
+        }
+
+        const order = await orderModel.findOrderById(Number(order_id));
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+        if (order.buyer_id !== req.user.id) {
+            return res.status(403).json({ message: "You don't have permission to verify this order" });
+        }
+
         const response = await fetch(`https://api.chapa.co/v1/transaction/verify/${tx_ref}`, {
             method: "GET",
             headers: {
                 "Authorization": `Bearer ${CHAPA_SECRET_KEY}`,
             }
         });
-        
+
+        if (!response.ok) {
+            logger.error("Chapa verification request failed", { status: response.status, tx_ref });
+            return res.status(502).json({ message: "Failed to verify payment with Chapa", status: "failed" });
+        }
+
         const data = await response.json();
-        
+
         if (data.status === "success" && data.data.status === "success") {
             await orderModel.updateOrderStatusesById(Number(order_id), {
                 order_status: null,
                 payment_status: 'paid',
                 delivery_status: null
             });
-            
+
             return res.status(200).json({ message: "Payment verified successfully", status: "success" });
         } else {
             return res.status(400).json({ message: "Payment not successful or pending", status: "failed" });
         }
-        
     } catch (error) {
          return handleControllerError(res, "Verify payment failed", error, {
             userId: req.user && req.user.id,
