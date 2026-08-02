@@ -131,6 +131,15 @@ const createProduct = async ({ user, payload }) => {
 		throw createServiceError("price must be a valid number greater than 0", 400);
 	}
 
+	if (
+		productValues.discount_price !== null &&
+		(!isNonNegativeNumber(productValues.discount_price) ||
+			Number(productValues.discount_price) <= 0 ||
+			Number(productValues.discount_price) >= Number(productValues.price))
+	) {
+		throw createServiceError("discount_price must be greater than 0 and less than price", 400);
+	}
+
 	if (!Number.isInteger(productValues.stock) || productValues.stock <= 0) {
 		throw createServiceError("stock must be a positive integer", 400);
 	}

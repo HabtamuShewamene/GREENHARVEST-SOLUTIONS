@@ -24,7 +24,7 @@ export default function OrderTrackingPage() {
                 const res = await api.getOrders();
                 const found = res.orders?.find((o: any) => o.id.toString() === orderId);
                 if (found) {
-                    setOrder(found);
+                    setOrder({ ...found, status: found.order_status ?? found.status });
                 } else {
                     // Mock order if not found for demo purposes
                     setOrder({

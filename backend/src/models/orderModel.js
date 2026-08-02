@@ -175,7 +175,8 @@ const assignDeliveryPartnerById = async (order_id, delivery_partner_id, client =
 	const result = await client.query(
 		`
 			UPDATE orders
-			SET delivery_status = 'assigned', delivery_partner_id = $2
+			SET delivery_partner_id = $2,
+					delivery_status = 'assigned'
 			WHERE id = $1
 			RETURNING
 				id,
@@ -185,6 +186,7 @@ const assignDeliveryPartnerById = async (order_id, delivery_partner_id, client =
 				total_amount,
 				order_status,
 				payment_status,
+				delivery_partner_id,
 				delivery_status,
 				created_at
 		`,
