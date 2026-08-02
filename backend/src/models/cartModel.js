@@ -138,6 +138,21 @@ const deleteCartItemByIdForUser = async (cart_item_id, user_id) => {
 	return result.rows[0] || null;
 };
 
+const clearCartItemsForUser = async (user_id) => {
+	const result = await pool.query(
+		`
+			DELETE FROM cart_items ci
+			USING carts c
+			WHERE ci.cart_id = c.cart_id
+				AND c.user_id = $1
+			RETURNING ci.cart_item_id AS id, c.cart_id
+		`,
+		[user_id]
+	);
+
+	return result.rows;
+};
+
 module.exports = {
 	createCartItem,
 	deleteCartItemByIdForUser,
@@ -146,4 +161,5 @@ module.exports = {
 	findCartItemWithStockById,
 	getUserCartItems,
 	updateCartItemQuantityById,
+	clearCartItemsForUser,
 };

@@ -9,6 +9,7 @@ const {
   updateCartItem,
   removeCartItem,
   getCart,
+  clearCart,
 } = require("../controllers/cartController");
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.use(requireRole("buyer"));
 
 router.get("/", getCart);
 router.post("/", addToCart);
+router.delete("/clear", clearCart);
 router.patch("/:id", updateCartItem);
 router.put("/:id", updateCartItem);
 router.delete("/:id", removeCartItem);

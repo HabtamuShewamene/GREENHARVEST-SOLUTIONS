@@ -97,9 +97,15 @@ const removeCartItem = async ({ user_id, cart_item_id }) => {
   return cartModel.getUserCartItems(user_id);
 };
 
+const clearCart = async (user_id) => {
+  const result = await cartModel.clearCartItemsForUser(user_id);
+  return cartModel.getUserCartItems(user_id);
+};
+
 module.exports = {
   addToCart,
   getCart,
   removeCartItem,
   updateCartItem,
+  clearCart,
 };
