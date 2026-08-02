@@ -144,8 +144,8 @@ const deleteProduct = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    const { page, limit } = req.query;
-    const result = await productService.getAllProducts({ page, limit });
+    const { page, limit, farmer_id, category_id, search, sort } = req.query;
+    const result = await productService.getAllProducts({ page, limit, farmer_id, category_id, search, sort });
 
     return res.status(200).json(result);
   } catch (error) {

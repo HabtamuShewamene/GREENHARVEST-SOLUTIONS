@@ -18,11 +18,10 @@ const getFarmerDashboard = async (req, res) => {
         `
           SELECT
             COUNT(p.id)::int AS total_products,
-            COALESCE(SUM(COALESCE(i.quantity, 0)), 0)::int AS total_stock_units,
-            COUNT(*) FILTER (WHERE COALESCE(i.quantity, 0) = 0)::int AS out_of_stock_products,
-            COUNT(*) FILTER (WHERE COALESCE(i.quantity, 0) > 0 AND COALESCE(i.quantity, 0) <= 10)::int AS low_stock_products
+            COALESCE(SUM(COALESCE(p.stock, 0)), 0)::int AS total_stock_units,
+            COUNT(*) FILTER (WHERE COALESCE(p.stock, 0) = 0)::int AS out_of_stock_products,
+            COUNT(*) FILTER (WHERE COALESCE(p.stock, 0) > 0 AND COALESCE(p.stock, 0) <= 10)::int AS low_stock_products
           FROM products p
-          LEFT JOIN inventory i ON i.product_id = p.id
           WHERE p.farmer_id = $1
         `,
         [farmerId]
@@ -32,14 +31,13 @@ const getFarmerDashboard = async (req, res) => {
           SELECT
             p.id,
             p.name,
-            COALESCE(i.quantity, 0) AS stock,
+            COALESCE(p.stock, 0) AS stock,
             p.price,
-            NULL::text AS farm_location,
+            p.farm_location,
             p.created_at,
             p.category_id,
             c.name AS category_name
           FROM products p
-          LEFT JOIN inventory i ON i.product_id = p.id
           LEFT JOIN categories c ON c.id = p.category_id
           WHERE p.farmer_id = $1
           ORDER BY p.created_at DESC
@@ -135,12 +133,11 @@ const getFarmerDashboard = async (req, res) => {
           SELECT
             p.id,
             p.name,
-            COALESCE(i.quantity, 0)::int AS stock,
+            COALESCE(p.stock, 0)::int AS stock,
             p.price
           FROM products p
-          LEFT JOIN inventory i ON i.product_id = p.id
-          WHERE p.farmer_id = $1 AND COALESCE(i.quantity, 0) <= 10
-          ORDER BY COALESCE(i.quantity, 0) ASC
+          WHERE p.farmer_id = $1 AND COALESCE(p.stock, 0) <= 10
+          ORDER BY COALESCE(p.stock, 0) ASC
           LIMIT 10
         `,
         [farmerId]
@@ -359,18 +356,17 @@ const getFarmerProducts = async (req, res) => {
     }
 
     if (stockStatus === 'out_of_stock') {
-      stockFilter = ` AND COALESCE(i.quantity, 0) = 0`;
+      stockFilter = ` AND COALESCE(p.stock, 0) = 0`;
     } else if (stockStatus === 'low_stock') {
-      stockFilter = ` AND COALESCE(i.quantity, 0) > 0 AND COALESCE(i.quantity, 0) <= 50`;
+      stockFilter = ` AND COALESCE(p.stock, 0) > 0 AND COALESCE(p.stock, 0) <= 50`;
     } else if (stockStatus === 'in_stock') {
-      stockFilter = ` AND COALESCE(i.quantity, 0) > 50`;
+      stockFilter = ` AND COALESCE(p.stock, 0) > 50`;
     }
 
     const countResult = await pool.query(
       `
         SELECT COUNT(DISTINCT p.id)::int AS total
         FROM products p
-        LEFT JOIN inventory i ON i.product_id = p.id
         LEFT JOIN categories c ON c.id = p.category_id
         WHERE p.farmer_id = $1${searchFilter}${categoryFilter}${stockFilter}
       `,
@@ -388,20 +384,24 @@ const getFarmerProducts = async (req, res) => {
           p.name,
           p.description,
           p.price,
-          p.status,
-          COALESCE(i.quantity, 0)::int AS stock,
+          COALESCE(p.stock, 0)::int AS stock,
+          CASE
+            WHEN COALESCE(p.stock, 0) = 0 THEN 'out_of_stock'
+            WHEN COALESCE(p.stock, 0) <= 50 THEN 'low_stock'
+            ELSE 'in_stock'
+          END AS status,
           p.image_url,
+          p.farm_location,
           p.created_at,
           c.name AS category_name,
           c.id AS category_id,
           COALESCE(SUM(oi.quantity), 0)::int AS units_sold,
           COALESCE(SUM(oi.quantity * oi.price), 0)::numeric(10,2) AS revenue
         FROM products p
-        LEFT JOIN inventory i ON i.product_id = p.id
         LEFT JOIN categories c ON c.id = p.category_id
         LEFT JOIN order_items oi ON oi.product_id = p.id
         WHERE p.farmer_id = $1${searchFilter}${categoryFilter}${stockFilter}
-        GROUP BY p.id, p.status, i.quantity, c.name, c.id
+        GROUP BY p.id, c.name, c.id
         ORDER BY p.created_at DESC
         LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
       `,
@@ -424,6 +424,7 @@ const getFarmerProducts = async (req, res) => {
     });
   }
 };
+
 
 // Export farmer orders as CSV
 const exportFarmerOrdersCSV = async (req, res) => {
@@ -518,17 +519,16 @@ const exportFarmerProductsCSV = async (req, res) => {
           p.name,
           p.description,
           p.price,
-          COALESCE(i.quantity, 0)::int AS stock,
+          COALESCE(p.stock, 0)::int AS stock,
           c.name AS category_name,
           COALESCE(SUM(oi.quantity), 0)::int AS units_sold,
           COALESCE(SUM(oi.quantity * oi.price), 0)::numeric(10,2) AS revenue,
           p.created_at
         FROM products p
-        LEFT JOIN inventory i ON i.product_id = p.id
         LEFT JOIN categories c ON c.id = p.category_id
         LEFT JOIN order_items oi ON oi.product_id = p.id
         WHERE p.farmer_id = $1
-        GROUP BY p.id, i.quantity, c.name, c.id
+        GROUP BY p.id, c.name, c.id
         ORDER BY p.created_at DESC
         LIMIT 5000
       `,
@@ -595,25 +595,17 @@ const batchUpdateProductStatus = async (req, res) => {
       await pool.query(`DELETE FROM products WHERE id = ANY($1::int[]) AND farmer_id = $2`, [ownedIds, farmerId]);
       message = `${ownedIds.length} product(s) deleted successfully`;
     } else if (action === 'deactivate') {
-      // Deactivate = set stock to 0 in inventory
+      // Deactivate = set stock to 0 on the product
       await pool.query(
-        `UPDATE inventory SET quantity = 0, last_updated = NOW() WHERE product_id = ANY($1::int[])`,
-        [ownedIds]
+        `UPDATE products SET stock = 0 WHERE id = ANY($1::int[]) AND farmer_id = $2`,
+        [ownedIds, farmerId]
       );
       message = `${ownedIds.length} product(s) deactivated (stock set to 0)`;
     } else if (action === 'reactivate') {
-      // Reactivate — signal by restoring minimum stock of 1 where stock is 0
+      // Reactivate — restore minimum stock of 1 where stock is currently 0
       await pool.query(
-        `
-          INSERT INTO inventory (product_id, farmer_id, quantity)
-          SELECT p.id, p.farmer_id, 1
-          FROM products p
-          WHERE p.id = ANY($1::int[])
-          ON CONFLICT (product_id) DO UPDATE
-            SET quantity = CASE WHEN inventory.quantity = 0 THEN 1 ELSE inventory.quantity END,
-                last_updated = NOW()
-        `,
-        [ownedIds]
+        `UPDATE products SET stock = CASE WHEN COALESCE(stock, 0) = 0 THEN 1 ELSE stock END WHERE id = ANY($1::int[]) AND farmer_id = $2`,
+        [ownedIds, farmerId]
       );
       message = `${ownedIds.length} product(s) reactivated`;
     }
@@ -688,7 +680,7 @@ const updateReturnStatus = async (req, res) => {
 
     await pool.query(`UPDATE orders SET order_status = $1 WHERE id = $2`, [newStatus, orderId]);
 
-    // If refunded, restore inventory stock
+    // If refunded, restore stock on the products table
     if (action === 'refund') {
       const itemsResult = await pool.query(
         `SELECT product_id, quantity FROM order_items WHERE order_id = $1`,
@@ -696,7 +688,7 @@ const updateReturnStatus = async (req, res) => {
       );
       for (const item of itemsResult.rows) {
         await pool.query(
-          `UPDATE inventory SET quantity = quantity + $1, last_updated = NOW() WHERE product_id = $2`,
+          `UPDATE products SET stock = COALESCE(stock, 0) + $1 WHERE id = $2`,
           [item.quantity, item.product_id]
         );
       }
@@ -749,18 +741,17 @@ const getAdminDashboard = async (req, res) => {
             p.id,
             p.name,
             p.price,
-            COALESCE(i.quantity, 0) AS stock,
+            COALESCE(p.stock, 0) AS stock,
             p.farmer_id,
             u.name AS farmer_name,
             COALESCE(SUM(oi.quantity), 0)::int AS units_sold,
             COALESCE(SUM(oi.quantity * oi.price), 0)::numeric(10,2) AS revenue_generated
           FROM products p
           JOIN users u ON u.id = p.farmer_id
-          LEFT JOIN inventory i ON i.product_id = p.id
           LEFT JOIN order_items oi ON oi.product_id = p.id
           LEFT JOIN orders o ON o.id = oi.order_id
           WHERE o.id IS NULL OR o.order_status != 'cancelled'
-          GROUP BY p.id, u.id, i.quantity
+          GROUP BY p.id, u.id
           ORDER BY units_sold DESC, revenue_generated DESC, p.created_at DESC
           LIMIT 10
         `

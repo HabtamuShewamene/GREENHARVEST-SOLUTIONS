@@ -76,6 +76,7 @@ const buildProductValues = (payload = {}) => {
 					: null
 				: undefined,
 		price: payload.price !== undefined ? Number(payload.price) : undefined,
+		discount_price: payload.discount_price !== undefined && payload.discount_price !== '' && payload.discount_price !== null ? Number(payload.discount_price) : null,
 		stock: payload.stock !== undefined ? Number(payload.stock) : undefined,
 		farm_location:
 			payload.farm_location !== undefined
@@ -140,14 +141,10 @@ const createProduct = async ({ user, payload }) => {
 		name: productValues.name,
 		description: productValues.description || null,
 		price: productValues.price,
+		discount_price: productValues.discount_price || null,
+		stock: productValues.stock,
 		farm_location: productValues.farm_location || null,
 		image_url: productValues.image_url || null,
-	});
-
-	await inventoryModel.upsertInventory({
-		product_id: product.id,
-		farmer_id,
-		quantity: productValues.stock,
 	});
 
 	logger.info("Product created", {
@@ -200,6 +197,7 @@ const updateProduct = async ({ user, productId, payload }) => {
 		"name",
 		"description",
 		"price",
+		"discount_price",
 		"stock",
 		"category_id",
 		"farm_location",
@@ -233,21 +231,13 @@ const updateProduct = async ({ user, productId, payload }) => {
 		name: productValues.name !== undefined ? productValues.name : null,
 		description: productValues.description !== undefined ? productValues.description : null,
 		price: productValues.price !== undefined ? productValues.price : null,
+		discount_price: productValues.discount_price !== undefined ? productValues.discount_price : null,
+		stock: productValues.stock !== undefined ? productValues.stock : null,
 		category_id: category_id !== undefined ? category_id : null,
 		farm_location:
 			productValues.farm_location !== undefined ? productValues.farm_location : null,
 		image_url: productValues.image_url !== undefined ? productValues.image_url : null,
 	});
-
-	if (productValues.stock !== undefined) {
-		await inventoryModel.upsertInventory({
-			product_id: updatedProduct.id,
-			farmer_id: Number(ownedProduct.farmer_id),
-			quantity: productValues.stock,
-		});
-
-		return productModel.findProductById(updatedProduct.id);
-	}
 
 	return productModel.findProductById(updatedProduct.id);
 };
@@ -273,12 +263,12 @@ const deleteProduct = async ({ user, productId }) => {
 	return { deleted: true };
 };
 
-const getAllProducts = async ({ page, limit } = {}) => {
+const getAllProducts = async ({ page, limit, farmer_id, category_id, search, sort } = {}) => {
 	const parsedPage = Math.max(1, parseInt(page, 10) || 1);
 	const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
 	const offset = (parsedPage - 1) * parsedLimit;
 
-	const result = await productModel.findAllProducts({ limit: parsedLimit, offset });
+	const result = await productModel.findAllProducts({ limit: parsedLimit, offset, farmer_id, category_id, search, sort });
 
 	const total = result.total;
 	const total_pages = Math.ceil(total / parsedLimit);

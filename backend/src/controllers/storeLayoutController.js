@@ -20,7 +20,18 @@ const updateStoreLayout = async (req, res) => {
   }
 };
 
+const getStoreLayoutByFarmerId = async (req, res) => {
+  try {
+    const farmer_id = req.params.farmerId;
+    const layout = await storeLayoutService.getStoreLayout(farmer_id);
+    res.status(200).json({ layout });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch store layout" });
+  }
+};
+
 module.exports = {
   getStoreLayout,
+  getStoreLayoutByFarmerId,
   updateStoreLayout
 };

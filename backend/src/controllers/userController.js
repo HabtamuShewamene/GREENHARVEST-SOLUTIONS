@@ -53,8 +53,23 @@ const listUsers = async (req, res) => {
   }
 };
 
+const getFarmerProfile = async (req, res) => {
+  try {
+    const user = await userService.getMe(req.params.id);
+    if (user.role !== 'farmer') {
+      return res.status(404).json({ message: "Farmer not found" });
+    }
+    return res.status(200).json({ user });
+  } catch (error) {
+    return handleControllerError(res, "Get farmer profile failed", error, {
+      userId: req.params.id,
+    });
+  }
+};
+
 module.exports = {
   getMe,
   updateMe,
   listUsers,
+  getFarmerProfile,
 };

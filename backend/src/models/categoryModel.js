@@ -50,6 +50,7 @@ const getAllCategories = async () => {
 		`
 			SELECT
 				id,
+				name,
 				name AS category_name,
 				description
 			FROM categories

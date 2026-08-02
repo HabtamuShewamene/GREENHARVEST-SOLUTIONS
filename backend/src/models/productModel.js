@@ -6,13 +6,18 @@ const productSelect = `
 		p.name,
 		p.description,
 		p.price,
+		p.discount_price,
 		p.stock,
 		p.farm_location,
 		p.image_url,
 		p.created_at,
 		p.category_id,
 		p.farmer_id,
-		p.status,
+		CASE
+			WHEN COALESCE(p.stock, 0) = 0 THEN 'out_of_stock'
+			WHEN COALESCE(p.stock, 0) <= 50 THEN 'low_stock'
+			ELSE 'in_stock'
+		END AS status,
 		u.name AS farmer_name,
 		u.email AS farmer_email,
 		c.name AS category_name
@@ -27,6 +32,8 @@ const createProduct = async ({
 	name,
 	description,
 	price,
+	discount_price,
+	stock,
 	farm_location,
 	image_url,
 }) => {
@@ -38,13 +45,15 @@ const createProduct = async ({
 				name,
 				description,
 				price,
+				discount_price,
+				stock,
 				farm_location,
 				image_url
 			)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			RETURNING id, farmer_id, category_id, name, description, price, discount_price, stock, farm_location, image_url, created_at
 		`,
-		[farmer_id, category_id, name, description, price, farm_location, image_url]
+		[farmer_id, category_id, name, description, price, discount_price, stock ?? 0, farm_location, image_url]
 	);
 
 	if (image_url) {
@@ -192,17 +201,55 @@ const findProductStockForUpdateById = async (client, productId) => {
 	return result.rows[0] || null;
 };
 
-const findAllProducts = async ({ limit, offset } = {}) => {
+const findAllProducts = async ({ limit, offset, farmer_id, category_id, search, sort } = {}) => {
+	let conditions = [];
+	let countParams = [];
+	let dataParams = [];
+	let paramCount = 1;
+
+	if (farmer_id) {
+		conditions.push(`p.farmer_id = $${paramCount}`);
+		countParams.push(farmer_id);
+		dataParams.push(farmer_id);
+		paramCount++;
+	}
+
+	if (category_id) {
+		conditions.push(`p.category_id = $${paramCount}`);
+		countParams.push(category_id);
+		dataParams.push(category_id);
+		paramCount++;
+	}
+
+	if (search) {
+		conditions.push(`(p.name ILIKE $${paramCount} OR p.description ILIKE $${paramCount} OR p.farm_location ILIKE $${paramCount} OR u.name ILIKE $${paramCount})`);
+		countParams.push(`%${search}%`);
+		dataParams.push(`%${search}%`);
+		paramCount++;
+	}
+
+	let queryCondition = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+	let orderBy = 'ORDER BY p.created_at DESC';
+	if (sort === 'price_low') orderBy = 'ORDER BY p.price ASC';
+	else if (sort === 'price_high') orderBy = 'ORDER BY p.price DESC';
+	else if (sort === 'popular') orderBy = 'ORDER BY p.stock DESC';
+
 	if (limit !== undefined && offset !== undefined) {
+		dataParams.push(limit, offset);
+		const limitIdx = dataParams.length - 1;
+		const offsetIdx = dataParams.length;
+
 		const [countResult, dataResult] = await Promise.all([
-			pool.query(`SELECT COUNT(*)::int AS total FROM products p`),
+			pool.query(`SELECT COUNT(*)::int AS total FROM products p JOIN users u ON u.id = p.farmer_id ${queryCondition}`, countParams),
 			pool.query(
 				`
 					${productSelect}
-					ORDER BY p.created_at DESC
-					LIMIT $1 OFFSET $2
+					${queryCondition}
+					${orderBy}
+					LIMIT $${limitIdx} OFFSET $${offsetIdx}
 				`,
-				[limit, offset]
+				dataParams
 			),
 		]);
 
@@ -215,8 +262,10 @@ const findAllProducts = async ({ limit, offset } = {}) => {
 	const result = await pool.query(
 		`
 			${productSelect}
-			ORDER BY p.created_at DESC
-		`
+			${queryCondition}
+			${orderBy}
+		`,
+		dataParams
 	);
 
 	return result.rows;
@@ -236,7 +285,7 @@ const findProductById = async (productId) => {
 
 const updateProductById = async (
 	productId,
-	{ name, description, price, category_id, farm_location, image_url }
+	{ name, description, price, discount_price, stock, category_id, farm_location, image_url }
 ) => {
 	const result = await pool.query(
 		`
@@ -245,13 +294,15 @@ const updateProductById = async (
 				name = COALESCE($1, name),
 				description = COALESCE($2, description),
 				price = COALESCE($3, price),
-				category_id = COALESCE($4, category_id),
-				farm_location = COALESCE($5, farm_location),
-				image_url = COALESCE($6, image_url)
-			WHERE id = $7
-			RETURNING id, farmer_id, category_id, name, description, price, stock, farm_location, image_url, created_at
+				discount_price = COALESCE($4, discount_price),
+				stock = COALESCE($5, stock),
+				category_id = COALESCE($6, category_id),
+				farm_location = COALESCE($7, farm_location),
+				image_url = COALESCE($8, image_url)
+			WHERE id = $9
+			RETURNING id, farmer_id, category_id, name, description, price, discount_price, stock, farm_location, image_url, created_at
 		`,
-		[name, description, price, category_id, farm_location, image_url, productId]
+		[name, description, price, discount_price, stock, category_id, farm_location, image_url, productId]
 	);
 
 	return result.rows[0] || null;

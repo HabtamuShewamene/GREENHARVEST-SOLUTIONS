@@ -4,7 +4,10 @@ const storeLayoutController = require("../controllers/storeLayoutController");
 const authMiddleware = require("../middleware/authMiddleware");
 const { requireRole } = require("../middleware/roleMiddleware");
 
-// All routes require authentication and farmer role
+// Public route to view a farmer's store
+router.get("/:farmerId", storeLayoutController.getStoreLayoutByFarmerId);
+
+// Protected farmer routes
 router.use(authMiddleware, requireRole("farmer"));
 
 router.get("/", storeLayoutController.getStoreLayout);
