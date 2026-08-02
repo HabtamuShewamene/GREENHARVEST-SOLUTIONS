@@ -2,20 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import type { Product, CartItem } from '@/types';
+import type { Product } from '@/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useCart } from '@/contexts/CartContext';
 
 export default function BuyerDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { cart, toggleCart, addToCart } = useCart();
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -35,15 +35,13 @@ export default function BuyerDashboard() {
 
   const loadData = async () => {
     try {
-      const [productsRes, cartRes, userRes, notifRes, catRes] = await Promise.all([
+      const [productsRes, userRes, notifRes, catRes] = await Promise.all([
         api.getProducts().catch(() => ({ products: [] })),
-        api.getCart().catch(() => ({ cart: [] })),
         api.getUserProfile().catch((err) => { console.error("Profile error:", err); return { user: null }; }),
         api.getNotifications().catch(() => ({ notifications: [] })),
         api.getCategories().catch(() => ({ categories: [] }))
       ]);
       setProducts(productsRes.products || []);
-      setCart(cartRes.cart || []);
       setUser(userRes.user || null);
       setNotifications(notifRes.notifications || []);
       setCategories(catRes.categories || []);
@@ -53,46 +51,6 @@ export default function BuyerDashboard() {
       setLoading(false);
     }
   };
-
-  const handleAddToCart = async (productId: number) => {
-    try {
-      await api.addToCart(productId.toString(), 1);
-      const cartRes = await api.getCart();
-      setCart(cartRes.cart || []);
-      setIsCartOpen(true);
-    } catch (error) {
-      console.error('Failed to add to cart', error);
-    }
-  };
-
-  const updateCartQuantity = async (cartItemId: number, newQuantity: number) => {
-    if (newQuantity < 1) {
-      try {
-        await api.removeFromCart(cartItemId.toString());
-      } catch (error) {}
-    } else {
-      try {
-        await api.updateCartItem(cartItemId.toString(), newQuantity);
-      } catch (error: any) {
-        if (error.response?.data?.message) {
-          alert(error.response.data.message);
-        } else {
-          console.error("Update cart item failed", error);
-        }
-      }
-    }
-    try {
-      const cartRes = await api.getCart();
-      setCart(cartRes.cart || []);
-    } catch (e) {}
-  };
-
-  const toggleCart = () => setIsCartOpen(!isCartOpen);
-
-  const cartSubtotal = cart.reduce((sum, item) => sum + ((item.product?.price || 0) * item.quantity), 0);
-  const deliveryFee = cart.length > 0 ? 1.50 : 0;
-  const tax = cartSubtotal * 0.05;
-  const cartTotal = cartSubtotal + deliveryFee + tax;
 
   // Dynamically compute max price from loaded products
   const maxPrice = products.length > 0
@@ -359,7 +317,7 @@ export default function BuyerDashboard() {
                           ) : (
                             <span className="text-[10px] text-gray-400">{product.stock} in stock</span>
                           )}
-                          <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product.id); }} className="text-xs font-bold text-white bg-[#286c00] px-3 py-1.5 rounded-lg hover:bg-[#1e5200] transition-colors">
+                          <button onClick={(e) => { e.stopPropagation(); addToCart(product.id); }} className="text-xs font-bold text-white bg-[#286c00] px-3 py-1.5 rounded-lg hover:bg-[#1e5200] transition-colors">
                             Add to Cart
                           </button>
                         </div>
@@ -407,79 +365,6 @@ export default function BuyerDashboard() {
           </section>
         </div>
       </main>
-
-      {/* Slide-out Cart Drawer Overlay */}
-      <div 
-        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-50 transition-all duration-300 ${isCartOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
-        onClick={toggleCart}
-      ></div>
-
-      {/* Cart Drawer */}
-      <aside className={`fixed top-0 right-0 h-full w-full sm:w-[400px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-[#1a1c29] flex items-center gap-2">
-            Your Bag
-          </h2>
-          <button className="p-2 rounded-full hover:bg-gray-100 text-gray-400 transition-colors" onClick={toggleCart}>
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {cart.length === 0 ? (
-            <div className="text-center text-gray-400 py-20 flex flex-col items-center">
-               <span className="material-symbols-outlined text-6xl mb-4 opacity-30 text-[#286c00]">shopping_bag</span>
-               <p className="text-sm font-medium">Your bag is empty.</p>
-            </div>
-          ) : (
-            cart.map(item => (
-              <div key={item.id} className="flex gap-4 items-center">
-                <div className="w-20 h-24 rounded-lg bg-gray-100 overflow-hidden shrink-0 border border-gray-100">
-                  {item.product?.image_url ? (
-                    <img alt={item.product.name} className="w-full h-full object-cover" src={item.product.image_url} />
-                  ) : (
-                     <div className="w-full h-full flex items-center justify-center text-3xl">🥦</div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-bold text-[#1a1c29] leading-tight mb-1">{item.product?.name}</h4>
-                  <p className="text-xs text-gray-400 font-bold uppercase mb-3">{item.product?.farmer?.name}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-[#286c00]">SAR {Number(item.product?.price || 0).toFixed(2)}</span>
-                    <div className="flex items-center gap-3 bg-gray-50 rounded border border-gray-200 px-1 py-0.5">
-                      <button onClick={() => updateCartQuantity(item.id, item.quantity - 1)} className="text-gray-400 hover:text-black transition-colors w-6 h-6 flex items-center justify-center"><span className="material-symbols-outlined text-[16px]">remove</span></button>
-                      <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
-                      <button onClick={() => updateCartQuantity(item.id, item.quantity + 1)} className="text-gray-400 hover:text-black transition-colors w-6 h-6 flex items-center justify-center"><span className="material-symbols-outlined text-[16px]">add</span></button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {cart.length > 0 && (
-          <div className="p-6 bg-white border-t border-gray-100 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]">
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-sm text-gray-500 font-medium">
-                <span>Subtotal</span>
-                <span className="font-bold text-[#1a1c29]">SAR {cartSubtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-500 font-medium">
-                <span>Shipping</span>
-                <span className="font-bold text-[#1a1c29]">SAR {deliveryFee.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold text-[#1a1c29] pt-4 border-t border-gray-100">
-                <span>Total</span>
-                <span className="text-[#286c00]">SAR {cartTotal.toFixed(2)}</span>
-              </div>
-            </div>
-            <button className="w-full py-3.5 bg-[#286c00] text-white rounded-md text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#1e5200] transition-colors shadow-md">
-              Checkout Now
-            </button>
-          </div>
-        )}
-      </aside>
     </div>
   );
 }
