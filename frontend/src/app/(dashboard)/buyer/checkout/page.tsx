@@ -107,7 +107,7 @@ export default function CheckoutPage() {
                 <span className="material-symbols-outlined text-gray-300 text-6xl mb-4">shopping_cart</span>
                 <h2 className="text-xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
                 <p className="text-gray-500 mb-6">Looks like you haven't added anything to your cart yet.</p>
-                <Link href="/buyer" className="bg-gradient-to-r from-[#ff8900] to-[#ff5d00] hover:from-[#ff9900] hover:to-[#ff6d00] text-white font-bold py-3 px-8 rounded-full shadow-md transition-all">
+                <Link href="/buyer/dashboard" className="bg-gradient-to-r from-[#ff8900] to-[#ff5d00] hover:from-[#ff9900] hover:to-[#ff6d00] text-white font-bold py-3 px-8 rounded-full shadow-md transition-all">
                     Continue Shopping
                 </Link>
             </div>

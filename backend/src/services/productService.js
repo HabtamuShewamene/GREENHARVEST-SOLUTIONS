@@ -76,7 +76,9 @@ const buildProductValues = (payload = {}) => {
 					: null
 				: undefined,
 		price: payload.price !== undefined ? Number(payload.price) : undefined,
-		discount_price: payload.discount_price !== undefined && payload.discount_price !== '' && payload.discount_price !== null ? Number(payload.discount_price) : null,
+		discount_price: payload.discount_price !== undefined 
+			? (payload.discount_price !== '' && payload.discount_price !== null ? Number(payload.discount_price) : null)
+			: undefined,
 		stock: payload.stock !== undefined ? Number(payload.stock) : undefined,
 		farm_location:
 			payload.farm_location !== undefined
@@ -131,6 +133,15 @@ const createProduct = async ({ user, payload }) => {
 
 	if (!Number.isInteger(productValues.stock) || productValues.stock <= 0) {
 		throw createServiceError("stock must be a positive integer", 400);
+	}
+
+	if (productValues.discount_price !== null && productValues.discount_price !== undefined) {
+		if (!isNonNegativeNumber(productValues.discount_price) || Number(productValues.discount_price) <= 0) {
+			throw createServiceError("discount_price must be greater than 0", 400);
+		}
+		if (Number(productValues.discount_price) >= Number(productValues.price)) {
+			throw createServiceError("discount_price must be less than price", 400);
+		}
 	}
 
 	const category_id = await validateCategoryId(payload.category_id);
@@ -224,6 +235,16 @@ const updateProduct = async ({ user, productId, payload }) => {
 		throw createServiceError("stock must be a positive integer", 400);
 	}
 
+	if (productValues.discount_price !== null && productValues.discount_price !== undefined) {
+		if (!isNonNegativeNumber(productValues.discount_price) || Number(productValues.discount_price) <= 0) {
+			throw createServiceError("discount_price must be greater than 0", 400);
+		}
+		const finalPrice = productValues.price !== undefined ? Number(productValues.price) : Number(ownedProduct.price);
+		if (Number(productValues.discount_price) >= finalPrice) {
+			throw createServiceError("discount_price must be less than price", 400);
+		}
+	}
+
 	const category_id =
 		payload.category_id === undefined ? undefined : await validateCategoryId(payload.category_id);
 
@@ -231,7 +252,7 @@ const updateProduct = async ({ user, productId, payload }) => {
 		name: productValues.name !== undefined ? productValues.name : null,
 		description: productValues.description !== undefined ? productValues.description : null,
 		price: productValues.price !== undefined ? productValues.price : null,
-		discount_price: productValues.discount_price !== undefined ? productValues.discount_price : null,
+		discount_price: productValues.discount_price === null ? -1 : (productValues.discount_price !== undefined ? productValues.discount_price : null),
 		stock: productValues.stock !== undefined ? productValues.stock : null,
 		category_id: category_id !== undefined ? category_id : null,
 		farm_location:

@@ -175,7 +175,7 @@ const assignDeliveryPartnerById = async (order_id, delivery_partner_id, client =
 	const result = await client.query(
 		`
 			UPDATE orders
-			SET delivery_status = 'assigned'
+			SET delivery_status = 'assigned', delivery_partner_id = $2
 			WHERE id = $1
 			RETURNING
 				id,
@@ -188,7 +188,7 @@ const assignDeliveryPartnerById = async (order_id, delivery_partner_id, client =
 				delivery_status,
 				created_at
 		`,
-		[order_id]
+		[order_id, delivery_partner_id]
 	);
 
 	return result.rows[0] || null;
@@ -261,14 +261,14 @@ const updateOrderStatusesById = async (
 
 	if (payment_status !== null) {
 		await pool.query(
-			`UPDATE payments SET payment_status = $1, paid_at = NOW() WHERE order_id = $2`,
+			`UPDATE orders SET payment_status = $1 WHERE id = $2`,
 			[payment_status, order_id]
 		);
 	}
 
 	if (delivery_status !== null) {
 		await pool.query(
-			`UPDATE deliveries SET delivery_status = $1 WHERE order_id = $2`,
+			`UPDATE orders SET delivery_status = $1 WHERE id = $2`,
 			[delivery_status, order_id]
 		);
 	}

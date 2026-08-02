@@ -294,7 +294,7 @@ const updateProductById = async (
 				name = COALESCE($1, name),
 				description = COALESCE($2, description),
 				price = COALESCE($3, price),
-				discount_price = COALESCE($4, discount_price),
+				discount_price = CASE WHEN $4 = -1 THEN NULL WHEN $4 IS NULL THEN discount_price ELSE $4 END,
 				stock = COALESCE($5, stock),
 				category_id = COALESCE($6, category_id),
 				farm_location = COALESCE($7, farm_location),

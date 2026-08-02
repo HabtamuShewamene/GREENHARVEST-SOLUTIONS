@@ -84,7 +84,7 @@ const initializeChapaPayment = async (req, res) => {
             first_name: req.user.first_name || req.user.name || "Customer",
             last_name: req.user.last_name || "",
             tx_ref: tx_ref,
-            callback_url: "https://webhook.site/placeholder",
+            callback_url: process.env.CHAPA_CALLBACK_URL || "https://webhook.site/placeholder",
             return_url: `${return_url}?tx_ref=${tx_ref}&order_id=${order_id}`,
             customization: {
                 title: "GreenHarvest Order Payment",
