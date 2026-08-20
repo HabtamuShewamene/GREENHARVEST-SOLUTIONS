@@ -184,9 +184,9 @@ export default function StoreDecorationPage() {
   };
 
   const updateSelectedModule = (field: 'content' | 'styles', key: string, value: any) => {
-    setLayout({
-      ...layout,
-      modules: layout.modules.map(m => {
+    setLayout(prev => ({
+      ...prev,
+      modules: prev.modules.map(m => {
         if (m.id === selectedModuleId) {
           return {
             ...m,
@@ -195,14 +195,14 @@ export default function StoreDecorationPage() {
         }
         return m;
       })
-    });
+    }));
   };
 
   const updateGlobalTheme = (key: string, value: any) => {
-    setLayout({
-      ...layout,
-      theme_settings: { ...layout.theme_settings, [key]: value }
-    });
+    setLayout(prev => ({
+      ...prev,
+      theme_settings: { ...prev.theme_settings, [key]: value }
+    }));
   };
 
   const handleImageUpload = async (file: File, field: string, isArray = false) => {
@@ -210,12 +210,26 @@ export default function StoreDecorationPage() {
     setIsUploading(true);
     try {
       const { url } = await api.uploadImage(file);
-      if (isArray) {
-        const current = selectedModule?.content?.images || [];
-        updateSelectedModule('content', 'images', [...current, url]);
-      } else {
-        updateSelectedModule('content', field, url);
-      }
+      setLayout(prev => ({
+        ...prev,
+        modules: prev.modules.map(m => {
+          if (m.id === selectedModuleId) {
+            if (isArray) {
+              const current = m.content?.[field] || [];
+              return {
+                ...m,
+                content: { ...m.content, [field]: [...current, url] }
+              };
+            } else {
+              return {
+                ...m,
+                content: { ...m.content, [field]: url }
+              };
+            }
+          }
+          return m;
+        })
+      }));
     } catch {
       setUploadError('Image upload failed. Please try again.');
       showError('Image upload failed. Please try again.');
